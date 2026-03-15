@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
-from Models.layers import Conv2dWithConstraint, LazyLinearWithConstraint
+from Models.layers import Conv2dWithConstraint
 
 
-class EEGNet(nn.Module):
+class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
                 F1=8, D=2, F2= 'auto', T1= 125, T2=30, P1=4, P2=8, pool_mode= 'mean',
                 drop_out=0.25):
-        super(EEGNet, self).__init__()
+        super(backbone, self).__init__()
     
         pooling_layer = dict(max=nn.MaxPool2d, mean=nn.AvgPool2d)[pool_mode]
         if F2 == 'auto':
@@ -40,7 +40,10 @@ class EEGNet(nn.Module):
         )
         self.flatten = nn.Flatten()
         self.bn = nn.BatchNorm2d(F2)
+
     def forward(self, x):
+        # print(x.shape)
+        x=x.unsqueeze(1)
         x = self.spectral(x)
         x = self.spatial(x)
         x = self.temporal(x)
@@ -62,56 +65,25 @@ class classifier(nn.Module):
 
     def forward(self, x):
         x = self.dense(x)
+        print(f"classifier output shape: {x.shape}")
         x = torch.squeeze(x, 3)
         x = torch.squeeze(x, 2)
         return x
-# class classifier(nn.Module):
-#     def __init__(self, num_classes):
-#         super(classifier, self).__init__()
-#
-#         self.dense = LazyLinearWithConstraint(num_classes, max_norm=0.25)
-#
-#     def forward(self, x):
-#         x = self.dense(x)
-#         return x
 
-class Net(nn.Module):   
+
+class EEGNet(nn.Module):   
     def __init__(self,
                 num_classes: int,
                 num_channels: int,
-                sampling_rate: int):
-        super(Net, self).__init__()
+                ):
+        super(EEGNet, self).__init__()
 
-        self.backbone = EEGNet(num_channels=num_channels)
+        self.backbone = backbone(num_channels=num_channels)
 
         self.classifier = classifier(num_classes)
 
     def forward(self, x):
         x, output = self.backbone(x)
         x = self.classifier(x)
+        print(f"EEGNet output shape: {x.shape}")
         return x
-
-
-def get_model(args):
-    
-    model = Net(num_classes=args.num_classes,
-                num_channels=args.num_channels,
-                sampling_rate=args.sampling_rate)
-
-    return model
-
-class ActSquare(nn.Module):
-    def __init__(self):
-        super(ActSquare, self).__init__()
-        pass
-
-    def forward(self, x):
-        return torch.square(x)
-
-class ActLog(nn.Module):
-    def __init__(self, eps=1e-06):
-        super(ActLog, self).__init__()
-        self.eps = eps
-
-    def forward(self, x):
-        return torch.log(torch.clamp(x, min=self.eps))

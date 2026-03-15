@@ -4,7 +4,7 @@ from pytorch_lightning import LightningModule
 from torchmetrics.functional import accuracy
 from utils.training_utils import get_criterion, get_scheduler, get_optimizer
 
-from model.ADFCNN import get_model
+from Models.ADFCNN import get_model
 # from model.FBCNet import get_model
 # from model.ShallowConvNet import get_model
 # from model.DeepConvNet import get_model

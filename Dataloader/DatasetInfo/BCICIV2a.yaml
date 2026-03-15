@@ -1,0 +1,8 @@
+data_dir: "Datasets/BCICIV2a"
+
+task: "BCICompetIV2a"
+num_classes: 4
+num_channels: 22
+
+num_subjects: 9
+sample_rate: 250

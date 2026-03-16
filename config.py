@@ -18,8 +18,8 @@ SELECTED_MODEL = 2
 is_test = False
 
 # Preprocessing Config
-window_length = 2
-window_stride = 1
+window_length = 4
+window_stride = 4
 use_filter_bank = False
 bank = [[4, 16], [16, 40]]
 band_filter = [8, 40]
@@ -31,9 +31,8 @@ resample_rate = 250
 # Training Config
 train_device = 'cuda'
 
-
 batch_size = 16
-num_epochs = 200
+num_epochs = 50
 learning_rate = 1e-3
 weight_decay = 0.01
 k_folds = 5

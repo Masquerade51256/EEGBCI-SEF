@@ -1,95 +1,148 @@
-from glob import glob
-from tqdm import tqdm
-import mne
-import torch
-import scipy
 import numpy as np
-import numpy as np
+import scipy.io
+import os
 from torch.utils.data import Dataset
+# from braindecode.preprocessing import Preprocessor, preprocess, PreprocessingPipeline
 import config
-import os,yaml
+import yaml
+from Preprocessing import bandpass
 
-SUBJECTS = config.target_subjects
-dataset_path = os.path.join(config.dataInfo_path,f"{config.DATASETS[config.SELECTED_DATASET]}.yaml")
-with open(dataset_path, 'r') as f:
-    dataset_info = yaml.safe_load(f)
+class XWStrokeDataset(Dataset):
+    """
+    An optimized PyTorch Dataset class for loading and preprocessing the XWStroke EEG motor imagery dataset.
+    Core improvements: Utilizes braindecode's preprocessing pipeline for a standardized and efficient workflow.
+    """
+    def __init__(self, subject_id, dataset_info_path, is_test=False, transform=None):
+        """
+        Initializes the dataset for a specific subject.
 
-DATA_DIR = dataset_info['data_dir']
-CHANNELS = dataset_info['num_channels']
-CHANNELS_SELECTED = dataset_info['channels_selected']
-SAMPLE_RATE = dataset_info['sample_rate']
-CLASS_NUM = dataset_info['num_classes']
-is_test = config.is_test
+        Args:
+            subject_id: The ID of the subject.
+            data_dir: The root directory for the data (read from dataset_info.yaml).
+            dataset_info_path: Path to the `dataset_info.yaml` configuration file.
+            is_test: Whether the dataset is for testing (currently not fully utilized in windowing logic).
+            transform: Optional additional transforms (e.g., for data augmentation).
+        """
+        self.subject_id = subject_id
+        self.is_test = is_test
+        self.transform = transform
 
-def windowSlide(signal,label,win_len = config.window_length*SAMPLE_RATE,step = config.window_stride*SAMPLE_RATE):
-    slices = []
-    label_slices = []
-    _,len = signal.shape
-    for i in range(0,len-win_len+1,step):
-        slices.append(signal[:,i:i+win_len])
-        label_slices.append(label)
-    return np.array(slices), np.array(label_slices)
+        # Load dataset metadata from the YAML configuration file
+        with open(dataset_info_path, 'r') as f:
+            self.info = yaml.safe_load(f)
 
-class XWStroke(Dataset):
-    def __init__(self):
-        self.data, self.label = self.get_brain_data()
-        
-    def __len__(self):
-        return len(self.data)
-    
-    def __getitem__(self, idx):
-        label = self.label[idx]
-        data = np.array(self.data[idx]).astype(np.float32)
-        # print(data.shape)
-        return data, label
+        self.channels_selected = self.info['channels_selected']
+        self.sample_rate = self.info['sample_rate']
+        self.data_dir = self.info['data_dir']
+        # Assuming config.window_length and config.window_stride are defined globally
+        self.window_len_samples = int(config.window_length * self.sample_rate)
+        self.window_stride_samples = int(config.window_stride * self.sample_rate)
 
-    def get_brain_data(self):
-        all_sub_data = []
-        all_labels = []
-        for subject_id in SUBJECTS:
-            file_path = os.path.join(DATA_DIR, f"sub-{subject_id:02d}", f"sub-{subject_id:02d}_task-motor-imagery_eeg.mat")
-            try:
-                data = scipy.io.loadmat(file_path)
-                print(f"data file '{file_path}' loaded")
-            except FileNotFoundError:
-                print(f"ERROR: file '{file_path}' not found.")
-                continue
-            except Exception as e:
-                print(f"ERROR: failed to load file: {e}")
-                continue
+        # Define the preprocessing pipeline
+        self.l_freq = config.band_filter[0]
+        self.h_freq = config.band_filter[1]
+
+        # Load and process the subject's data
+        self.data, self.labels = self._load_and_process_subject_data()
+
+    def _load_mat_data(self, file_path):
+        """Loads raw EEG data and labels from a .mat file."""
+        try:
+            data = scipy.io.loadmat(file_path)
             for key, value in data.items():
                 if not key.startswith('__'):
-                    eeg_data = value[0][0][0]
-                    labels = value[0][0][1]
-                    # print(f"EEG data shape: {eeg_data.shape}")
-                    # print(f"label shape: {labels.shape}")
-            eeg_data = eeg_data[:,CHANNELS_SELECTED,:]
-            labels = labels.reshape(-1, 1)
-            labels = labels-1
-            # print(f"labels shape after reshaping: {labels.shape}")
-            # one_hot_labels = np.zeros((labels.size, CLASS_NUM))
-            # one_hot_labels[np.arange(labels.size), labels.flatten()] = 1
+                    eeg_data = value[0][0][0]  # Expected shape: (n_sessions, n_channels, n_timepoints)
+                    labels = value[0][0][1]    # Expected shape: (n_sessions, 1)
+                    break
+            return eeg_data, labels.reshape(-1)  # Flatten labels to (n_sessions,)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Data file not found: {file_path}")
+        except KeyError:
+            raise KeyError(f"File structure does not match expectations: {file_path}")
 
-            # print(f"EEG data shape after selection: {eeg_data.shape}")
-            # print(f"label shape after reshaping: {labels.shape}")
-            windowed_data = []
-            windowed_labels = []
-            for i, signal in enumerate(eeg_data):
-                signal_slices, labels_sclices = windowSlide(signal, labels[i])
-                # print(f"Windowed EEG data shape: {signal_slices.shape}")
-                # print(f"Windowed label shape: {labels_sclices.shape}")
-                windowed_data.append(signal_slices)
-                windowed_labels.append(labels_sclices)
+    def _apply_preprocessing(self, eeg_data):
+        """
+        Preprocessing: Bandpass filtering and channel-wise normalization.
+        """
+        # 1. Bandpass filtering
+        filtered_data = bandpass.bandpass_filter(eeg_data,
+                                              low_freq=self.l_freq,
+                                              high_freq=self.h_freq,
+                                              sfreq=self.sample_rate)
+        # 2. Channel-wise normalization (along the time axis, i.e., the last axis, for each channel)
+        # Keep the shape unchanged: (n_sessions, n_channels, n_timepoints)
+        mean = filtered_data.mean(axis=-1, keepdims=True)
+        std = filtered_data.std(axis=-1, keepdims=True)
 
-            all_sub_data.append(windowed_data)
-            all_labels.append(windowed_labels)
-        # all_sub_data[sub,sess,ch,time].shape = (n,40,33,4000)
-        all_sub_data = np.array(all_sub_data)
-        all_labels = np.array(all_labels)
-        sub, sess, slices, ch, timepts = all_sub_data.shape
-        all_sub_data = all_sub_data.reshape(sub*sess*slices, ch, timepts)
-        all_labels = all_labels.reshape(-1)
-        print(f"all_sub_data shape: {all_sub_data.shape}")
-        print(f"all_labels shape: {all_labels.shape}")
-        return all_sub_data, all_labels
+        # Prevent division by zero by setting very small std values to 1
+        std[std < 1e-8] = 1.0
+        normalized_data = (filtered_data - mean) / std
 
+        return normalized_data
+
+    def _apply_sliding_window(self, processed_data, labels):
+        """
+        Applies a sliding window to each session's data and generates corresponding window labels.
+        """
+        windowed_data_list = []
+        windowed_labels_list = []
+
+        n_sessions, n_channels, n_timepoints = processed_data.shape
+
+        for sess_idx in range(n_sessions):
+            session_data = processed_data[sess_idx]  # Shape: (n_channels, n_timepoints)
+            session_label = labels[sess_idx]
+
+            # Calculate the number of windows for this session
+            n_windows = 1 + (n_timepoints - self.window_len_samples) // self.window_stride_samples
+
+            for win_idx in range(n_windows):
+                start = win_idx * self.window_stride_samples
+                end = start + self.window_len_samples
+                window = session_data[:, start:end]  # Shape: (n_channels, window_len_samples)
+
+                windowed_data_list.append(window)
+                windowed_labels_list.append(session_label)
+
+        # Stack all windows
+        all_windowed_data = np.stack(windowed_data_list, axis=0).astype(np.float32)  # (n_total_windows, n_channels, window_len)
+        all_windowed_labels = np.array(windowed_labels_list, dtype=np.int64)
+
+        return all_windowed_data, all_windowed_labels
+
+    def _load_and_process_subject_data(self):
+        """Main pipeline: loads, preprocesses, and windows a single subject's data."""
+        # 1. Construct file path and load raw data
+        file_name = f"sub-{self.subject_id:02d}_task-motor-imagery_eeg.mat"
+        file_path = os.path.join(self.data_dir, f"sub-{self.subject_id:02d}", file_name)
+
+        raw_eeg_data, raw_labels = self._load_mat_data(file_path)  # raw_eeg_data: (n_sessions, n_all_channels, n_timepoints)
+
+        # 2. Channel selection
+        selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
+
+        # 3. Apply preprocessing pipeline (Filtering + Normalization)
+        processed_eeg_data = self._apply_preprocessing(selected_eeg_data)  # (n_sessions, n_selected_channels, n_timepoints)
+
+        # 4. Label shift (1,2 to 0,1)
+        adjusted_labels = raw_labels - 1
+
+        # 5. Sliding window segmentation
+        final_data, final_labels = self._apply_sliding_window(processed_eeg_data, adjusted_labels)
+
+        print(f"[Subject {self.subject_id}] Data loaded. Final data shape: {final_data.shape}, Label shape: {final_labels.shape}")
+        return final_data, final_labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        data = self.data[idx]  # Shape: (n_channels, window_len_samples)
+        label = self.labels[idx]
+
+        if self.transform:
+            data = self.transform(data)
+
+        # Data is returned as a NumPy array. Conversion to PyTorch Tensor can be done here or via a collate_fn in the DataLoader.
+        # Example: data = torch.from_numpy(data).float()
+        return data, label

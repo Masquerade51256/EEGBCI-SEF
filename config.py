@@ -6,7 +6,7 @@ DATASETS = {
     3: 'XWStroke',
 }
 SELECTED_DATASET = 3
-target_subjects = [1]
+target_subjects = list(range(1,51))
 
 MODELS = {
     1: 'EEGNet',
@@ -18,11 +18,11 @@ SELECTED_MODEL = 2
 is_test = False
 
 # Preprocessing Config
-window_length = 4
-window_stride = 4
+window_length = 2
+window_stride = 1
 use_filter_bank = False
 bank = [[4, 16], [16, 40]]
-band_filter = [8, 40]
+band_filter = [8, 38]
 use_csp = False
 need_resample = False
 resample_rate = 250
@@ -32,7 +32,7 @@ resample_rate = 250
 train_device = 'cuda'
 
 batch_size = 16
-num_epochs = 50
+num_epochs = 35
 learning_rate = 1e-3
 weight_decay = 0.01
 k_folds = 5

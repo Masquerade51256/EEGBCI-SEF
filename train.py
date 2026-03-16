@@ -1,3 +1,5 @@
+import os
+
 import config
 from Dataloader import dataloader
 from Models.get_model import get_model
@@ -11,6 +13,9 @@ import logging
 train_device = torch.device(config.train_device if torch.cuda.is_available() else "cpu")
 print(train_device)
 torch.set_default_tensor_type(torch.cuda.FloatTensor)
+
+DATASET_NAME = config.DATASETS[config.SELECTED_DATASET]
+MODEL_NAME = config.MODELS[config.SELECTED_MODEL]
 
 # logging config
 logging.basicConfig(
@@ -32,8 +37,6 @@ def train(model, data):
     print(f"--> train begin")
 
     k = 0
-    best_val_acc = 0.0
-    best_model_state = None
 
     for train_index, val_index in kf.split(data):
         print(f"-->fold: {k}")
@@ -63,13 +66,13 @@ def train(model, data):
             train_size = 0
             for images,labels in dataloader_train:
                 images = images.to(train_device)
-                print(f"images: {images.shape} ")
+                # print(f"images: {images.shape} ")
                 labels = labels.to(train_device)
 
                 optimizer.zero_grad()
                 outputs = model(images)
-                print(outputs.shape)
-                print(labels.shape)
+                # print(outputs.shape)
+                # print(labels.shape)
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
@@ -123,19 +126,19 @@ def train(model, data):
                 }
                 # 构建包含关键信息的文件名
                 ckpt_filename = f"best_model_{config.SELECTED_DATASET}_{config.SELECTED_MODEL}_fold_{k-1}_acc_{fold_best_val_acc:.4f}.pt"
-                torch.save(checkpoint, ckpt_filename)
-                logger.info(f"  -> Fold {k-1} 最佳模型已保存: {ckpt_filename} (准确率: {fold_best_val_acc:.4f})")
-                
-                # 同时更新全局最佳模型（这里简单取最后一个fold的最佳模型，也可改为跟踪所有fold中最好的）
-                best_val_acc = fold_best_val_acc
-                best_model_state = model_to_save.state_dict()
+                ckpt_filedir = os.path.join(config.ckpt_path,
+                                             DATASET_NAME,MODEL_NAME,
+                                             str(config.target_subjects[0]))
+                if not os.path.exists(ckpt_filedir):
+                    os.makedirs(ckpt_filedir)
+                ckpt_filepath = os.path.join(ckpt_filedir, ckpt_filename)
+                torch.save(checkpoint, ckpt_filepath)
+                logger.info(f"  -> Fold {k-1} best model saved: {ckpt_filename} (Acc: {fold_best_val_acc:.4f})")
+
+
         
         logger.info(f"--- Fold {k-1} finished, highest acc: {fold_best_val_acc:.4f} ---")
     
-    # 加载最终的最佳模型状态（此处返回最后一个fold的最佳模型，您可以根据需求修改策略）
-    if best_model_state is not None:
-        model.load_state_dict(best_model_state)
-        logger.info(f"已加载最终模型权重（验证准确率: {best_val_acc:.4f}）。")
     return model
             
 

@@ -66,7 +66,7 @@ class XWStroke(Dataset):
             eeg_data = eeg_data[:,CHANNELS_SELECTED,:]
             labels = labels.reshape(-1, 1)
             labels = labels-1
-            print(f"labels shape after reshaping: {labels.shape}")
+            # print(f"labels shape after reshaping: {labels.shape}")
             # one_hot_labels = np.zeros((labels.size, CLASS_NUM))
             # one_hot_labels[np.arange(labels.size), labels.flatten()] = 1
 

@@ -27,7 +27,7 @@ class TGCNN(nn.Module):
         self.flat = nn.Flatten()
 
     def forward(self,x):
-        print(x.shape)
+        # print(x.shape)
         x = self.conv1_frez_cal(x)
         x = self.conv2_frez_ol(x)
         x = self.conv3(x)
@@ -73,7 +73,7 @@ class CNNLSTM(nn.Module):
             (input_length + 2*max_padding - max_size) / max_stride + 1
         )
         cnn_output_features = 64 * length_after_pooling  # 64是conv3的输出通道数
-        print(f"CNN output features shape: {cnn_output_features}")
+        # print(f"CNN output features shape: {cnn_output_features}")
         self.cnn = TGCNN(max_size, max_stride, max_padding, channels_num)
         self.lstm = TGLSTM(max_size, max_stride, max_padding, class_num, cnn_output_features)
 

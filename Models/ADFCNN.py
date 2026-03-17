@@ -1,15 +1,14 @@
 import math
 import torch
 import torch.nn as nn
-from model.layers import Conv2dWithConstraint, LazyLinearWithConstraint, PositionalEncodingFourier
+from Models.layers import Conv2dWithConstraint, LazyLinearWithConstraint, PositionalEncodingFourier
 
-class ADFCNN(nn.Module):
+class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
-                sampling_rate: int,
                 F1=8, D=1, F2= 'auto', P1=4, P2=8, pool_mode= 'mean',
                 drop_out=0.25, layer_scale_init_value = 1e-6, nums = 4):
-        super(ADFCNN, self).__init__()
+        super(backbone, self).__init__()
 
         pooling_layer = dict(max=nn.MaxPool2d, mean=nn.AvgPool2d)[pool_mode]
 
@@ -62,6 +61,7 @@ class ADFCNN(nn.Module):
         self.flatten =nn.Flatten()
 
     def forward(self, x):
+        x = x.unsqueeze(1) # 增加通道维: [batch, 1, channels, timepoints]
         x_1 = self.spectral_1(x)
         x_2 = self.spectral_2(x)
 
@@ -106,14 +106,13 @@ class classifier(nn.Module):
         x = torch.squeeze(x, 2)
         return x
 
-class Net(nn.Module):   
+class ADFCNN(nn.Module):   
     def __init__(self,
                 num_classes: 4,
-                num_channels: int,
-                sampling_rate: int):
-        super(Net, self).__init__()
+                num_channels: int):
+        super(ADFCNN, self).__init__()
 
-        self.backbone = ADFCNN(num_channels=num_channels, sampling_rate=sampling_rate)
+        self.backbone = backbone(num_channels=num_channels)
 
         self.classifier = classifier(num_classes)
 
@@ -121,16 +120,6 @@ class Net(nn.Module):
         x = self.backbone(x)
         x = self.classifier(x)
         return x
-
-
-def get_model(args):
-    
-    model = Net(num_classes=args.num_classes,
-                num_channels=args.num_channels,
-                sampling_rate=args.sampling_rate)
-
-    return model
-
 
 
 class ActSquare(nn.Module):

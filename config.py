@@ -11,8 +11,9 @@ target_subjects = list(range(1,51))
 MODELS = {
     1: 'EEGNet',
     2: 'CNNLSTM',
+    3: 'ADFCNN',
 }
-SELECTED_MODEL = 2
+SELECTED_MODEL = 3
 
 # Mode
 is_test = False

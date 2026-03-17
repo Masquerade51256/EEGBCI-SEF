@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from Models.layers import Conv2dWithConstraint
 
-
 class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
@@ -32,42 +31,35 @@ class backbone(nn.Module):
             nn.Conv2d(F1 * D, F2, (1, T2),  padding=(0, T2//2), groups=F1 * D),
             nn.Conv2d(F2, F2, 1,  stride=1, bias=False, padding=0),
             nn.BatchNorm2d(F2),
-            # ActSquare(),
             nn.ELU(),
             pooling_layer((1, P2), stride=8),
-            # ActLog(),
             nn.Dropout(drop_out)
         )
         self.flatten = nn.Flatten()
-        self.bn = nn.BatchNorm2d(F2)
 
     def forward(self, x):
-        # print(x.shape)
-        x=x.unsqueeze(1)
+        x=x.unsqueeze(1) # 增加通道维: [batch, 1, channels, timepoints]
         x = self.spectral(x)
         x = self.spatial(x)
-        x = self.temporal(x)
-        output = self.flatten(x)
-
+        x = self.temporal(x) # 此时x形状类似 [batch, F2, 1, some_length]
+        output = self.flatten(x) # 展平: [batch, F2 * some_length]
         return x, output
     
 
 class classifier(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, input_features: int, num_classes: int): # 修改：需要知道输入特征数
         super(classifier, self).__init__()
-
+        # 使用一个简单的线性层（全连接层）进行分类
         self.dense = nn.Sequential(
-            nn.Conv2d(16, num_classes, (1, 23)),
-            nn.LogSoftmax(dim=1)
-
+            nn.Linear(input_features, num_classes), # 从展平特征映射到类别数
+            # 移除 LogSoftmax，因为常与 CrossEntropyLoss 搭配使用（其内部包含LogSoftmax）
+            # nn.LogSoftmax(dim=1)
         )
 
-
     def forward(self, x):
+        # x 现在是展平后的特征向量，形状为 [batch, input_features]
         x = self.dense(x)
-        print(f"classifier output shape: {x.shape}")
-        x = torch.squeeze(x, 3)
-        x = torch.squeeze(x, 2)
+        # 输出形状: [batch, num_classes]
         return x
 
 
@@ -79,11 +71,21 @@ class EEGNet(nn.Module):
         super(EEGNet, self).__init__()
 
         self.backbone = backbone(num_channels=num_channels)
-
-        self.classifier = classifier(num_classes)
+        
+        # 关键修改：我们需要知道backbone输出的展平特征维度
+        # 由于网络结构固定，我们可以预先计算或通过一个前向传播探测得到。
+        # 这里我们通过创建一个虚拟输入来探测特征维度。
+        dummy_input = torch.randn(1, num_channels, 2000) # 假设时间点2000，与您的数据一致
+        with torch.no_grad():
+            _, dummy_output = self.backbone(dummy_input)
+        flattened_features = dummy_output.shape[1] # 获取展平后的特征数量
+        
+        # 初始化classifier时传入展平特征数
+        self.classifier = classifier(input_features=flattened_features, num_classes=num_classes)
 
     def forward(self, x):
-        x, output = self.backbone(x)
-        x = self.classifier(x)
-        print(f"EEGNet output shape: {x.shape}")
+        # 前向传播
+        _, flattened_features = self.backbone(x) # 只取展平的特征
+        x = self.classifier(flattened_features) # 将展平特征送入分类器
+        # 此时 x 形状为 [batch_size, num_classes]
         return x

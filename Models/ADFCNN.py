@@ -10,6 +10,7 @@ class backbone(nn.Module):
                 drop_out=0.25, layer_scale_init_value = 1e-6, nums = 4):
         super(backbone, self).__init__()
 
+        # ... [保留原有的所有层定义，如spectral_1, spectral_2, spatial_1, spatial_2, w_q, w_k, w_v等] ...
         pooling_layer = dict(max=nn.MaxPool2d, mean=nn.AvgPool2d)[pool_mode]
 
         pooling_size = 0.3
@@ -30,7 +31,7 @@ class backbone(nn.Module):
 
         # Spatial
         self.spatial_1 = nn.Sequential(
-            Conv2dWithConstraint(F2, F2, (num_channels, 1), padding=0, groups=F2, bias=False, max_norm=2.),
+            Conv2dWithConstraint(F1, F2, (num_channels, 1), padding=0, groups=F1, bias=False, max_norm=2.), # 注意: 输入通道应为F1
             nn.BatchNorm2d(F2),
             nn.ELU(),
             nn.Dropout(drop_out),
@@ -43,8 +44,8 @@ class backbone(nn.Module):
         )
 
         self.spatial_2 = nn.Sequential(
-            Conv2dWithConstraint(F2, F2, kernel_size=[num_channels, 1], padding='valid',
-                                                 max_norm=2.),
+            Conv2dWithConstraint(F1, F2, kernel_size=[num_channels, 1], padding='valid',
+                                                 max_norm=2.), # 注意: 输入通道应为F1
             nn.BatchNorm2d(F2),
             ActSquare(),
             pooling_layer((1, 75), stride=25),
@@ -55,86 +56,117 @@ class backbone(nn.Module):
 
         self.flatten = nn.Flatten()
         self.drop = nn.Dropout(drop_out)
-        self.w_q = nn.Linear(F2, F2)
-        self.w_k = nn.Linear(F2, F2)
-        self.w_v = nn.Linear(F2, F2)
-        self.flatten =nn.Flatten()
+        # 注意力层的线性变换，其输入特征数需要是 F2 * 某个值，但这里我们先按原结构，后续在forward中调整
+        # 注意：由于spatial_1和spatial_2的输出在时间维拼接，其第二维（通道维）都是F2，但时间维长度可能不同。
+        # 我们需要在forward中计算拼接后展平的特征数，这里先占位。
+        self._attention_feat_dim = None
+        self.w_q = nn.Linear(0, 0) # 占位，将在首次前向传播后初始化
+        self.w_k = nn.Linear(0, 0)
+        self.w_v = nn.Linear(0, 0)
 
     def forward(self, x):
-        x = x.unsqueeze(1) # 增加通道维: [batch, 1, channels, timepoints]
+        # 1. 确保输入张量维度顺序正确: [batch, 1, channels, timepoints]
+        if x.dim() == 3:
+            # 假设输入是 [batch, channels, timepoints]
+            x = x.unsqueeze(1)  # -> [batch, 1, channels, timepoints]
+        # 如果已经是4维，假设顺序正确，直接继续
+        
         x_1 = self.spectral_1(x)
         x_2 = self.spectral_2(x)
 
-        x_filter_1 = self.spatial_1(x_1)
-        x_filter_2 = self.spatial_2(x_2)
-        x_noattention = torch.cat((x_filter_1, x_filter_2), 3)
-        B2, C2, H2, W2 = x_noattention.shape
-        x_attention = x_noattention.reshape(B2, C2, H2 * W2).permute(0, 2, 1)  #### the last one is channel
-
-        B, N, C = x_attention.shape
-
-        q = self.w_q(x_attention).permute(0,2,1)
-        k = self.w_k(x_attention).permute(0,2,1)
-        v = self.w_v(x_attention).permute(0,2,1)
-        q = torch.nn.functional.normalize(q, dim=-1)
-        k = torch.nn.functional.normalize(k, dim=-1)
+        x_filter_1 = self.spatial_1(x_1) # 形状: [B, F2, 1, T1]
+        x_filter_2 = self.spatial_2(x_2) # 形状: [B, F2, 1, T2]
+        
+        # 在最后一个维度（时间维）上拼接
+        x_concat = torch.cat((x_filter_1, x_filter_2), dim=3) # 形状: [B, F2, 1, T1+T2]
+        
+        # 为注意力机制准备: [B, N, C]，其中N=1*(T1+T2), C=F2
+        B, C, H, W = x_concat.shape
+        x_for_attn = x_concat.reshape(B, C, H * W).permute(0, 2, 1)  # -> [B, H*W, C] 即 [B, N, C]
+        
+        # 动态初始化注意力层的线性变换（如果尚未初始化）
+        if self._attention_feat_dim is None:
+            self._attention_feat_dim = x_for_attn.size(-1) # C
+            self.w_q = nn.Linear(self._attention_feat_dim, self._attention_feat_dim).to(x.device)
+            self.w_k = nn.Linear(self._attention_feat_dim, self._attention_feat_dim).to(x.device)
+            self.w_v = nn.Linear(self._attention_feat_dim, self._attention_feat_dim).to(x.device)
+        
+        B, N, C = x_for_attn.shape
+        
+        q = self.w_q(x_for_attn) # [B, N, C]
+        k = self.w_k(x_for_attn) # [B, N, C]
+        v = self.w_v(x_for_attn) # [B, N, C]
+        
+        # 简化的自注意力（无多头，无缩放？原代码有缩放）
         d_k = q.size(-1)
-        attn = (q @ k.transpose(-2, -1)) / math.sqrt(d_k)
-        # -------------------
+        attn = (q @ k.transpose(-2, -1)) / math.sqrt(d_k) # [B, N, N]
         attn = attn.softmax(dim=-1)
-
-        x = (attn @ v).reshape(B, N, C)
-
-        x_attention = x_attention + self.drop(x)
-        x_attention = x_attention.reshape(B2, H2, W2, C2).permute(0, 3, 1, 2)
-        x = self.drop(x_attention)
-        return x
+        
+        attended = attn @ v # [B, N, C]
+        
+        # 残差连接
+        x_after_attn = x_for_attn + self.drop(attended) # [B, N, C]
+        
+        # 恢复为 [B, C, H, W] 形状以进行可能的后续处理，但这里我们直接展平
+        # 注意: H=1, W=N
+        x_flat = x_after_attn.permute(0, 2, 1).reshape(B, C, 1, N) # 回到 [B, C, 1, N]
+        x_flat = self.flatten(x_flat) # 展平 -> [B, C * 1 * N] 即 [B, C * N]
+        
+        return x_flat # 返回展平的特征向量
 
 
 class classifier(nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, input_features: int, num_classes: int):
         super(classifier, self).__init__()
-
+        # 使用一个简单的线性层（全连接层）进行分类
         self.dense = nn.Sequential(
-            nn.Conv2d(8, num_classes, (1, 51)),
-            nn.LogSoftmax(dim=1)
+            nn.Linear(input_features, num_classes),
+            # 注意：通常与CrossEntropyLoss搭配时，不在这里添加LogSoftmax
+            # nn.LogSoftmax(dim=1)
         )
 
     def forward(self, x):
-        x= self.dense(x)
-        x = torch.squeeze(x, 3)
-        x = torch.squeeze(x, 2)
+        # x 的形状应为 [batch, input_features]
+        x = self.dense(x)
+        # 输出形状: [batch, num_classes]
         return x
+
 
 class ADFCNN(nn.Module):   
     def __init__(self,
-                num_classes: 4,
+                num_classes: int,  # 修复：默认值4导致类型错误，应设为int
                 num_channels: int):
         super(ADFCNN, self).__init__()
-
         self.backbone = backbone(num_channels=num_channels)
-
-        self.classifier = classifier(num_classes)
+        
+        # 关键：动态获取backbone输出的特征维度
+        # 创建一个虚拟输入来探测特征维度
+        with torch.no_grad():
+            # 假设输入形状为 [1, num_channels, timepoints]，这里timepoints需与训练数据一致（例如2000）
+            dummy_input = torch.randn(1, num_channels, 2000)
+            dummy_features = self.backbone(dummy_input)
+            flattened_features = dummy_features.shape[1]
+        
+        self.classifier = classifier(input_features=flattened_features, num_classes=num_classes)
 
     def forward(self, x):
-        x = self.backbone(x)
-        x = self.classifier(x)
-        return x
+        # 前向传播
+        features = self.backbone(x)  # features形状: [batch, flattened_features]
+        out = self.classifier(features)  # out形状: [batch, num_classes]
+        return out
 
 
+# ... [ActSquare 和 ActLog 类保持不变] ...
 class ActSquare(nn.Module):
     def __init__(self):
         super(ActSquare, self).__init__()
         pass
-
     def forward(self, x):
         return torch.square(x)
-
 
 class ActLog(nn.Module):
     def __init__(self, eps=1e-06):
         super(ActLog, self).__init__()
         self.eps = eps
-
     def forward(self, x):
         return torch.log(torch.clamp(x, min=self.eps))

@@ -7,11 +7,15 @@ DATASETS = {
 }
 SELECTED_DATASET = 3
 target_subjects = list(range(1,51))
+# target_subjects = list(range(1,10))
 
 MODELS = {
     1: 'EEGNet',
     2: 'CNNLSTM',
     3: 'ADFCNN',
+    4: 'MultiBand_CNNLSTM',
+    5: 'Simplified_MultiBand_CNNLSTM',
+    6: 'MyADFCNN'
 }
 SELECTED_MODEL = 3
 
@@ -21,9 +25,9 @@ is_test = False
 # Preprocessing Config
 window_length = 2
 window_stride = 1
-use_filter_bank = False
-bank = [[4, 16], [16, 40]]
-band_filter = [8, 38]
+filter_banks = [
+    [4, 40],
+]
 use_csp = False
 need_resample = False
 resample_rate = 250
@@ -33,9 +37,9 @@ resample_rate = 250
 train_device = 'cuda'
 
 batch_size = 16
-num_epochs = 35
+num_epochs = 300
 learning_rate = 1e-3
-weight_decay = 0.01
+weight_decay = 0.075
 k_folds = 5
 
 # Path

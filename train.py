@@ -2,6 +2,7 @@ import os
 import math
 import logging
 from sklearn.model_selection import KFold
+from sklearn.model_selection import GroupKFold
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -43,7 +44,6 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     progress_bar = tqdm(data_loader, desc='Training', leave=False)
     for images, labels in progress_bar:
         images, labels = images.to(device), labels.to(device)
-
         optimizer.zero_grad()
         outputs = model(images)
         loss = criterion(outputs, labels)
@@ -176,14 +176,15 @@ def train_model(model, dataset, subject_id=None):
     batch_size = config.batch_size
     num_folds = config.k_folds
 
-    kfold = KFold(n_splits=num_folds, shuffle=True, random_state=config.seed if hasattr(config, 'seed') else 0)
+    # kfold = KFold(n_splits=num_folds, shuffle=True, random_state=config.seed if hasattr(config, 'seed') else 0)
+    kfold = GroupKFold(n_splits=num_folds)
     logger.info(f"Starting training for Subject {subject_id} with {num_folds}-fold CV.")
 
     # Data structure to store history for plotting
     fold_training_histories = []
     fold_best_accuracies = []
 
-    for fold_idx, (train_indices, val_indices) in enumerate(kfold.split(dataset)):
+    for fold_idx, (train_indices, val_indices) in enumerate(kfold.split(dataset, groups=dataset.group_ids)):
         logger.info(f"--- Processing Fold {fold_idx + 1}/{num_folds} ---")
         # Create data subsets and loaders for this fold
         train_subset = Subset(dataset, train_indices)

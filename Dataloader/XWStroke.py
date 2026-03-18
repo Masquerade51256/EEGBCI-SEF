@@ -39,11 +39,11 @@ class XWStrokeDataset(Dataset):
         self.window_stride_samples = int(config.window_stride * self.sample_rate)
 
         # Define the preprocessing pipeline
-        self.l_freq = config.band_filter[0]
-        self.h_freq = config.band_filter[1]
+        self.filter_banks = config.filter_banks
+        self.n_bands = len(self.filter_banks)
 
         # Load and process the subject's data
-        self.data, self.labels = self._load_and_process_subject_data()
+        self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
 
     def _load_mat_data(self, file_path):
         """Loads raw EEG data and labels from a .mat file."""
@@ -62,23 +62,24 @@ class XWStrokeDataset(Dataset):
 
     def _apply_preprocessing(self, eeg_data):
         """
-        Preprocessing: Bandpass filtering and channel-wise normalization.
+        Applies filter bank preprocessing to the EEG data.
         """
-        # 1. Bandpass filtering
-        filtered_data = bandpass.bandpass_filter(eeg_data,
-                                              low_freq=self.l_freq,
-                                              high_freq=self.h_freq,
-                                              sfreq=self.sample_rate)
-        # 2. Channel-wise normalization (along the time axis, i.e., the last axis, for each channel)
-        # Keep the shape unchanged: (n_sessions, n_channels, n_timepoints)
-        mean = filtered_data.mean(axis=-1, keepdims=True)
-        std = filtered_data.std(axis=-1, keepdims=True)
+        print(eeg_data.shape)
+        band_data_list = []
+        for band_idx, (l_freq, h_freq) in enumerate(self.filter_banks):
+            filtered_data = bandpass.bandpass_filter(eeg_data,
+                                                 low_freq=l_freq,
+                                                 high_freq=h_freq,
+                                                 sfreq=self.sample_rate)
+            mean = filtered_data.mean(axis=-1, keepdims=True)
+            std = filtered_data.std(axis=-1, keepdims=True)
+            std[std < 1e-8] = 1.0
+            normalized_band_data = (filtered_data - mean) / std
+            normalized_band_data = normalized_band_data[:, np.newaxis, :, :]
+            band_data_list.append(normalized_band_data)
+        multi_band_data = np.concatenate(band_data_list, axis=1)
+        return multi_band_data
 
-        # Prevent division by zero by setting very small std values to 1
-        std[std < 1e-8] = 1.0
-        normalized_data = (filtered_data - mean) / std
-
-        return normalized_data
 
     def _apply_sliding_window(self, processed_data, labels):
         """
@@ -86,11 +87,12 @@ class XWStrokeDataset(Dataset):
         """
         windowed_data_list = []
         windowed_labels_list = []
+        all_group_ids = []
 
-        n_sessions, n_channels, n_timepoints = processed_data.shape
+        n_sessions, n_bands, n_channels, n_timepoints = processed_data.shape
 
         for sess_idx in range(n_sessions):
-            session_data = processed_data[sess_idx]  # Shape: (n_channels, n_timepoints)
+            session_data = processed_data[sess_idx]  # Shape: (n_bands, n_channels, n_timepoints)
             session_label = labels[sess_idx]
 
             # Calculate the number of windows for this session
@@ -99,16 +101,19 @@ class XWStrokeDataset(Dataset):
             for win_idx in range(n_windows):
                 start = win_idx * self.window_stride_samples
                 end = start + self.window_len_samples
-                window = session_data[:, start:end]  # Shape: (n_channels, window_len_samples)
+                window = session_data[:, :, start:end]  # Shape: (n_bands, n_channels, window_len_samples)
 
                 windowed_data_list.append(window)
                 windowed_labels_list.append(session_label)
 
-        # Stack all windows
-        all_windowed_data = np.stack(windowed_data_list, axis=0).astype(np.float32)  # (n_total_windows, n_channels, window_len)
-        all_windowed_labels = np.array(windowed_labels_list, dtype=np.int64)
+            all_group_ids.extend([sess_idx] * n_windows)
 
-        return all_windowed_data, all_windowed_labels
+        # Stack all windows
+        all_windowed_data = np.stack(windowed_data_list, axis=0).astype(np.float32)  # (n_total_windows, n_bands, n_channels, window_len)
+        all_windowed_labels = np.array(windowed_labels_list, dtype=np.int64)
+        all_group_ids = np.array(all_group_ids, dtype=np.int64)
+        print(all_group_ids.shape)
+        return all_windowed_data, all_windowed_labels, all_group_ids
 
     def _load_and_process_subject_data(self):
         """Main pipeline: loads, preprocesses, and windows a single subject's data."""
@@ -128,10 +133,10 @@ class XWStrokeDataset(Dataset):
         adjusted_labels = raw_labels - 1
 
         # 5. Sliding window segmentation
-        final_data, final_labels = self._apply_sliding_window(processed_eeg_data, adjusted_labels)
+        final_data, final_labels, final_group_ids = self._apply_sliding_window(processed_eeg_data, adjusted_labels)
 
         print(f"[Subject {self.subject_id}] Data loaded. Final data shape: {final_data.shape}, Label shape: {final_labels.shape}")
-        return final_data, final_labels
+        return final_data, final_labels, final_group_ids
 
     def __len__(self):
         return len(self.data)
@@ -139,6 +144,7 @@ class XWStrokeDataset(Dataset):
     def __getitem__(self, idx):
         data = self.data[idx]  # Shape: (n_channels, window_len_samples)
         label = self.labels[idx]
+        group_id = self.group_ids[idx]
 
         if self.transform:
             data = self.transform(data)

@@ -1,6 +1,8 @@
-from Models.ADFCNN import ADFCNN
+# from Models.ADFCNN import ADFCNN
 from Models.EEGNet import EEGNet
-from Models.CNNLSTM import CNNLSTM
+# from Models.EEGNet_old import EEGNet
+from Models.CNNLSTM import CNNLSTM, MultiBand_CNNLSTM, Simplified_MultiBand_CNNLSTM
+from Models.myADFCNN import ADFCNN
 import config
 import os, yaml
 
@@ -12,15 +14,19 @@ CHANNELS_NUM = len(dataset_info['channels_selected'])
 CLASS_NUM = dataset_info['num_classes']
 INPUT_SIZE = config.window_length * dataset_info['sample_rate']
 SR = dataset_info['sample_rate']
+BAND_NUM = len(config.filter_banks)
 
 def get_model(model_id):
-    print(model_id)
     model_name = config.MODELS[model_id]
     if model_name == 'EEGNet':
-        return EEGNet(CHANNELS_NUM, CLASS_NUM)
+        return EEGNet(num_channels=CHANNELS_NUM, num_classes=CLASS_NUM, num_bands=BAND_NUM, input_length=INPUT_SIZE)
     elif model_name == 'CNNLSTM':
-        return CNNLSTM(CHANNELS_NUM, CLASS_NUM, INPUT_SIZE)
+        return CNNLSTM(num_channels=CHANNELS_NUM, num_classes=CLASS_NUM, num_bands=BAND_NUM, input_length=INPUT_SIZE)
     elif model_name == 'ADFCNN':
-        return ADFCNN(num_classes=CLASS_NUM, num_channels=CHANNELS_NUM)
+        return ADFCNN(num_channels=CHANNELS_NUM, num_classes=CLASS_NUM, num_bands=BAND_NUM, input_length=INPUT_SIZE)
+    elif model_name == 'MultiBand_CNNLSTM':
+        return MultiBand_CNNLSTM(channels_num=CHANNELS_NUM, bands_num=BAND_NUM, class_num=CLASS_NUM, input_length=INPUT_SIZE)
+    elif model_name == 'Simplified_MultiBand_CNNLSTM':
+        return Simplified_MultiBand_CNNLSTM(channels_num=CHANNELS_NUM, bands_num=BAND_NUM, class_num=CLASS_NUM, input_length=INPUT_SIZE)
     else:
         raise ValueError(f"Unknown model name: {model_name}")

@@ -6,6 +6,7 @@ from Models.layers import Conv2dWithConstraint, LazyLinearWithConstraint, Positi
 class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
+                num_bands: int,
                 F1=8, D=1, F2= 'auto', P1=4, P2=8, pool_mode= 'mean',
                 drop_out=0.25, layer_scale_init_value = 1e-6, nums = 4):
         super(backbone, self).__init__()
@@ -21,11 +22,11 @@ class backbone(nn.Module):
 
         # Spectral
         self.spectral_1 = nn.Sequential(
-            Conv2dWithConstraint(1, F1, kernel_size=[1, 125], padding='same',  max_norm=2.),
+            Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 125], padding='same',  max_norm=2.),
             nn.BatchNorm2d(F1),
             )
         self.spectral_2 = nn.Sequential(
-            Conv2dWithConstraint(1, F1, kernel_size=[1, 30], padding='same', max_norm=2.),
+            Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 30], padding='same', max_norm=2.),
             nn.BatchNorm2d(F1),
             )
 
@@ -65,12 +66,6 @@ class backbone(nn.Module):
         self.w_v = nn.Linear(0, 0)
 
     def forward(self, x):
-        # 1. 确保输入张量维度顺序正确: [batch, 1, channels, timepoints]
-        if x.dim() == 3:
-            # 假设输入是 [batch, channels, timepoints]
-            x = x.unsqueeze(1)  # -> [batch, 1, channels, timepoints]
-        # 如果已经是4维，假设顺序正确，直接继续
-        
         x_1 = self.spectral_1(x)
         x_2 = self.spectral_2(x)
 
@@ -134,19 +129,21 @@ class classifier(nn.Module):
 
 class ADFCNN(nn.Module):   
     def __init__(self,
-                num_classes: int,  # 修复：默认值4导致类型错误，应设为int
-                num_channels: int):
+                num_classes: int,
+                num_channels: int,
+                num_bands: int,
+                input_length: int):
         super(ADFCNN, self).__init__()
-        self.backbone = backbone(num_channels=num_channels)
-        
+        self.backbone = backbone(num_channels=num_channels, num_bands=num_bands)
+
         # 关键：动态获取backbone输出的特征维度
         # 创建一个虚拟输入来探测特征维度
         with torch.no_grad():
-            # 假设输入形状为 [1, num_channels, timepoints]，这里timepoints需与训练数据一致（例如2000）
-            dummy_input = torch.randn(1, num_channels, 2000)
+            # 假设输入形状为 [1, num_bands, num_channels, timepoints]，这里timepoints需与训练数据一致（例如2000）
+            dummy_input = torch.randn(1,num_bands, num_channels, input_length)
             dummy_features = self.backbone(dummy_input)
             flattened_features = dummy_features.shape[1]
-        
+
         self.classifier = classifier(input_features=flattened_features, num_classes=num_classes)
 
     def forward(self, x):

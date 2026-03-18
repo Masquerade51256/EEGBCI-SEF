@@ -5,6 +5,7 @@ from Models.layers import Conv2dWithConstraint
 class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
+                num_bands: int,
                 F1=8, D=2, F2= 'auto', T1= 125, T2=30, P1=4, P2=8, pool_mode= 'mean',
                 drop_out=0.25):
         super(backbone, self).__init__()
@@ -15,7 +16,7 @@ class backbone(nn.Module):
 
         # Spectral
         self.spectral = nn.Sequential(
-            nn.Conv2d(1, F1, (1, T1),  padding=(0, T1//2), bias=False),
+            nn.Conv2d(num_bands, F1, (1, T1),  padding=(0, T1//2), bias=False),
             nn.BatchNorm2d(F1))
 
         # Spatial
@@ -38,7 +39,6 @@ class backbone(nn.Module):
         self.flatten = nn.Flatten()
 
     def forward(self, x):
-        x=x.unsqueeze(1) # 增加通道维: [batch, 1, channels, timepoints]
         x = self.spectral(x)
         x = self.spatial(x)
         x = self.temporal(x) # 此时x形状类似 [batch, F2, 1, some_length]
@@ -67,15 +67,14 @@ class EEGNet(nn.Module):
     def __init__(self,
                 num_classes: int,
                 num_channels: int,
+                num_bands: int,
+                input_length: int
                 ):
         super(EEGNet, self).__init__()
 
-        self.backbone = backbone(num_channels=num_channels)
-        
-        # 关键修改：我们需要知道backbone输出的展平特征维度
-        # 由于网络结构固定，我们可以预先计算或通过一个前向传播探测得到。
-        # 这里我们通过创建一个虚拟输入来探测特征维度。
-        dummy_input = torch.randn(1, num_channels, 2000) # 假设时间点2000，与您的数据一致
+        self.backbone = backbone(num_channels=num_channels, num_bands=num_bands)
+
+        dummy_input = torch.randn(1, num_bands, num_channels, input_length)
         with torch.no_grad():
             _, dummy_output = self.backbone(dummy_input)
         flattened_features = dummy_output.shape[1] # 获取展平后的特征数量

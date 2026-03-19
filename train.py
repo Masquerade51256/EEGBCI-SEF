@@ -3,6 +3,7 @@ import math
 import logging
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GroupKFold
+from tomlkit import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -160,7 +161,8 @@ def plot_subject_comparison(subject_results, save_path):
                 f'{acc:.3f}', ha='center', va='bottom', fontsize=9)
 
     plt.tight_layout()
-    plot_filename = os.path.join(save_path, 'subject_performance_comparison.png')
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    plot_filename = os.path.join(save_path, f'subject_performance_comparison_{timestamp}.png')
     plt.savefig(plot_filename, dpi=150)
     plt.close(fig)
     logger.info(f"Subject comparison plot saved to: {plot_filename}")

@@ -1,0 +1,37 @@
+dataset:
+  name: "XWStroke"
+  data_dir: "src/datasets/21679035/sourcedata"
+
+  num_classes: 2
+  num_channels: 33
+
+  num_subjects: 50
+  sample_rate: 1000
+
+preprocessing:
+  # 全局预处理（在数据集分割/窗口化之前，通常在数据加载时进行）
+  global_pipeline:
+    - name: “MNERawProcessor”  # 封装MNE读取、滤波、epoch的处理器
+      params:
+        apply_baseline: false
+        resample: 0
+    - name: “ArtifactRemovalProcessor”
+      params:
+        method: “ica”
+        n_components: 0.99
+        # 可以指定EOG通道用于自动标记
+        eog_ch: [31, 32]  # 假设第31、32通道是EOG
+
+  # 样本级预处理（在窗口化之后，送入DataLoader之前）
+  sample_pipeline:
+    - name: “ExponentialMovingStandardizeProcessor”
+      params:
+        init_block_size: 1000
+        factor_new: 0.001
+    - name: “FilterBankProcessor”
+      params:
+        filter_banks: [[4,8], [8,12], [12,16], [16,20], [20,24], [24,28], [28,32], [32,36], [36,40]]
+        sample_rate: 250
+    - name: “ChannelSelectorProcessor”
+      params: 
+        channels_selected: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]

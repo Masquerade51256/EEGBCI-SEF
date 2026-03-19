@@ -1,0 +1,31 @@
+experiment:
+  name: "EEGNet_BCI2a_Initial"
+  seed: 42
+
+data:
+  dataset: "BCICIV2a"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  preprocessing:
+    filter_low: 4.0
+    filter_high: 38.0
+    normalize: "zscore"
+
+model:
+  name: "EEGNet"
+  args:
+    n_channels: 22
+    n_classes: 4
+    kernel_length: 64
+
+trainer:
+  name: "SupervisedTrainer"
+  args:
+    epochs: 300
+    batch_size: 64
+    optimizer: "Adam"
+    lr: 0.001
+    scheduler: "ReduceLROnPlateau"
+
+paths:
+  checkpoint_dir: "./checkpoints"
+  result_dir: "./results"

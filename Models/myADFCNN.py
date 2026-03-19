@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-from Models.layers import Conv2dWithConstraint, LazyLinearWithConstraint, PositionalEncodingFourier
+from models.layers import Conv2dWithConstraint, LazyLinearWithConstraint, PositionalEncodingFourier
 
 class backbone(nn.Module):
     def __init__(self,

@@ -10,17 +10,17 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 import numpy as np
 
-import config
-from Dataloader import dataloader
-from Models.get_model import get_model
+import constant_value
+from dataloader.get_data import load_single_subject_data
+from models.get_model import get_model
 
 # ==================== Configuration & Setup ====================
-train_device = torch.device(config.train_device if torch.cuda.is_available() else "cpu")
+train_device = torch.device(constant_value.train_device if torch.cuda.is_available() else "cpu")
 print(f"Using device: {train_device}")
 torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-DATASET_NAME = config.DATASETS[config.SELECTED_DATASET]
-MODEL_NAME = config.MODELS[config.SELECTED_MODEL]
+DATASET_NAME = constant_value.DATASETS[constant_value.SELECTED_DATASET]
+MODEL_NAME = constant_value.MODELS[constant_value.SELECTED_MODEL]
 
 # Logging configuration
 logging.basicConfig(
@@ -170,11 +170,11 @@ def train_model(model, dataset, subject_id=None):
     Main training routine for a single subject using k-fold cross-validation.
     Returns the trained model and a history dictionary for visualization.
     """
-    weight_decay = config.weight_decay
-    initial_learning_rate = config.learning_rate
-    num_epochs = config.num_epochs
-    batch_size = config.batch_size
-    num_folds = config.k_folds
+    weight_decay = constant_value.weight_decay
+    initial_learning_rate = constant_value.learning_rate
+    num_epochs = constant_value.num_epochs
+    batch_size = constant_value.batch_size
+    num_folds = constant_value.k_folds
 
     # kfold = KFold(n_splits=num_folds, shuffle=True, random_state=config.seed if hasattr(config, 'seed') else 0)
     kfold = GroupKFold(n_splits=num_folds)
@@ -195,7 +195,7 @@ def train_model(model, dataset, subject_id=None):
                                  generator=torch.Generator(device=train_device))
 
         # Re-initialize model and optimizer for each fold
-        fold_model = get_model(config.SELECTED_MODEL).to(train_device)
+        fold_model = get_model(constant_value.SELECTED_MODEL).to(train_device)
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(fold_model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
 
@@ -249,7 +249,7 @@ def train_model(model, dataset, subject_id=None):
                     'fold': fold_idx,
                     'subject_id': subject_id
                 }
-                checkpoint_dir = os.path.join(config.ckpt_path, DATASET_NAME, MODEL_NAME, str(subject_id))
+                checkpoint_dir = os.path.join(constant_value.ckpt_path, DATASET_NAME, MODEL_NAME, str(subject_id))
                 os.makedirs(checkpoint_dir, exist_ok=True)
                 checkpoint_name = f"best_fold{fold_idx}_acc{fold_best_val_accuracy:.4f}.pt"
                 checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
@@ -276,15 +276,15 @@ def main():
     output_viz_dir = os.path.join("results", "visualizations", DATASET_NAME, MODEL_NAME)
     os.makedirs(output_viz_dir, exist_ok=True)
 
-    for subject_id in config.target_subjects:
+    for subject_id in constant_value.target_subjects:
         logger.info(f"\n{'='*60}")
         logger.info(f"Processing Subject: {subject_id}")
         logger.info(f"{'='*60}")
 
         # Load single subject data
-        subject_dataset = dataloader.load_single_subject_data(config.SELECTED_DATASET, subject_id)
+        subject_dataset = load_single_subject_data(constant_value.SELECTED_DATASET, subject_id)
         # Build model
-        model_instance = get_model(config.SELECTED_MODEL).to(train_device)
+        model_instance = get_model(constant_value.SELECTED_MODEL).to(train_device)
         # Train model
         trained_model, subject_history, subject_avg_acc = train_model(model_instance, subject_dataset, subject_id)
 

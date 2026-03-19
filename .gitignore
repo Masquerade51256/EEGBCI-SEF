@@ -1,5 +1,6 @@
 # my Ignore
-Datasets/*
+src/datasets/*
+src/checkpoints/*
 Checkpoints/*
 *.pt
 

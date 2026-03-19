@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from model.layers import Conv2dWithConstraint, LinearWithConstraint
+from models.layers import Conv2dWithConstraint, LinearWithConstraint
 from torch.nn import functional as F
 class FBCNet(nn.Module):
     def __init__(

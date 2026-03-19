@@ -5,7 +5,7 @@ DATASETS = {
     2: 'BCICIV2b',
     3: 'XWStroke',
 }
-SELECTED_DATASET = 1
+SELECTED_DATASET = 3
 target_subjects = list(range(1,51))
 # target_subjects = list(range(1,10))
 
@@ -15,7 +15,6 @@ MODELS = {
     3: 'ADFCNN',
     4: 'MultiBand_CNNLSTM',
     5: 'Simplified_MultiBand_CNNLSTM',
-    6: 'MyADFCNN'
 }
 SELECTED_MODEL = 3
 

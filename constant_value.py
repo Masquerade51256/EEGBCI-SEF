@@ -44,5 +44,5 @@ k_folds = 5
 
 # Path
 dataInfo_path = os.path.join('src', 'data_info')
-log_path = 'training_logs'
-ckpt_path = 'src_checkpoints'
+log_path = os.path.join('training_logs')
+ckpt_path =  os.path.join('src', 'checkpoints')

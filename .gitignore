@@ -1,7 +1,6 @@
 # my Ignore
 src/datasets/*
 src/checkpoints/*
-Checkpoints/*
 *.pt
 
 # Byte-compiled / optimized / DLL files

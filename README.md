@@ -1,7 +1,7 @@
 # EEGBCI Standard Experiment Framwork
 A standardized, modular, and extensible platform for BCI algorithm experimentation. It supports various datasets, deep learning models, preprocessing pipelines, and training strategies.
 
-## ✨ Objective
+## :sparkles: Objective
 - **Modular Design**: Clean separation of data, models, trainers, and evaluation.
 - **Reproducibility**: Experiment-specific YAML configuration files snapshot all hyperparameters.
 - **Extensibility**: Easily add new datasets (inherit from `BaseDataset`) or models.
@@ -9,7 +9,7 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 
 
 
-## 🚀 Quick Start
+## :rocket: Quick Start
 
 ### 1. Project Installation
 
@@ -67,5 +67,17 @@ Training script will save figures to dir `src\result\DATASET\MODEL`.
 
 
 
-## 🧩 How to Extend
+## :open_file_folder: How to Extend
+
+
+
+
+
+
+
+
+
+
+
+
 

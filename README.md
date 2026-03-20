@@ -16,7 +16,7 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 - download or clone this repository
 - create new virtual environment  with `Python=3.10`
 - install Pytorch, CUDA and cudnn
-- `pip install -r requirements.txt` (Not available yet)
+- `pip install -r requirements.txt`
 
 ### 2. Prepare Data
 

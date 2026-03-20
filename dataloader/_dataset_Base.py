@@ -1,18 +1,24 @@
 from torch.utils.data import Dataset
-import os,yaml
+import utils
 
 class BaseDataset(Dataset):
     def __init__(self, subject_id, dataset_info_path):
-        # Load dataset metadata from the YAML constant_valueuration file
-        with open(dataset_info_path, 'r') as f:
-            self.info = yaml.safe_load(f)
-
         self.subject_id = subject_id
-        self.channels_selected = self.info['channels_selected']
-        self.sample_rate = self.info['sample_rate']
-        self.data_dir = self.info['data_dir']
 
-    
+        # Load dataset metadata from the YAML constant_valueuration file
+        self.info = utils.load_config(dataset_info_path)
+
+        self.channels_selected = self.info['dataset']['channels_selected']
+        self.sample_rate = self.info['dataset']['sample_rate']
+        self.data_dir = self.info['dataset']['data_dir']
+
+        # Define the preprocessing pipeline
+        self.filter_banks = constant_value.filter_banks
+        self.n_bands = len(self.filter_banks)
+
+        # Load and process the subject's data
+        self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
+   
     def __len__(self):        # This should be implemented in the subclass based on the actual data
         raise NotImplementedError("Subclasses must implement __len__ method")
     

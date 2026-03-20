@@ -13,16 +13,6 @@ class XWStrokeDataset(Dataset):
     Core improvements: Utilizes braindecode's preprocessing pipeline for a standardized and efficient workflow.
     """
     def __init__(self, subject_id, dataset_info_path, is_test=False, transform=None):
-        """
-        Initializes the dataset for a specific subject.
-
-        Args:
-            subject_id: The ID of the subject.
-            data_dir: The root directory for the data (read from dataset_info.yaml).
-            dataset_info_path: Path to the `dataset_info.yaml` constant_valueuration file.
-            is_test: Whether the dataset is for testing (currently not fully utilized in windowing logic).
-            transform: Optional additional transforms (e.g., for data augmentation).
-        """
         self.subject_id = subject_id
         self.is_test = is_test
         self.transform = transform

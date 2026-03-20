@@ -11,7 +11,8 @@ import pandas as pd
 import os
 
 from preprocessing.bandpass import bandpass_filter
-import constant_value  
+import constant_value
+from preprocessing.pipline import FilterBankProcessor, ExponentialMovingStandardizeProcessor
 
 
 class BCICompet2aIV(Dataset):

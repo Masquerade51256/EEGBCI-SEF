@@ -61,7 +61,9 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 
 ### 4. Check Results
 
-Training script will save figures to dir `src\result\DATASET\MODEL`
+Training script will save figures to dir `src\result\DATASET\MODEL`.
+
+:warning: For now, the figures could be **COVERED** by new training procedures.
 
 
 

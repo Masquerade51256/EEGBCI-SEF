@@ -4,16 +4,17 @@ from models.EEGNet import EEGNet
 from models.CNNLSTM import CNNLSTM, MultiBand_CNNLSTM, Simplified_MultiBand_CNNLSTM
 from models.myADFCNN import ADFCNN
 import constant_value
-import os, yaml
+import os
+import utils
 
 dataset_path = os.path.join(constant_value.dataInfo_path,f"{constant_value.DATASETS[constant_value.SELECTED_DATASET]}.yaml")
-with open(dataset_path, 'r') as f:
-    dataset_info = yaml.safe_load(f)
 
-CHANNELS_NUM = len(dataset_info['channels_selected'])
-CLASS_NUM = dataset_info['num_classes']
-INPUT_SIZE = constant_value.window_length * dataset_info['sample_rate']
-SR = dataset_info['sample_rate']
+dataset_info = utils.load_config(dataset_path)
+
+CHANNELS_NUM = len(dataset_info['dataset']['channels_selected'])
+CLASS_NUM = dataset_info['dataset']['num_classes']
+INPUT_SIZE = constant_value.window_length * dataset_info['dataset']['sample_rate']
+SR = dataset_info['dataset']['sample_rate']
 BAND_NUM = len(constant_value.filter_banks)
 
 def get_model(model_id):

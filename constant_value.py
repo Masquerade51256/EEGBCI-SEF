@@ -6,8 +6,9 @@ DATASETS = {
     3: 'XWStroke',
 }
 SELECTED_DATASET = 3
-target_subjects = list(range(1,51))
+# target_subjects = list(range(1,51))
 # target_subjects = list(range(1,10))
+target_subjects = [1]
 
 MODELS = {
     1: 'EEGNet',
@@ -41,7 +42,7 @@ weight_decay = 0.075
 k_folds = 5
 
 # Path
-dataInfo_path = os.path.join('src', 'data_info')
+dataInfo_path = os.path.join('config', 'dataset_config')
 log_path = os.path.join('training_logs')
 ckpt_path =  os.path.join('src', 'checkpoints')
 res_path = os.path.join('src', 'results')

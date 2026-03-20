@@ -274,8 +274,8 @@ def main():
     all_subjects_models = []
     all_subjects_history = []
     all_subjects_results = []  # For final comparison plot
-
-    output_viz_dir = os.path.join("results", "visualizations", DATASET_NAME, MODEL_NAME)
+    vis_base_dir = constant_value.vis_path
+    output_viz_dir = os.path.join(vis_base_dir, DATASET_NAME, MODEL_NAME)
     os.makedirs(output_viz_dir, exist_ok=True)
 
     for subject_id in constant_value.target_subjects:

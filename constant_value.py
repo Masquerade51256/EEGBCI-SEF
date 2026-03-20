@@ -27,9 +27,8 @@ window_stride = 1
 filter_banks = [
     [4, 40],
 ]
-use_csp = False
 need_resample = False
-resample_rate = 250
+target_sample_rate = 250
 
 
 # Training Config
@@ -45,3 +44,5 @@ k_folds = 5
 dataInfo_path = os.path.join('src', 'data_info')
 log_path = os.path.join('training_logs')
 ckpt_path =  os.path.join('src', 'checkpoints')
+res_path = os.path.join('src', 'results')
+vis_path = os.path.join(res_path, 'visualizations')

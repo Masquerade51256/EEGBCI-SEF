@@ -16,23 +16,52 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 - download or clone this repository
 - create new virtual environment  with `Python=3.10`
 - install Pytorch, CUDA and cudnn
-- `pip install -r requirements.txt`
+- `pip install -r requirements.txt` (Not available yet)
 
 ### 2. Prepare Data
 
 - project structure
-- 
+
+  ```
+  ├── dataloader
+  ├── models
+  ├── preprocessing
+  └── src
+      ├── checkpoints
+      │   ├── BCICIV2a
+      │   └── XWStroke
+      ├── datasets
+      │   ├── 21679035
+      │   │   └── sourcedata
+      │   │   │   ├── sub-01
+      │   │   │   │   └── sub-01_task-motor-imagery_eeg.mat
+      │   │   │   └── ...
+      │   ├── 27130299
+      │   └── BCICIV_2a
+      │       ├── A01E.gdf
+      │       ├── A01E.mat
+      │       ├── A01T.gdf
+      │       ├── A01T.mat
+      │       └── ...
+      └── results
+          └── visualizations
+  ```
+
+- Please download **XuanWu** dataset from [this site](https://figshare.com/articles/dataset/EEG_datasets_of_stroke_patients/21679035/5), decompress and put all contents (especially `sourcedata`) into `src\datasets\21679035`.
+
+- Please download **BCICompetetion IV 2a** dataset from [this site](https://www.bbci.de/competition/iv/#download), and the true lable from [this site](https://www.bbci.de/competition/iv/results/ds2a/true_labels.zip). Decompress and put all files (including `.gdf` & `.mat`) into dir `src\datasets\BCICIV_2a`
+
+  
 
 ### 3. Run Experiment
 
-```python
+- You can change Model, Dataset and other configuration in file `constant_value`. (It will be updated, and finally deprecated, in subsequent versions)
 
-
-```
-
-
+- Just run `python train.py`
 
 ### 4. Check Results
+
+Training script will save figures to dir `src\result\DATASET\MODEL`
 
 
 

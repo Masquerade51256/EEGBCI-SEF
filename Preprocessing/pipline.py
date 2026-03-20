@@ -11,8 +11,7 @@ class BaseProcessor(ABC):
     def __call__(self, data: np.ndarray, **kwargs) -> np.ndarray:
         return self.process(data, **kwargs)
 
-# 具体处理器实现
-from preprocessing.bandpass import bandpass_filter  # 假设这是您的滤波函数
+from preprocessing.bandpass import bandpass_filter
 
 class FilterBankProcessor(BaseProcessor):
     """滤波器组处理器，对应XWStrokeDataset中的_apply_preprocessing核心部分。"""
@@ -237,7 +236,7 @@ class DataAugmentationProcessor(BaseProcessor):
 
 class ArtifactRemovalProcessor(BaseProcessor):
     """伪影去除处理器。提供多种方法可选。"""
-    def __init__(self, method: str = ‘ica’, **kwargs):
+    def __init__(self, method: str = 'ica', **kwargs):
         """
         Args:
             method: 伪影去除方法，可选 ‘ica’（独立成分分析）, ‘regression’, ‘ads’（自适应滤波）等。

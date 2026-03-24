@@ -36,7 +36,7 @@ target_sample_rate = 250
 train_device = 'cuda'
 
 batch_size = 16
-num_epochs = 300
+num_epochs = 20
 learning_rate = 1e-3
 weight_decay = 0.075
 k_folds = 5

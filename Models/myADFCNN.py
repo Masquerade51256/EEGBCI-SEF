@@ -176,7 +176,6 @@ class backbone(nn.Module):
 
         return x_flat
 
-
 class classifier(nn.Module):
     def __init__(self, input_features: int, num_classes: int):
         super(classifier, self).__init__()
@@ -192,7 +191,6 @@ class classifier(nn.Module):
         x = self.dense(x)
         # 输出形状: [batch, num_classes]
         return x
-
 
 class ADFCNN(nn.Module):   
     def __init__(self,
@@ -218,7 +216,6 @@ class ADFCNN(nn.Module):
         features = self.backbone(x)  # features形状: [batch, flattened_features]
         out = self.classifier(features)  # out形状: [batch, num_classes]
         return out
-
 
 class ActSquare(nn.Module):
     def __init__(self):

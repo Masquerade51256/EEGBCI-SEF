@@ -33,6 +33,7 @@ class XWStrokeDataset(Dataset):
         self.channels_selected = self.info['dataset']['channels_selected']
         self.sample_rate = self.info['dataset']['sample_rate']
         self.data_dir = self.info['dataset']['data_dir']
+        
         # Assuming constant_value.window_length and constant_value.window_stride are defined globally
         self.window_len_samples = int(constant_value.window_length * self.sample_rate)
         self.window_stride_samples = int(constant_value.window_stride * self.sample_rate)

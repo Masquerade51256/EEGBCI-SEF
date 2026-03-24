@@ -5,60 +5,16 @@ import torch
 import scipy
 import numpy as np
 from typing import List, Union, Dict, Optional, Tuple
-from torch.utils.data import Dataset
-import yaml
 import pandas as pd
 import os
 
 from preprocessing.bandpass import bandpass_filter
 import constant_value
-from preprocessing.pipline import FilterBankProcessor, ExponentialMovingStandardizeProcessor
+# from preprocessing.pipline import FilterBankProcessor, ExponentialMovingStandardizeProcessor
+from dataloader._dataset_Base import BaseDataset
 
 
-class BCICompet2aIV(Dataset):
-    """
-    重构后的BCI Competition IV 2a数据集类。
-    设计目标：提供与XWStrokeDataset完全一致的接口和输出格式。
-    """
-    def __init__(self, 
-                 subject_id: int, 
-                 dataset_info_path: str, 
-                 transform = None):
-        """
-        初始化数据集，参数与XWStrokeDataset对齐。
-
-        Args:
-            subject_id: 受试者ID (1-9 for BCI IV 2a)。
-            dataset_info_path: 数据集配置文件（YAML）路径，用于统一管理参数。
-            is_test: 是否为测试模式（加载评估数据）。
-            transform: 可选的额外数据增强变换。
-        """
-        self.subject_id = subject_id
-        self.is_test = constant_value.is_test
-        self.transform = transform
-
-        # 1. 从配置文件加载数据集元信息（统一配置入口）
-        with open(dataset_info_path, 'r') as f:
-            self.info = yaml.safe_load(f)
-        
-        # 从配置中读取BCI数据集特定的路径和参数
-        self.base_path = self.info['data_dir']
-        self.downsampling = constant_value.need_resample
-        self.channels_selected = self.info['channels_selected'] if 'channels_selected' in self.info else None  # 可指定通道，默认全选
-        self.sample_rate = self.info["sample_rate"]  # 原始采样率
-        self.target_subject = subject_id - 1  # BCI代码中subject是0-indexed
-        
-        # 2. 读取与XWStroke统一的预处理和切片参数
-        self.window_len_samples = int(constant_value.window_length * self.sample_rate)
-        self.window_stride_samples = int(constant_value.window_stride * self.sample_rate)
-        self.filter_banks = constant_value.filter_banks  # 例如 [[4,8], [8,12], ...]
-        self.n_bands = len(self.filter_banks)
-
-        # 3. 加载并处理数据
-        # 注意：BCI IV 2a的标签是4类: 0-左手, 1-右手, 2-脚, 3-舌头
-        self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
-        
-        print(f"[BCI-IV 2a Subject {self.subject_id}] Data loaded. Final shape: {self.data.shape}, Labels: {self.labels.shape}")
+class BCICompet2aIV(BaseDataset):
 
     def _load_and_process_subject_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """主流程：加载、预处理、并组织单个受试者的数据，输出格式与XWStroke一致。"""

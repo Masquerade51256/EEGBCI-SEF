@@ -6,35 +6,10 @@ from torch.utils.data import Dataset
 import constant_value
 import yaml
 from preprocessing import bandpass
+from dataloader._dataset_Base import BaseDataset
 
-class XWStrokeDataset(Dataset):
-    """
-    An optimized PyTorch Dataset class for loading and preprocessing the XWStroke EEG motor imagery dataset.
-    Core improvements: Utilizes braindecode's preprocessing pipeline for a standardized and efficient workflow.
-    """
-    def __init__(self, subject_id, dataset_info_path, is_test=False, transform=None):
-        self.subject_id = subject_id
-        self.is_test = is_test
-        self.transform = transform
-
-        # Load dataset metadata from the YAML constant_valueuration file
-        with open(dataset_info_path, 'r') as f:
-            self.info = yaml.safe_load(f)
-
-        self.channels_selected = self.info['channels_selected']
-        self.sample_rate = self.info['sample_rate']
-        self.data_dir = self.info['data_dir']
-        # Assuming constant_value.window_length and constant_value.window_stride are defined globally
-        self.window_len_samples = int(constant_value.window_length * self.sample_rate)
-        self.window_stride_samples = int(constant_value.window_stride * self.sample_rate)
-
-        # Define the preprocessing pipeline
-        self.filter_banks = constant_value.filter_banks
-        self.n_bands = len(self.filter_banks)
-
-        # Load and process the subject's data
-        self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
-
+class XWStrokeDataset(BaseDataset):
+    
     def _load_mat_data(self, file_path):
         """Loads raw EEG data and labels from a .mat file."""
         try:

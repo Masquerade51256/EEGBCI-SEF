@@ -1,14 +1,8 @@
-import numpy as np
 import scipy.io
 import os
-from torch.utils.data import Dataset
-import constant_value
-import yaml
-from preprocessing import bandpass
 from dataloader._dataset_Base import BaseDataset
 
 class XWStrokeDataset(BaseDataset):
-    
     def _load_mat_data(self, file_path):
         """Loads raw EEG data and labels from a .mat file."""
         try:
@@ -29,4 +23,9 @@ class XWStrokeDataset(BaseDataset):
         file_name = f"sub-{self.subject_id:02d}_task-motor-imagery_eeg.mat"
         file_path = os.path.join(self.data_dir, f"sub-{self.subject_id:02d}", file_name)
         data, labels = self._load_mat_data(file_path)
-        return data, labels
+        # print("Raw data shape:", data.shape)
+        normalized_data = []
+        for sess_data in data:
+            sess_data = self._exponential_moving_standardize(sess_data, init_block_size=self.sample_rate)
+            normalized_data.append(sess_data)
+        return normalized_data, labels

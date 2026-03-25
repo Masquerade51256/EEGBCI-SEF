@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from preprocessing.slide_windows import SlidingWindowSegmenter
 from preprocessing.filter_banks import FilterBankProcessor
 import numpy as np
+import pandas as pd
 
 class BaseDataset(Dataset):
     def __init__(self, 
@@ -44,9 +45,7 @@ class BaseDataset(Dataset):
         if self.transform:
             data = self.transform(data)
 
-        # 返回格式与XWStrokeDataset一致
         return data, label
-    
 
     def _load_and_process_subject_data(self,):
          # 1. Construct file path and load raw data
@@ -77,11 +76,45 @@ class BaseDataset(Dataset):
 
         print(f"[Subject {self.subject_id}] Data loaded. Final data shape: {final_data.shape}, Label shape: {final_labels.shape}")
         return final_data, final_labels, final_group_ids
-    
-    # def _apply_preprocessing(self, eeg_data):
-
 
     def _load_raw_data(self, file_path):
         # This method should be implemented in the subclass to load raw data from the given file path
         raise NotImplementedError("Subclasses must implement _load_raw_data method")
     
+    def _exponential_moving_standardize(self, data, init_block_size, factor_new=0.001):
+        """指数移动标准化（修正版）"""
+        n_ch = len(self.channels_selected)
+        # 确保数据形状是 (n_channels, n_times)
+        if data.shape[0] != n_ch:
+            # 如果输入是 (n_times, n_channels)，则转置
+            if data.shape[1] == n_ch:
+                data = data.T
+            else:
+                # 尝试自动推断
+                if data.shape[0] > data.shape[1]:
+                    data = data.T
+        
+        df = pd.DataFrame(data.T)
+        meaned = df.ewm(alpha=factor_new).mean()
+        demeaned = df - meaned
+        squared = demeaned * demeaned
+        square_ewmed = squared.ewm(alpha=factor_new).mean()
+        standardized = demeaned / np.maximum(1e-4, np.sqrt(np.array(square_ewmed)))
+        standardized = np.array(standardized)  # 形状: (n_times, n_channels)
+        
+        if init_block_size is not None:
+            # 计算初始块的标准化
+            i_time_axis = 1  # 原始数据中时间轴是第1维
+            # 从原始数据中取初始块
+            init_data = data[..., :init_block_size]
+            # 沿着时间轴计算均值和标准差
+            init_mean = np.mean(init_data, axis=i_time_axis, keepdims=True)
+            init_std = np.std(init_data, axis=i_time_axis, keepdims=True)
+            init_block_standardized = (init_data - init_mean) / np.maximum(1e-4, init_std)
+            # 注意: init_block_standardized 形状是 (n_channels, init_block_size)
+            # 而 standardized[:init_block_size, :] 需要形状 (init_block_size, n_channels)
+            # 所以需要转置
+            standardized[:init_block_size, :] = init_block_standardized.T
+        
+        # 返回转置后的结果，使形状变回 (n_channels, n_times)
+        return standardized.T

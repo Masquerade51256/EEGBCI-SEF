@@ -1,6 +1,6 @@
 # configs/datasets/xwstroke.yaml
 dataset:
-  name: "XWStroke"
+  name: "BCICIV2a"
   data_dir: "src/datasets/BCICIV2a"
   sample_rate: 250
   num_channels: 22

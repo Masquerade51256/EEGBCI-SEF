@@ -1,5 +1,5 @@
 import numpy as np
-from preprocessing.baseProcessor import BaseProcessor
+from preprocessing.base_processor import BaseProcessor
 
 class SlidingWindowSegmenter(BaseProcessor):
     """滑动窗口分割处理器。"""

@@ -1,5 +1,6 @@
 from torch.utils.data import Dataset
 from preprocessing.slide_windows import SlidingWindowSegmenter
+from preprocessing.filter_banks import FilterBankProcessor
 # from braindecode.preprocessing import Preprocessor, preprocess, PreprocessingPipeline
 
 class BaseDataset(Dataset):
@@ -10,22 +11,22 @@ class BaseDataset(Dataset):
 
         # Load dataset metadata from the YAML configuration file
         self.info = dataset_info
-
-        self.channels_selected = self.info['dataset']['channels_selected']
-        self.sample_rate = self.info['dataset']['sample_rate']
         self.data_dir = self.info['dataset']['data_dir']
+
+        self.channels_selected = self.info['preprocessing']['channel_selection']['channels_to_select']
+        self.sample_rate = self.info['preprocessing']['resample']['target_sr']
 
         # Assuming constant_value.window_length and constant_value.window_stride are defined globally
         self.window_len_samples = int(self.info['preprocessing']["windowing"]['window_length_sec'] * self.sample_rate)
         self.window_stride_samples = int(self.info['preprocessing']["windowing"]['window_stride_sec'] * self.sample_rate)
 
         # Build preprocessing pipeline
-        self.filter_banks = self.info['dataset']['filter_banks']
+        self.filter_banks = self.info['preprocessing']['filter_bank']['filter_banks']
         self.n_bands = len(self.filter_banks)
 
-        self.global_pipeline = self._build_global_pipeline(self.info['preprocessing']['global_pipeline'])
-        self.sample_pipeline = self._build_sample_pipeline(self.info['preprocessing']['sample_pipeline'])
-        self.augmentation_pipeline = self._build_augmentation_pipeline(self.info['preprocessing']['augmentation_pipeline'])
+        # self.global_pipeline = self._build_global_pipeline(self.info['preprocessing']['global_pipeline'])
+        # self.sample_pipeline = self._build_sample_pipeline(self.info['preprocessing']['sample_pipeline'])
+        # self.augmentation_pipeline = self._build_augmentation_pipeline(self.info['preprocessing']['augmentation_pipeline'])
 
         # Load and process the subject's data
         self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
@@ -54,7 +55,9 @@ class BaseDataset(Dataset):
         selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
 
         # 3. Apply preprocessing pipeline (Filtering + Normalization)
-        processed_eeg_data = self._apply_preprocessing(selected_eeg_data)  # (n_sessions, n_selected_channels, n_timepoints)
+        # processed_eeg_data = self._apply_preprocessing(selected_eeg_data)  # (n_sessions, n_selected_channels, n_timepoints)
+        filer_bank_processor = FilterBankProcessor(filter_banks=self.filter_banks, sample_rate=self.sample_rate)
+        processed_eeg_data = filer_bank_processor(selected_eeg_data)
 
         # 4. Label shift (1,2 to 0,1)
         if min(self.info['dataset']['labels']) == 1:

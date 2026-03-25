@@ -203,10 +203,11 @@ def train_model(model, dataset, train_config, subject_id=None):
                                  generator=torch.Generator(device=train_device))
 
         # Re-initialize model and optimizer for each fold
-        # info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")
-        # dataset_info = load_config(info_path)
-        # fold_model = get_model(train_config['model_id'],dataset_info).to(train_device)
-        fold_model = model # 此处使用传入的model实例，不需要每次都调用getmodel方法重新初始化
+        info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")
+        dataset_info = load_config(info_path)
+        fold_model = get_model(train_config['model_id'],dataset_info).to(train_device)
+        # fold_model = model # 此处使用传入的model实例，不需要每次都调用getmodel方法重新初始化
+        # 不行，模型需要在每个fold重新初始化，否则会在不同fold之间共享权重，导致训练结果不准确。
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(fold_model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
 
@@ -291,7 +292,7 @@ def main():
     info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")
     dataset_info = load_config(info_path)
 
-    for subject_id in constant_value.target_subjects:
+    for subject_id in config['Training']['target_subjects']:
         logger.info(f"\n{'='*60}")
         logger.info(f"Processing Subject: {subject_id}")
         logger.info(f"{'='*60}")

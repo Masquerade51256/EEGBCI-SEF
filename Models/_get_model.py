@@ -10,10 +10,10 @@ import utils
 
 
 def get_model(model_id, dataset_info):
-    channels_num = len(dataset_info['dataset']['channels_selected'])
+    channels_num = len(dataset_info['preprocessing']['channel_selection']['channels_to_select'])
     class_num = dataset_info['dataset']['num_classes']
-    input_size = constant_value.window_length * dataset_info['dataset']['sample_rate']
-    sr = dataset_info['dataset']['sample_rate']
+    sr = dataset_info['preprocessing']['resample']['target_sr']
+    input_size = constant_value.window_length * sr
     band_num = len(constant_value.filter_banks)
 
     model_name = constant_value.MODELS[model_id]

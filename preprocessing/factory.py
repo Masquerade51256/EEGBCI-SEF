@@ -1,6 +1,6 @@
 # src/preprocessing/factory.py
 from typing import Dict, Any, Type
-from preprocessing.baseProcessor import BaseProcessor
+from preprocessing.base_processor import BaseProcessor
 from preprocessing.filterbank import FilterBankProcessor
 from preprocessing.resample import ResampleProcessor
 from preprocessing.artifact_removal import ArtifactRemovalProcessor

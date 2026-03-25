@@ -30,10 +30,10 @@ class XWStrokeDataset(Dataset):
         # Load dataset metadata from the YAML constant_valueuration file
         self.info = utils.load_config(dataset_info_path)
 
-        self.channels_selected = self.info['dataset']['channels_selected']
-        self.sample_rate = self.info['dataset']['sample_rate']
-        self.data_dir = self.info['dataset']['data_dir']
-        
+        self.channels_selected = self.info['channels_selected']
+        self.sample_rate = self.info['sample_rate']
+        self.data_dir = self.info['data_dir']
+
         # Assuming constant_value.window_length and constant_value.window_stride are defined globally
         self.window_len_samples = int(constant_value.window_length * self.sample_rate)
         self.window_stride_samples = int(constant_value.window_stride * self.sample_rate)

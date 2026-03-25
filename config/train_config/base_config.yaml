@@ -17,19 +17,9 @@ model_id: 3
 # Mode
 # is_test = False
 
-# Preprocessing Config
-Preprocessing:
-  window_length: 2
-  window_stride: 1
-  filter_banks:
-    - [4, 40]
-  need_resample: False
-  target_sample_rate: 250
-
-
 # Training Config
 Training:
-  target_subjects: [1,2,3,4,5,6,7,8,9]
+  target_subjects: [1]
   train_device: 'cuda'
   batch_size: 16
   num_epochs: 30

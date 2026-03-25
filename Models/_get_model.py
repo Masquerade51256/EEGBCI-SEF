@@ -13,7 +13,7 @@ def get_model(model_id, dataset_info):
     channels_num = len(dataset_info['preprocessing']['channel_selection']['channels_to_select'])
     class_num = dataset_info['dataset']['num_classes']
     sr = dataset_info['preprocessing']['resample']['target_sr']
-    input_size = constant_value.window_length * sr
+    input_size = int(dataset_info['preprocessing']['windowing']['window_length_sec'] * sr)
     band_num = len(constant_value.filter_banks)
 
     model_name = constant_value.MODELS[model_id]

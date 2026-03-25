@@ -1,13 +1,14 @@
 from torch.utils.data import Dataset
 from preprocessing.slide_windows import SlidingWindowSegmenter
 from preprocessing.filter_banks import FilterBankProcessor
-# from braindecode.preprocessing import Preprocessor, preprocess, PreprocessingPipeline
+import numpy as np
 
 class BaseDataset(Dataset):
     def __init__(self, 
-                 subject_id: int, dataset_info: dict, transform=None):
+                 subject_id: int, dataset_info: dict, transform=None, is_test=False):
         self.subject_id = subject_id
         self.transform = transform
+        self.is_test = is_test
 
         # Load dataset metadata from the YAML configuration file
         self.info = dataset_info
@@ -50,7 +51,11 @@ class BaseDataset(Dataset):
     def _load_and_process_subject_data(self,):
          # 1. Construct file path and load raw data
         raw_eeg_data, raw_labels = self._load_raw_data()  # raw_eeg_data: (n_sessions, n_all_channels, n_timepoints)
-
+        raw_eeg_data = np.array(raw_eeg_data)
+        raw_labels = np.array(raw_labels)
+        if raw_eeg_data.shape[0] == 1:
+            raw_eeg_data = raw_eeg_data[0]  # 如果第一维是1，去掉这一维
+        print(f"[Subject {self.subject_id}] Raw data shape: {raw_eeg_data.shape}, Raw labels shape: {raw_labels.shape}")
         # 2. Channel selection
         selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
 

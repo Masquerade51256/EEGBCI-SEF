@@ -1,47 +1,17 @@
-from glob import glob
-from tqdm import tqdm
 import mne
-import torch
 import scipy
 import numpy as np
 from typing import List, Union, Dict, Optional, Tuple
-import pandas as pd
 import os
 
 from preprocessing.bandpass import bandpass_filter
-import constant_value
 # from preprocessing.pipline import FilterBankProcessor, ExponentialMovingStandardizeProcessor
 from dataloader._dataset_Base import BaseDataset
 
 
 class BCICompet2aIV(BaseDataset):
 
-    def _load_and_process_subject_data(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """主流程：加载、预处理、并组织单个受试者的数据，输出格式与XWStroke一致。"""
-        # 1. 加载原始数据和标签
-        raw_data_per_session, raw_labels = self._load_bci_raw_data()
-        # raw_data_per_session: list of (n_trials, n_channels, n_times)
-        # raw_labels: (n_total_trials,)
-        
-        # 2. 通道选择（如果配置中指定了）
-        if self.channels_selected is not None:
-            selected_data = [session[:, self.channels_selected, :] for session in raw_data_per_session]
-        else:
-            selected_data = raw_data_per_session
-        
-        # 3. 应用滤波器组预处理
-        # 将试次列表合并为一个数组以便处理: (n_total_trials, n_channels, n_times)
-        all_trials = np.concatenate(selected_data, axis=0)
-        processed_data = self._apply_filterbank_preprocessing(all_trials)  # 输出: (n_trials, n_bands, n_channels, n_times)
-        
-        # 4. 滑动窗口分割（为每个试次生成窗口）
-        # 在BCI数据中，通常每个试次已经是一个完整的 trials，但为了与XW保持一致，我们仍可进行窗口化
-        # 这里将每个试次视为一个独立的“session”用于分组
-        final_data, final_labels, final_group_ids = self._apply_sliding_window_to_trials(processed_data, raw_labels)
-        
-        return final_data, final_labels, final_group_ids
-
-    def _load_bci_raw_data(self) -> Tuple[List[np.ndarray], np.ndarray]:
+    def _load_raw_data(self) -> Tuple[List[np.ndarray], np.ndarray]:
         """
         简化版本：直接加载目标受试者的文件
         """
@@ -49,8 +19,8 @@ class BCICompet2aIV(BaseDataset):
         file_suffix = 'T' if not self.is_test else 'E'
         
         # 直接构建目标文件名
-        target_gdf_file = f'{self.base_path}/A{self.subject_id:02d}{file_suffix}.gdf'
-        target_mat_file = f'{self.base_path}/A{self.subject_id:02d}{file_suffix}.mat'
+        target_gdf_file = f'{self.data_dir}/A{self.subject_id:02d}{file_suffix}.gdf'
+        target_mat_file = f'{self.data_dir}/A{self.subject_id:02d}{file_suffix}.mat'
         
         # 检查文件是否存在
         if not os.path.exists(target_gdf_file):
@@ -103,8 +73,6 @@ class BCICompet2aIV(BaseDataset):
                             baseline=None,
                             preload=True)
         
-        if self.downsampling != 0:
-            epochs = epochs.resample(self.downsampling)
         self.fs = epochs.info['sfreq']
         
         # 获取数据
@@ -125,45 +93,45 @@ class BCICompet2aIV(BaseDataset):
         
         return session_data, label_list
     
-    # def _exponential_moving_standardize(self, data, init_block_size, factor_new=0.001):
-    #     """指数移动标准化（修正版）"""
-    #     import pandas as pd
-    #     import numpy as np
+    def _exponential_moving_standardize(self, data, init_block_size, factor_new=0.001):
+        """指数移动标准化（修正版）"""
+        import pandas as pd
+        import numpy as np
         
-    #     # 确保数据形状是 (n_channels, n_times)
-    #     if data.shape[0] != 22:  # 假设22是通道数
-    #         # 如果输入是 (n_times, n_channels)，则转置
-    #         if data.shape[1] == 22:
-    #             data = data.T
-    #         else:
-    #             # 尝试自动推断
-    #             if data.shape[0] > data.shape[1]:
-    #                 data = data.T
+        # 确保数据形状是 (n_channels, n_times)
+        if data.shape[0] != 22:  # 假设22是通道数
+            # 如果输入是 (n_times, n_channels)，则转置
+            if data.shape[1] == 22:
+                data = data.T
+            else:
+                # 尝试自动推断
+                if data.shape[0] > data.shape[1]:
+                    data = data.T
         
-    #     df = pd.DataFrame(data.T)
-    #     meaned = df.ewm(alpha=factor_new).mean()
-    #     demeaned = df - meaned
-    #     squared = demeaned * demeaned
-    #     square_ewmed = squared.ewm(alpha=factor_new).mean()
-    #     standardized = demeaned / np.maximum(1e-4, np.sqrt(np.array(square_ewmed)))
-    #     standardized = np.array(standardized)  # 形状: (n_times, n_channels)
+        df = pd.DataFrame(data.T)
+        meaned = df.ewm(alpha=factor_new).mean()
+        demeaned = df - meaned
+        squared = demeaned * demeaned
+        square_ewmed = squared.ewm(alpha=factor_new).mean()
+        standardized = demeaned / np.maximum(1e-4, np.sqrt(np.array(square_ewmed)))
+        standardized = np.array(standardized)  # 形状: (n_times, n_channels)
         
-    #     if init_block_size is not None:
-    #         # 计算初始块的标准化
-    #         i_time_axis = 1  # 原始数据中时间轴是第1维
-    #         # 从原始数据中取初始块
-    #         init_data = data[..., :init_block_size]
-    #         # 沿着时间轴计算均值和标准差
-    #         init_mean = np.mean(init_data, axis=i_time_axis, keepdims=True)
-    #         init_std = np.std(init_data, axis=i_time_axis, keepdims=True)
-    #         init_block_standardized = (init_data - init_mean) / np.maximum(1e-4, init_std)
-    #         # 注意: init_block_standardized 形状是 (n_channels, init_block_size)
-    #         # 而 standardized[:init_block_size, :] 需要形状 (init_block_size, n_channels)
-    #         # 所以需要转置
-    #         standardized[:init_block_size, :] = init_block_standardized.T
+        if init_block_size is not None:
+            # 计算初始块的标准化
+            i_time_axis = 1  # 原始数据中时间轴是第1维
+            # 从原始数据中取初始块
+            init_data = data[..., :init_block_size]
+            # 沿着时间轴计算均值和标准差
+            init_mean = np.mean(init_data, axis=i_time_axis, keepdims=True)
+            init_std = np.std(init_data, axis=i_time_axis, keepdims=True)
+            init_block_standardized = (init_data - init_mean) / np.maximum(1e-4, init_std)
+            # 注意: init_block_standardized 形状是 (n_channels, init_block_size)
+            # 而 standardized[:init_block_size, :] 需要形状 (init_block_size, n_channels)
+            # 所以需要转置
+            standardized[:init_block_size, :] = init_block_standardized.T
         
-    #     # 返回转置后的结果，使形状变回 (n_channels, n_times)
-    #     return standardized.T
+        # 返回转置后的结果，使形状变回 (n_channels, n_times)
+        return standardized.T
 
     def _apply_filterbank_preprocessing(self, eeg_data: np.ndarray) -> np.ndarray:
         """

@@ -5,7 +5,7 @@ DATASETS = {
     2: 'BCICIV2b',
     3: 'XWStroke',
 }
-SELECTED_DATASET = 3
+SELECTED_DATASET = 1
 # target_subjects = list(range(1,51))
 # target_subjects = list(range(1,10))
 target_subjects = [1]
@@ -23,7 +23,7 @@ SELECTED_MODEL = 3
 is_test = False
 
 # Preprocessing Config
-window_length = 2
+window_length = 3
 window_stride = 1
 filter_banks = [
     [4, 40],

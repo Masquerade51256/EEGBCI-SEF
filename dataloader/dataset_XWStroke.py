@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 # from braindecode.preprocessing import Preprocessor, preprocess, PreprocessingPipeline
 import constant_value
 import utils
-from preprocessing import bandpass
+from preprocessing.filter_banks import bandpass_filter
 
 class XWStrokeDataset(Dataset):
     """
@@ -67,7 +67,7 @@ class XWStrokeDataset(Dataset):
         print(eeg_data.shape)
         band_data_list = []
         for band_idx, (l_freq, h_freq) in enumerate(self.filter_banks):
-            filtered_data = bandpass.bandpass_filter(eeg_data,
+            filtered_data = bandpass_filter(eeg_data,
                                                  low_freq=l_freq,
                                                  high_freq=h_freq,
                                                  sfreq=self.sample_rate)

@@ -10,7 +10,7 @@ import yaml
 import pandas as pd
 import os
 
-from preprocessing.bandpass import bandpass_filter
+from preprocessing.filter_banks import bandpass_filter
 import constant_value  
 
 

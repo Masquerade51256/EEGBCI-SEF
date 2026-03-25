@@ -40,8 +40,7 @@ class BaseDataset(Dataset):
 
     def _load_and_process_subject_data(self,):
          # 1. Construct file path and load raw data
-        file_path = self._get_file_path()
-        raw_eeg_data, raw_labels = self._load_mat_data(file_path)  # raw_eeg_data: (n_sessions, n_all_channels, n_timepoints)
+        raw_eeg_data, raw_labels = self._load_raw_data()  # raw_eeg_data: (n_sessions, n_all_channels, n_timepoints)
 
         # 2. Channel selection
         selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)

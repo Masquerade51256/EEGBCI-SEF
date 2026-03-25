@@ -2,7 +2,7 @@ import os
 import math
 import logging
 from sklearn.model_selection import GroupKFold
-from tomlkit import datetime
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -18,6 +18,9 @@ from utils import load_config
 config = load_config("config/train_config/base_config.yaml")
 train_device = torch.device(config['Training']['train_device'] if torch.cuda.is_available() else "cpu")
 print(f"Using device: {train_device}")
+
+if torch.cuda.is_available():
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
 DATASET_NAME = constant_value.DATASETS[config['dataset_id']]
 MODEL_NAME = constant_value.MODELS[config['model_id']]
@@ -176,6 +179,7 @@ def train_model(model, dataset, train_config, subject_id=None):
     """
     weight_decay = train_config['Training']['weight_decay']
     initial_learning_rate = train_config['Training']['learning_rate']
+    # print(f"Training configuration: LR={type(initial_learning_rate).__name__}: {initial_learning_rate}, WD={type(weight_decay).__name__}: {weight_decay}")
     num_epochs = train_config['Training']['num_epochs']
     batch_size = train_config['Training']['batch_size']
     num_folds = train_config['Training']['k_folds']
@@ -199,7 +203,9 @@ def train_model(model, dataset, train_config, subject_id=None):
                                  generator=torch.Generator(device=train_device))
 
         # Re-initialize model and optimizer for each fold
-        # fold_model = get_model(constant_value.SELECTED_MODEL).to(train_device)
+        # info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")
+        # dataset_info = load_config(info_path)
+        # fold_model = get_model(train_config['model_id'],dataset_info).to(train_device)
         fold_model = model # 此处使用传入的model实例，不需要每次都调用getmodel方法重新初始化
         criterion = nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(fold_model.parameters(), lr=initial_learning_rate, weight_decay=weight_decay)
@@ -291,6 +297,7 @@ def main():
         logger.info(f"{'='*60}")
 
         # Load single subject data
+        # subject_dataset = load_single_subject_data(config['dataset_id'], subject_id, dataset_info)
         subject_dataset = load_single_subject_data(config['dataset_id'], subject_id, dataset_info)
         # Build model
         model_instance = get_model(config['model_id'], dataset_info).to(train_device)

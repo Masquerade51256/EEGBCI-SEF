@@ -1,9 +1,8 @@
 import os
 import math
 import logging
-from sklearn.model_selection import KFold
 from sklearn.model_selection import GroupKFold
-from tomlkit import datetime
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
@@ -18,7 +17,9 @@ from models.get_model import get_model
 # ==================== Configuration & Setup ====================
 train_device = torch.device(constant_value.train_device if torch.cuda.is_available() else "cpu")
 print(f"Using device: {train_device}")
-torch.set_default_tensor_type(torch.cuda.FloatTensor)
+
+if torch.cuda.is_available():
+    torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
 DATASET_NAME = constant_value.DATASETS[constant_value.SELECTED_DATASET]
 MODEL_NAME = constant_value.MODELS[constant_value.SELECTED_MODEL]

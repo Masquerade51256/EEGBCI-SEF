@@ -80,28 +80,12 @@ class XWStrokeDataset(BaseDataset):
         print(all_group_ids.shape)
         return all_windowed_data, all_windowed_labels, all_group_ids
 
-    def _load_and_process_subject_data(self):
-        """Main pipeline: loads, preprocesses, and windows a single subject's data."""
-        # 1. Construct file path and load raw data
+    def _load_raw_data(self):
+        """Constructs the file path for the subject's data based on the dataset info."""
         file_name = f"sub-{self.subject_id:02d}_task-motor-imagery_eeg.mat"
         file_path = os.path.join(self.data_dir, f"sub-{self.subject_id:02d}", file_name)
-
-        raw_eeg_data, raw_labels = self._load_mat_data(file_path)  # raw_eeg_data: (n_sessions, n_all_channels, n_timepoints)
-
-        # 2. Channel selection
-        selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
-
-        # 3. Apply preprocessing pipeline (Filtering + Normalization)
-        processed_eeg_data = self._apply_preprocessing(selected_eeg_data)  # (n_sessions, n_selected_channels, n_timepoints)
-
-        # 4. Label shift (1,2 to 0,1)
-        adjusted_labels = raw_labels - 1
-
-        # 5. Sliding window segmentation
-        final_data, final_labels, final_group_ids = self._apply_sliding_window(processed_eeg_data, adjusted_labels)
-
-        print(f"[Subject {self.subject_id}] Data loaded. Final data shape: {final_data.shape}, Label shape: {final_labels.shape}")
-        return final_data, final_labels, final_group_ids
+        data, labels = self._load_mat_data(file_path)
+        return data, labels
 
     def __len__(self):
         return len(self.data)
@@ -111,8 +95,8 @@ class XWStrokeDataset(BaseDataset):
         label = self.labels[idx]
         group_id = self.group_ids[idx]
 
-        if self.transform:
-            data = self.transform(data)
+        # if self.transform:
+        #     data = self.transform(data)
 
         # Data is returned as a NumPy array. Conversion to PyTorch Tensor can be done here or via a collate_fn in the DataLoader.
         # Example: data = torch.from_numpy(data).float()

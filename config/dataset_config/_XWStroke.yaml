@@ -5,6 +5,7 @@ dataset:
   sample_rate: 1000
   num_channels: 22
   num_classes: 2
+  labels: [1, 2]  # 1: Left hand, 2: Right hand
   
   channels_selected: [0, 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12]
   window_length_sec: 2.0
@@ -29,8 +30,8 @@ preprocessing:
       normalize: true
 
   windowing:
-    - window_length_sec: 2.0
-      window_stride_sec: 1.0
+    window_length_sec: 2.0
+    window_stride_sec: 1.0
 
   sample_pipeline:
     - name: "temporal_standardization"

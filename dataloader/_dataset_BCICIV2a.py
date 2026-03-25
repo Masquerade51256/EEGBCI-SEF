@@ -243,8 +243,6 @@ class BCICompet2aIV(BaseDataset):
         
         return all_windowed_data, all_windowed_labels, all_group_ids
 
-    def __len__(self):
-        return len(self.data)
 
     def __getitem__(self, idx):
         data = self.data[idx]  # 形状: (n_bands, n_channels, window_len)

@@ -2,7 +2,6 @@ import numpy as np
 import scipy.io
 import os
 from torch.utils.data import Dataset
-# from braindecode.preprocessing import Preprocessor, preprocess, PreprocessingPipeline
 import constant_value
 import yaml
 from preprocessing import bandpass
@@ -25,6 +24,13 @@ class XWStrokeDataset(BaseDataset):
         except KeyError:
             raise KeyError(f"File structure does not match expectations: {file_path}")
 
+    def _load_raw_data(self):
+        """Constructs the file path for the subject's data based on the dataset info."""
+        file_name = f"sub-{self.subject_id:02d}_task-motor-imagery_eeg.mat"
+        file_path = os.path.join(self.data_dir, f"sub-{self.subject_id:02d}", file_name)
+        data, labels = self._load_mat_data(file_path)
+        return data, labels
+
     def _apply_preprocessing(self, eeg_data):
         """
         Applies filter bank preprocessing to the EEG data.
@@ -44,7 +50,6 @@ class XWStrokeDataset(BaseDataset):
             band_data_list.append(normalized_band_data)
         multi_band_data = np.concatenate(band_data_list, axis=1)
         return multi_band_data
-
 
     def _apply_sliding_window(self, processed_data, labels):
         """
@@ -79,25 +84,3 @@ class XWStrokeDataset(BaseDataset):
         all_group_ids = np.array(all_group_ids, dtype=np.int64)
         print(all_group_ids.shape)
         return all_windowed_data, all_windowed_labels, all_group_ids
-
-    def _load_raw_data(self):
-        """Constructs the file path for the subject's data based on the dataset info."""
-        file_name = f"sub-{self.subject_id:02d}_task-motor-imagery_eeg.mat"
-        file_path = os.path.join(self.data_dir, f"sub-{self.subject_id:02d}", file_name)
-        data, labels = self._load_mat_data(file_path)
-        return data, labels
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        data = self.data[idx]  # Shape: (n_channels, window_len_samples)
-        label = self.labels[idx]
-        group_id = self.group_ids[idx]
-
-        # if self.transform:
-        #     data = self.transform(data)
-
-        # Data is returned as a NumPy array. Conversion to PyTorch Tensor can be done here or via a collate_fn in the DataLoader.
-        # Example: data = torch.from_numpy(data).float()
-        return data, label

@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 from preprocessing.slide_windows import SlidingWindowSegmenter
 from preprocessing.filter_banks import FilterBankProcessor
+from preprocessing.resample import ResampleProcessor
 import numpy as np
 import pandas as pd
 
@@ -16,11 +17,9 @@ class BaseDataset(Dataset):
         self.data_dir = self.info['dataset']['data_dir']
 
         self.channels_selected = self.info['preprocessing']['channel_selection']['channels_to_select']
-        self.sample_rate = self.info['preprocessing']['resample']['target_sr']
-
-        # Assuming constant_value.window_length and constant_value.window_stride are defined globally
-        self.window_len_samples = int(self.info['preprocessing']["windowing"]['window_length_sec'] * self.sample_rate)
-        self.window_stride_samples = int(self.info['preprocessing']["windowing"]['window_stride_sec'] * self.sample_rate)
+        self.original_sr = self.info['dataset']['original_sr']
+        self.target_sr = self.info['preprocessing']['resample']['target_sr']
+        self.sample_rate = self.original_sr
 
         # Build preprocessing pipeline
         self.filter_banks = self.info['preprocessing']['filter_bank']['filter_banks']
@@ -55,13 +54,19 @@ class BaseDataset(Dataset):
         if raw_eeg_data.shape[0] == 1:
             raw_eeg_data = raw_eeg_data[0]  # 如果第一维是1，去掉这一维
         print(f"[Subject {self.subject_id}] Raw data shape: {raw_eeg_data.shape}, Raw labels shape: {raw_labels.shape}")
+        
         # 2. Channel selection
         selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
 
-        # 3. Apply preprocessing pipeline (Filtering + Normalization)
-        # processed_eeg_data = self._apply_preprocessing(selected_eeg_data)  # (n_sessions, n_selected_channels, n_timepoints)
-        filer_bank_processor = FilterBankProcessor(filter_banks=self.filter_banks, sample_rate=self.sample_rate)
-        processed_eeg_data = filer_bank_processor(selected_eeg_data)
+        # 3. Apply preprocessing pipeline
+
+        # resample
+        resample_processor = ResampleProcessor(target_sfreq=self.target_sr, original_sfreq=self.original_sr)
+        resampled_data = resample_processor.process(selected_eeg_data)
+        self.sample_rate = self.target_sr
+        # filter bank
+        filter_bank_processor = FilterBankProcessor(filter_banks=self.filter_banks, sample_rate=self.sample_rate)
+        processed_eeg_data = filter_bank_processor(resampled_data)
 
         # 4. Label shift (1,2 to 0,1)
         if min(self.info['dataset']['labels']) == 1:
@@ -70,7 +75,8 @@ class BaseDataset(Dataset):
             adjusted_labels = raw_labels
 
         # 5. Sliding window segmentation
-        
+        self.window_len_samples = int(self.info['preprocessing']["windowing"]['window_length_sec'] * self.sample_rate)
+        self.window_stride_samples = int(self.info['preprocessing']["windowing"]['window_stride_sec'] * self.sample_rate)
         windows_segmenter = SlidingWindowSegmenter(self.window_len_samples, self.window_stride_samples)
         final_data, final_labels, final_group_ids = windows_segmenter(processed_eeg_data, labels = adjusted_labels) # 基类中使用**keywords传递参数，所以需要显式说明labels参数名
 

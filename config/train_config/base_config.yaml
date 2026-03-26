@@ -4,7 +4,7 @@
 #     2: 'BCICIV2b',
 #     3: 'XWStroke',
 # }
-dataset_id: 3
+dataset_id: 1
 # MODELS = {
 #     1: 'EEGNet',
 #     2: 'CNNLSTM',

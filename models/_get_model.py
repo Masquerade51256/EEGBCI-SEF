@@ -3,6 +3,7 @@ from models.EEGNet import EEGNet
 # from Models.EEGNet_old import EEGNet
 from models.CNNLSTM import CNNLSTM, MultiBand_CNNLSTM, Simplified_MultiBand_CNNLSTM
 from models.myADFCNN import ADFCNN
+from models.FBCNN import FilterBankCNN
 import constant_value
 import os
 import utils
@@ -27,5 +28,7 @@ def get_model(model_id, dataset_info):
         return MultiBand_CNNLSTM(channels_num=channels_num, bands_num=band_num, class_num=class_num, input_length=input_size)
     elif model_name == 'Simplified_MultiBand_CNNLSTM':
         return Simplified_MultiBand_CNNLSTM(channels_num=channels_num, bands_num=band_num, class_num=class_num, input_length=input_size)
+    elif model_name == 'FilterBankCNN':
+        return FilterBankCNN(n_filterbanks=band_num, n_channels=channels_num, n_times=input_size, n_classes=class_num)
     else:
         raise ValueError(f"Unknown model name: {model_name}")

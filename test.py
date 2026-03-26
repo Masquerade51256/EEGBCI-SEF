@@ -2,15 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 数据定义
-subjects = [7, 11, 22, 40, 45]  # 横坐标Subject ID
+# subjects = [7, 11, 22, 40, 45]  # 横坐标Subject ID
+# subjects = [3, 17, 25, 26, 31]  # 横坐标Subject ID
+subjects = [3, 7, 17, 22, 26, 40, 45]  # 横坐标Subject ID
 
-# 第一张图数据（未使用数据增强） - 基于描述，使用代理值
-# 注：原始第一张图数据对应Subject ID 5、10、20、40、45，这里映射到指定ID
-no_augmentation = [0.746, 0.871, 0.767, 0.758, 0.887]  # 对应subjects顺序
+# 第一张图数据（未使用数据增强）
+no_augmentation = [0.692, 0.746, 0.600, 0.767, 0.604, 0.758, 0.887]  # 对应subjects顺序
 
-# 第二张图数据（使用数据增强） - 基于描述，使用代理值
-# 注：原始第二张图数据对应Subject ID 7、11、22、40、45
-with_augmentation = [0.783, 0.854, 0.783, 0.783, 0.896]  # 对应subjects顺序
+# 第二张图数据（使用数据增强）
+with_augmentation = [0.713, 0.783, 0.633, 0.783, 0.629, 0.783, 0.896]  # 对应subjects顺序
 
 # 绘图设置
 x = np.arange(len(subjects))  # x轴位置

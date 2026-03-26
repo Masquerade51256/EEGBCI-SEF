@@ -16,6 +16,7 @@ MODELS = {
     3: 'ADFCNN',
     4: 'MultiBand_CNNLSTM',
     5: 'Simplified_MultiBand_CNNLSTM',
+    6: 'FilterBankCNN',
 }
 SELECTED_MODEL = 3
 

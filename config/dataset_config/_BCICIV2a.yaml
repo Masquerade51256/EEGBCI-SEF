@@ -6,7 +6,7 @@ dataset:
   num_channels: 22
   num_classes: 4
   num_subjects: 9
-  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  subjects: [1]
   labels: [0, 1, 2, 3]  # 0: Left hand, 1: Right hand, 2: Foot, 3: Tongue
   
 
@@ -24,7 +24,14 @@ preprocessing:
 
   filter_bank:
     filter_banks:
-      - [4, 40]
+      - [4, 12]
+      - [8, 16]
+      - [12, 20]
+      - [16, 24]
+      - [20, 28]
+      - [24, 32]
+      - [28, 36]
+      - [32, 40]
     normalize: true
 
   normalization:
@@ -32,21 +39,21 @@ preprocessing:
     axis: -1  # Standardize along time dimension
 
   augmentation:
-    guassian_noise:
-      method: "add_noise"
+  # if dont want to use an augmentation, set its probability to 0
+    - method: "add_noise"
       snr_db: 20
-      probability: 0.5
+      # probability: 0.6
+      probability: 0
 
-    channel_dropout:
-      method: "channel_dropout"
+    - method: "channel_dropout"
       dropout_rate: 0.1
-      probability: 0.3
+      # probability: 0.3
+      probability: 0
 
-    time_warp:
-      method: "time_warp"
+    - method: "time_warp"
       sigma: 0.2
-      probability: 0.4
-
+      # probability: 0.4
+      probability: 0
 
 pipelines:
   global_pipeline:

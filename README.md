@@ -49,27 +49,32 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 
 - Please download **XuanWu** dataset from [this site](https://figshare.com/articles/dataset/EEG_datasets_of_stroke_patients/21679035/5), decompress and put all contents (especially `sourcedata`) into `src\datasets\21679035`.
 
-- Please download **BCICompetetion IV 2a** dataset from [this site](https://www.bbci.de/competition/iv/#download), and the true lable from [this site](https://www.bbci.de/competition/iv/results/ds2a/true_labels.zip). Decompress and put all files (including `.gdf` & `.mat`) into dir `src\datasets\BCICIV_2a`
+- Please download **BCICompetetion IV 2a** dataset from [this site](https://www.bbci.de/competition/iv/#download), and the true lable from [this site](https://www.bbci.de/competition/iv/results/ds2a/true_labels.zip). Decompress and put all files (including `.gdf` & `.mat`) into direction `src\datasets\BCICIV_2a`
 
   
 
 ### 3. Run Experiment
 
-- You can change Model, Dataset and other configuration in file `constant_value`. (It will be updated, and finally deprecated, in subsequent versions)
-
 - Just run `python train.py`
+  - You can run `python _train.py` now. It is a more elegant implementation, but still under updating.
+
+- You can change **Model**, **Dataset** and **other training configuration** in file `constant_value`. (It will be updated, and finally deprecated, in subsequent versions)
+  - For `_train.py`, you need change **these** configuration in the file `config/train_config/base_config.yaml`; while some other database relevant configuration in the file `config/data_config/DATASETNAME_config.yaml`
+
 
 ### 4. Check Results
 
-Training script will save figures to dir `src\result\DATASET\MODEL`.
+- Training script will save figures to direction `src\result\DATASETNAME\MODELNAME`.
 
-:warning: For now, the figures could be **COVERED** by new training procedures.
+:warning: For now, the figures would be **COVERED** by new training procedures.
 
 
 
 ## :open_file_folder: How to Extend
 
+### 1. New Dataset
 
+### 2. New Model
 
 
 

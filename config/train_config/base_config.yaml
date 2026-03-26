@@ -15,14 +15,15 @@ dataset_id: 3
 model_id: 3
 
 # Mode
-# is_test = False
+model: "train"  # "train", "evaluate", "predict"
 
 # Training Config
 Training:
   target_subjects: "all"
   train_device: 'cuda'
-  batch_size: 16
+  batch_size: 32
   num_epochs: 200
   learning_rate: 0.001
-  weight_decay: 0.075
+  weight_decay: 0.5
   k_folds: 5
+  random_seed: 42

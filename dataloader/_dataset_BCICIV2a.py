@@ -11,7 +11,7 @@ class BCICompet2aIV(BaseDataset):
     def _load_raw_data(self):
 
         # 文件命名规则：T为训练，E为评估
-        file_suffix = 'T' if not self.is_test else 'E'
+        file_suffix = 'T' if self.mode == "train" else 'E'
         
         # 直接构建目标文件名
         target_gdf_file = f'{self.data_dir}/A{self.subject_id:02d}{file_suffix}.gdf'
@@ -50,7 +50,7 @@ class BCICompet2aIV(BaseDataset):
         
         # 定义事件ID
         tmin, tmax = 0, 3
-        if not self.is_test:
+        if self.mode == "train":
             if self.subject_id != 4:
                 event_id = {'769': 7, '770': 8, '771': 9, '772': 10}
             else:

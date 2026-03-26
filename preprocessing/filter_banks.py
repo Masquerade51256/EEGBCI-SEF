@@ -54,13 +54,14 @@ class FilterBankProcessor(BaseProcessor):
                 # 调用统一的滤波函数
                 filtered_data[t] = bandpass_filter(data[t], low_freq=l_freq, high_freq=h_freq, sfreq=self.sample_rate)
             # 逐通道标准化
-            mean = filtered_data.mean(axis=-1, keepdims=True)
-            std = filtered_data.std(axis=-1, keepdims=True)
-            std[std < 1e-8] = 1.0
-            normalized_band_data = (filtered_data - mean) / std
+            # mean = filtered_data.mean(axis=-1, keepdims=True)
+            # std = filtered_data.std(axis=-1, keepdims=True)
+            # std[std < 1e-8] = 1.0
+            # normalized_band_data = (filtered_data - mean) / std
             # 增加频带维度
-            normalized_band_data = normalized_band_data[:, np.newaxis, :, :]
-            band_data_list.append(normalized_band_data)
+            # normalized_band_data = normalized_band_data[:, np.newaxis, :, :]
+            filtered_data = filtered_data[:, np.newaxis, :, :]
+            band_data_list.append(filtered_data)
         
         multi_band_data = np.concatenate(band_data_list, axis=1)  # (n_trials, n_bands, n_channels, n_times)
         

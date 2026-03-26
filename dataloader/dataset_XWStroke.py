@@ -64,7 +64,6 @@ class XWStrokeDataset(Dataset):
         """
         Applies filter bank preprocessing to the EEG data.
         """
-        print(eeg_data.shape)
         band_data_list = []
         for band_idx, (l_freq, h_freq) in enumerate(self.filter_banks):
             filtered_data = bandpass_filter(eeg_data,

@@ -1,17 +1,19 @@
 from torch.utils.data import Dataset
+import torch
 from preprocessing.slide_windows import SlidingWindowSegmenter
 from preprocessing.filter_banks import FilterBankProcessor
 from preprocessing.resample import ResampleProcessor
+from preprocessing.data_augmentation import DataAugmentationProcessor
 # from preprocessing.artifact_removal import ArtifactRemovalProcessor
 import numpy as np
 import pandas as pd
 
 class BaseDataset(Dataset):
     def __init__(self, 
-                 subject_id: int, dataset_info: dict, transform=None, is_test=False):
+                 subject_id: int, dataset_info: dict, transform=None, mode="train"):
         self.subject_id = subject_id
         self.transform = transform
-        self.is_test = is_test
+        self.mode = mode
 
         # Load dataset metadata from the YAML configuration file
         self.info = dataset_info
@@ -32,6 +34,8 @@ class BaseDataset(Dataset):
 
         # Load and process the subject's data
         self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
+
+        self.aug_pipeline = DataAugmentationProcessor(methods=self.info['preprocessing']['augmentation'])
         print(f"[{self.info['dataset']['name']} Subject {self.subject_id}] Data loaded. Final shape: {self.data.shape}, Labels: {self.labels.shape}")
 
     def __len__(self):
@@ -44,8 +48,11 @@ class BaseDataset(Dataset):
 
         if self.transform:
             data = self.transform(data)
+        if self.mode == "train" and self.aug_pipeline:
+            data = self.aug_pipeline.process(data)
 
-        return data, label
+
+        return torch.from_numpy(data).float(), label
 
     def _load_and_process_subject_data(self,):
          # 1. Construct file path and load raw data

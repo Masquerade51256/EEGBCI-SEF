@@ -6,14 +6,15 @@ dataset:
   num_channels: 33
   num_classes: 2
   num_subjects: 50
-  subjects: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]
+  # subjects: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]
+  subjects: [7, 11, 22, 40, 45]
   EOG_channels: [30,31]
   labels: [1, 2]  # 1: Left hand, 2: Right hand
   
 
 preprocessing:
   windowing:
-    window_length_sec: 2.0
+    window_length_sec: 3.0
     window_stride_sec: 1.0
 
   resample:
@@ -32,18 +33,16 @@ preprocessing:
     axis: -1  # Standardize along time dimension
 
   augmentation:
-    guassian_noise:
-      method: "add_noise"
+  # if dont want to use an augmentation, set its probability to 0
+    - method: "add_noise"
       snr_db: 20
-      probability: 0.5
+      probability: 0.6
 
-    channel_dropout:
-      method: "channel_dropout"
+    - method: "channel_dropout"
       dropout_rate: 0.1
       probability: 0.3
 
-    time_warp:
-      method: "time_warp"
+    - method: "time_warp"
       sigma: 0.2
       probability: 0.4
 
@@ -58,10 +57,6 @@ pipelines:
     - name: "temporal_standardization"
 
   augmentation_pipeline:
-    train:  # Only applied in training mode
-      - name: "gaussian_noise"
-      - name: "channel_dropout"
-      - name: "time_warp"
-    
-    val: []  # No augmentation for validation
-    test: [] # No augmentation for testing
+    - "gaussian_noise"
+    - "channel_dropout"
+    - "time_warp"

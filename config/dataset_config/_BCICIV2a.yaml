@@ -5,6 +5,8 @@ dataset:
   original_sr: 250
   num_channels: 22
   num_classes: 4
+  num_subjects: 9
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   labels: [0, 1, 2, 3]  # 0: Left hand, 1: Right hand, 2: Foot, 3: Tongue
   
 

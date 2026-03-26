@@ -4,7 +4,7 @@
 #     2: 'BCICIV2b',
 #     3: 'XWStroke',
 # }
-dataset_id: 1
+dataset_id: 3
 # MODELS = {
 #     1: 'EEGNet',
 #     2: 'CNNLSTM',
@@ -19,7 +19,7 @@ model_id: 3
 
 # Training Config
 Training:
-  target_subjects: [1]
+  target_subjects: "all"
   train_device: 'cuda'
   batch_size: 16
   num_epochs: 30

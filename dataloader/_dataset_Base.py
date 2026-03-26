@@ -2,6 +2,7 @@ from torch.utils.data import Dataset
 from preprocessing.slide_windows import SlidingWindowSegmenter
 from preprocessing.filter_banks import FilterBankProcessor
 from preprocessing.resample import ResampleProcessor
+# from preprocessing.artifact_removal import ArtifactRemovalProcessor
 import numpy as np
 import pandas as pd
 
@@ -55,18 +56,26 @@ class BaseDataset(Dataset):
             raw_eeg_data = raw_eeg_data[0]  # 如果第一维是1，去掉这一维
         print(f"[Subject {self.subject_id}] Raw data shape: {raw_eeg_data.shape}, Raw labels shape: {raw_labels.shape}")
         
-        # 2. Channel selection
-        selected_eeg_data = raw_eeg_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
+        
 
-        # 3. Apply preprocessing pipeline
+        # 2. Apply preprocessing pipeline
 
-        # resample
+        # Resample
         resample_processor = ResampleProcessor(target_sfreq=self.target_sr, original_sfreq=self.original_sr)
-        resampled_data = resample_processor.process(selected_eeg_data)
+        resampled_data = resample_processor.process(raw_eeg_data)
         self.sample_rate = self.target_sr
-        # filter bank
+
+        # Artifact removal
+        # artifact_removal_processor = ArtifactRemovalProcessor(method='ica', n_components=0.95)
+        # cleaned_data = artifact_removal_processor.process(resampled_data)
+        cleaned_data = resampled_data
+
+        # Channel selection
+        selected_eeg_data = cleaned_data[:, self.channels_selected, :]  # (n_sessions, n_selected_channels, n_timepoints)
+
+        # Filter bank
         filter_bank_processor = FilterBankProcessor(filter_banks=self.filter_banks, sample_rate=self.sample_rate)
-        processed_eeg_data = filter_bank_processor(resampled_data)
+        processed_eeg_data = filter_bank_processor(selected_eeg_data)
 
         # 4. Label shift (1,2 to 0,1)
         if min(self.info['dataset']['labels']) == 1:

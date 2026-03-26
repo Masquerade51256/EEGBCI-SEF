@@ -292,7 +292,11 @@ def main():
     info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")
     dataset_info = load_config(info_path)
 
-    for subject_id in config['Training']['target_subjects']:
+    target_subjects = config['Training']['target_subjects']
+    if target_subjects == "all":
+        target_subjects = dataset_info['dataset']['subjects']
+
+    for subject_id in target_subjects:
         logger.info(f"\n{'='*60}")
         logger.info(f"Processing Subject: {subject_id}")
         logger.info(f"{'='*60}")

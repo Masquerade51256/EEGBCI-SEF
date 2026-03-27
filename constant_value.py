@@ -17,6 +17,7 @@ MODELS = {
     4: 'MultiBand_CNNLSTM',
     5: 'Simplified_MultiBand_CNNLSTM',
     6: 'FilterBankCNN',
+    7: 'FBCNet_Standard',
 }
 SELECTED_MODEL = 3
 

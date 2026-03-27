@@ -4,7 +4,7 @@
 #     2: 'BCICIV2b',
 #     3: 'XWStroke',
 # }
-dataset_id: 1
+dataset_id: 3
 # MODELS = {
 #     1: 'EEGNet',
 #     2: 'CNNLSTM',
@@ -12,6 +12,7 @@ dataset_id: 1
 #     4: 'MultiBand_CNNLSTM',
 #     5: 'Simplified_MultiBand_CNNLSTM',
 #     6: 'FilterBankCNN'
+#     7: 'FBCNet_Standard',
 # }
 model_id: 3
 

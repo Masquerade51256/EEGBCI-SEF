@@ -5,7 +5,7 @@
 #     3: 'XWStroke',
 #     4: 'LowerStroke',
 # }
-dataset_id: 4
+dataset_id: 3
 # MODELS = {
 #     1: 'EEGNet',
 #     2: 'CNNLSTM',
@@ -23,6 +23,10 @@ model: "train"  # "train", "evaluate", "predict"
 # Training Config
 Training:
   target_subjects: "all"
+  # target_subjects: [7, 11, 22, 40, 45]
+  target_subjects: [11]
+  # target_subjects: [4, 5, 13, 14, 18, 24, 28, 33, 42, 43, 47, 48, 49]
+  # target_subjects: [3, 17, 25]
   train_device: 'cuda'
   batch_size: 32
   num_epochs: 200

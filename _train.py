@@ -8,6 +8,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import numpy as np
 
 import constant_value
 from dataloader._get_data import load_single_subject_data
@@ -150,27 +151,36 @@ def plot_subject_comparison(subject_results, save_path):
 
     subject_ids = [res['subject_id'] for res in subject_results]
     avg_accuracies = [res['avg_val_acc'] for res in subject_results]
+    std_accuracies = [res['std_val_acc'] for res in subject_results]
 
-    fig, ax = plt.subplots(figsize=(max(6, len(subject_ids)*0.5), 5))
-    bars = ax.bar(subject_ids, avg_accuracies, color='skyblue', edgecolor='black')
+    overall_mean = np.mean(avg_accuracies)
+    overall_std = np.std(avg_accuracies)
+    overall_info = f'Overall: {overall_mean:.3f} ± {overall_std:.3f}'
+
+    fig, ax = plt.subplots(figsize=(max(6, len(subject_ids)*0.6), 6))
+    bars = ax.bar(subject_ids, avg_accuracies, yerr=std_accuracies,
+                   capsize=5, color='skyblue', edgecolor='black', alpha=0.7, error_kw={'elinewidth': 2, 'capthick': 2})
     ax.set_xlabel('Subject ID')
     ax.set_ylabel('Average Validation Accuracy')
     ax.set_title('Final Model Performance by Subject')
     ax.set_ylim([0, 1.05])
     ax.grid(True, axis='y', alpha=0.3)
+    ax.tick_params(axis='x', rotation=45)  # Rotate subject IDs for better readability if many subjects
 
     # Add value labels on top of bars
-    for bar, acc in zip(bars, avg_accuracies):
+    for bar, acc, std in zip(bars, avg_accuracies, std_accuracies):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2., height + 0.01,
-                f'{acc:.3f}', ha='center', va='bottom', fontsize=9)
+                f'{acc:.3f}±{std:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
 
     plt.tight_layout()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     plot_filename = os.path.join(save_path, f'subject_performance_comparison_{timestamp}.png')
-    plt.savefig(plot_filename, dpi=150)
+    plt.savefig(plot_filename, dpi=150, bbox_inches='tight')
     plt.close(fig)
     logger.info(f"Subject comparison plot saved to: {plot_filename}")
+    # Log the overall statistics as well
+    logger.info(f"Overall performance across {len(subject_ids)} subjects: {overall_info}")
 
 def train_model(model, dataset, train_config, subject_id=None):
     """
@@ -273,11 +283,15 @@ def train_model(model, dataset, train_config, subject_id=None):
         logger.info(f"--- Fold {fold_idx} finished. Best Val Acc: {fold_best_val_accuracy:.4f} ---")
         epoch_progress_bar.close()
 
-    subject_avg_accuracy = sum(fold_best_accuracies) / len(fold_best_accuracies)
-    logger.info(f"===== Subject {subject_id} training complete. Best Accuracy: {subject_avg_accuracy:.4f} =====")
+    subject_folds_mean = np.mean(fold_best_accuracies)
+    subject_folds_std = np.std(fold_best_accuracies)
+    
+    logger.info(f"===== Subject {subject_id} training complete. "
+                f"Best Acc (over {num_folds} folds): {subject_folds_mean:.4f} ± {subject_folds_std:.4f} =====")
+    
     # Note: The function returns the model from the *last* fold.
     # A more robust implementation might return an ensemble or the single best model.
-    return fold_model, fold_training_histories, subject_avg_accuracy
+    return fold_model, fold_training_histories, subject_folds_mean, subject_folds_std
 
 def main():
     """Main execution function."""
@@ -307,11 +321,11 @@ def main():
         # Build model
         model_instance = get_model(config['model_id'], dataset_info).to(train_device)
         # Train model
-        trained_model, subject_history, subject_avg_acc = train_model(model_instance, subject_dataset, config, subject_id)
+        trained_model, subject_history, subject_avg_acc, subject_std_acc = train_model(model_instance, subject_dataset, config, subject_id)
 
         all_subjects_models.append(trained_model)
         all_subjects_history.append({'subject_id': subject_id, 'history': subject_history})
-        all_subjects_results.append({'subject_id': subject_id, 'avg_val_acc': subject_avg_acc})
+        all_subjects_results.append({'subject_id': subject_id, 'avg_val_acc': subject_avg_acc, 'std_val_acc': subject_std_acc})
 
         # Generate and save training history plot for this subject
         plot_training_history(subject_history, os.path.join(output_viz_dir, f"subject_{subject_id}"))

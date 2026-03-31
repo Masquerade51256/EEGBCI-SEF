@@ -34,7 +34,7 @@ class BaseDataset(Dataset):
 
         # Load and process the subject's data
         self.data, self.labels, self.group_ids = self._load_and_process_subject_data()
-
+        
         self.aug_pipeline = DataAugmentationProcessor(methods=self.info['preprocessing']['augmentation'])
         print(f"[{self.info['dataset']['name']} Subject {self.subject_id}] Data loaded. Final shape: {self.data.shape}, Labels: {self.labels.shape}")
 
@@ -61,6 +61,8 @@ class BaseDataset(Dataset):
         raw_labels = np.array(raw_labels)
         if raw_eeg_data.shape[0] == 1:
             raw_eeg_data = raw_eeg_data[0]  # 如果第一维是1，去掉这一维
+        if raw_labels.shape[0] == 1:
+            raw_labels = raw_labels[0]  # 如果第一维是1，去掉这一维
         print(f"[Subject {self.subject_id}] Raw data shape: {raw_eeg_data.shape}, Raw labels shape: {raw_labels.shape}")
         
         

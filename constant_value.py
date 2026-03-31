@@ -4,8 +4,9 @@ DATASETS = {
     1: 'BCICIV2a',
     2: 'BCICIV2b',
     3: 'XWStroke',
+    4: 'LowerStroke',
 }
-SELECTED_DATASET = 1
+SELECTED_DATASET = 4
 # target_subjects = list(range(1,51))
 # target_subjects = list(range(1,10))
 target_subjects = [1]

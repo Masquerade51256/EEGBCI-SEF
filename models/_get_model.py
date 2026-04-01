@@ -2,6 +2,7 @@
 from models.EEGNet import EEGNet
 # from Models.EEGNet_old import EEGNet
 from models.CNNLSTM import CNNLSTM, MultiBand_CNNLSTM, Simplified_MultiBand_CNNLSTM
+from models.GACLNet import GACLNet
 from models.myADFCNN import ADFCNN
 from models.FBCNN import FilterBankCNN
 from models.myFBCNet import FBCNet_Standard
@@ -33,5 +34,8 @@ def get_model(model_id, dataset_info):
         return FilterBankCNN(n_filterbanks=band_num, n_channels=channels_num, n_times=input_size, n_classes=class_num)
     elif model_name == 'FBCNet_Standard':
         return FBCNet_Standard(num_classes=class_num, num_channels=channels_num, input_time_length=input_size, n_band=band_num)
+    elif model_name == 'GACLNet':
+        return GACLNet(num_classes=class_num, num_channels=channels_num, num_bands=band_num, input_length=input_size)
+
     else:
         raise ValueError(f"Unknown model name: {model_name}")

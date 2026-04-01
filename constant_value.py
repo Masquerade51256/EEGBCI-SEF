@@ -19,8 +19,9 @@ MODELS = {
     5: 'Simplified_MultiBand_CNNLSTM',
     6: 'FilterBankCNN',
     7: 'FBCNet_Standard',
+    8: 'GACLNet',
 }
-SELECTED_MODEL = 3
+SELECTED_MODEL = 8
 
 # Mode
 is_test = False

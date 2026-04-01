@@ -1,93 +1,239 @@
-import mne
-import os
+"""
+从XWStroke数据集中提取运动想象阶段4秒EEG数据
+将每个被试的40个试次中，运动想象阶段的4秒数据提取出来
+输出形状：(40, 32, 2000)  # 40试次 × 32通道 × 2000时间点(4秒×500Hz)
+"""
+
+import scipy.io
 import numpy as np
-import pandas as pd
+import os
+import warnings
+from pathlib import Path
 
-# 1. 定义数据集根路径和被试信息
-dataset_root = "src\\datasets\\27130299\\PEEG"  # 请修改为您的实际路径
-subject_id = '01'  # 要读取的被试ID，例如 '01'
-paradigm = 'pre'   # 实验范式，可选: 'Pre', 'IES', 'SES', 'Post', 'Follow'
-run_num = '1'      # 运行编号，通常为 '1'
-
-# 2. 根据命名规则构建文件路径
-# 以读取预处理数据为例
-file_name = f'sub-{subject_id}_{paradigm}_run-{run_num}_eeg.set'
-file_path = os.path.join(dataset_root, f'sub-{subject_id}',"ses-1","eeg", file_name)
-
-# 3. 检查文件是否存在
-if not os.path.exists(file_path):
-    # 如果预处理数据路径不存在，尝试在 derivatives 或 sourcedata 下寻找
-    alt_paths = [
-        os.path.join(dataset_root, 'derivatives', f'sub-{subject_id}', file_name),
-        os.path.join(dataset_root, 'sourcedata', f'sub-{subject_id}', file_name.replace('_eeg.set', '_ori.set')), # 原始数据
-        os.path.join(dataset_root, f'sub-{subject_id}', file_name.replace('_eeg.set', '_ori.set')) # 原始数据另一种可能位置
-    ]
-    for path in alt_paths:
-        if os.path.exists(path):
-            file_path = path
-            print(f"在备用路径找到文件: {file_path}")
-            break
-    else:
-        raise FileNotFoundError(f"未在以下路径找到数据文件: {file_path} 及其备用路径")
-
-# 4. 使用MNE读取 .set 文件
-# 注意：MNE可能需要读取同名的 .fdt 文件，请确保它与 .set 文件在同一目录
-raw = mne.io.read_raw_eeglab(file_path, preload=True)
-# 如果读取原始连续数据，可以使用上面的方法。
-# 如果数据已经是分好段的（单个trial），可能会被读为epochs。但根据文档描述，预处理数据是分段的，但存储为连续形式+事件标记。
-# 我们可以根据事件标记将数据分割成epochs。
-
-# 5. 获取信息
-print("="*50)
-print(f"文件: {os.path.basename(file_path)}")
-print(f"采样频率: {raw.info['sfreq']} Hz")
-print(f"通道名称: {raw.info['ch_names'][:5]}...")  # 打印前5个通道名
-print(f"数据形状 (通道数 x 时间点数): {raw.get_data().shape}")
-print(f"事件数量: {len(raw.annotations) if raw.annotations is not None else 'N/A'}")
-print("="*50)
-
-# 6. 提取事件和epochs（如果数据是带有事件标记的连续记录）
-# 文档中提到数据由事件标签（1-12）标记不同阶段（准备、提示、MI/空闲等）。
-if raw.annotations is not None:
-    events, event_id = mne.events_from_annotations(raw)
-    print(f"找到 {len(events)} 个事件")
-    print(f"事件ID与描述: {event_id}")
+def extract_motor_imagery_4s(input_file, output_file=None, event_marker=1, fs=500):
+    """
+    从单个被试的MAT文件中提取运动想象阶段的4秒EEG数据
     
-    # 例如，如果我们想提取所有“运动想象（MI）任务”阶段的数据（根据文档，标签可能为3,4,5,6）
-    # 注意：实际的事件ID（整数）与描述（字符串）的映射需要查看数据或文档确定。
-    # 这里仅为示例，您需要根据实际 event_id 字典调整 tmin, tmax 和 event_id 的选择。
-    # 假设 '3' 对应 MI 阶段开始
-    if '3' in event_id:
-        epochs = mne.Epochs(raw, events, event_id={'MI_phase': event_id['3']}, 
-                            tmin=0, tmax=5, baseline=None, preload=True) # 示例：提取5秒
-        print(f"Epochs 数据形状: {epochs.get_data().shape}") # (epochs数, 通道数, 时间点数)
-else:
-    # 如果数据已经是分段的，可能没有annotations，而是每个文件就是一个trial/epoch。
-    # 这种情况下，raw.get_data() 就是该trial的数据。
-    data = raw.get_data()
-    print(f"直接获取数据形状: {data.shape}")
-    # 通常，一个 .set 文件可能包含多个trials，具体结构需参考数据集说明。
-    # 根据文档，预处理数据是分好段的，'EEG.data' 是 (40, 50000)。
-    # 这意味着每个文件可能是一个长段数据（可能包含多个trials），需要根据EEG.event分割。
-    # 但由于我们通过MNE读取，EEG.event信息被转换成了raw.annotations。
+    参数:
+    ----------
+    input_file : str
+        输入的MAT文件路径
+    output_file : str, 可选
+        输出文件路径，如为None则自动生成
+    event_marker : int, 默认=1
+        事件标记通道中标识"运动想象开始"的标记值
+    fs : int, 默认=500
+        采样率(Hz)
+    
+    返回:
+    ----------
+    extracted_data : numpy.ndarray
+        提取的EEG数据，形状为(n_trials, 32, 2000)
+    labels : numpy.ndarray
+        试次标签，形状为(n_trials,)
+    """
+    
+    # 1. 加载MAT文件
+    try:
+        data = scipy.io.loadmat(input_file)
+        # 找到包含EEG数据的变量
+        for key, value in data.items():
+            if not key.startswith('__'):
+                eeg_data = value[0][0][0]  # 形状应为: (n_sessions, n_channels, n_timepoints)
+                labels = value[0][0][1]    # 形状应为: (n_sessions, 1)
+                break
+    except Exception as e:
+        raise FileNotFoundError(f"无法加载文件 {input_file}: {e}")
+    
+    # 2. 检查数据形状
+    n_trials, n_channels, n_timepoints = eeg_data.shape
+    print(f"原始数据形状: {eeg_data.shape}")
+    print(f"标签形状: {labels.shape}")
+    
+    # 确保是40个试次
+    if n_trials != 40:
+        warnings.warn(f"试次数不是40，而是{n_trials}，但将继续处理")
+    
+    # 确保是33个通道（32个EEG + 1个事件标记）
+    if n_channels != 33:
+        raise ValueError(f"期望33个通道(32EEG+1事件标记)，但实际有{n_channels}个通道")
+    
+    # 3. 提取4秒运动想象数据
+    extracted_trials = []
+    valid_trials = 0
+    
+    # 计算4秒对应的时间点数
+    duration_4s = 4 * fs  # 4秒 × 500Hz = 2000个点
+    
+    for trial_idx in range(n_trials):
+        # 获取当前试次的所有通道数据
+        trial_data = eeg_data[trial_idx, :, :]  # 形状: (33, n_timepoints)
+        
+        # 分离EEG通道和事件标记通道
+        eeg_channels = trial_data[:32, :]      # 前32个是EEG通道
+        event_channel = trial_data[32, :]     # 第33个是事件标记通道
+        
+        # 在事件标记通道中寻找运动想象开始的标记
+        # 找到事件标记值等于event_marker的位置
+        event_indices = np.where(event_channel == event_marker)[0]
+        
+        if len(event_indices) == 0:
+            # 如果没找到指定的标记值，尝试寻找第一个非零值
+            event_indices = np.where(event_channel != 0)[0]
+            if len(event_indices) > 0:
+                warnings.warn(f"试次{trial_idx+1}: 未找到标记值{event_marker}，使用第一个非零事件标记")
+            else:
+                # 如果仍然找不到，使用默认值（假设从2秒后开始，即1000个点）
+                warnings.warn(f"试次{trial_idx+1}: 未找到事件标记，使用默认起始点1000")
+                event_indices = [1000]
+        
+        # 取第一个事件标记作为运动想象开始
+        start_idx = event_indices[0]
+        
+        # 检查索引范围是否有效
+        if start_idx + duration_4s > n_timepoints:
+            warnings.warn(f"试次{trial_idx+1}: 起始索引{start_idx}加上4秒超出数据范围，跳过此试次")
+            continue
+        
+        # 提取4秒的EEG数据（去除事件标记通道）
+        extracted_eeg = eeg_channels[:, start_idx:start_idx + duration_4s]
+        
+        # 验证提取的形状
+        if extracted_eeg.shape != (32, duration_4s):
+            warnings.warn(f"试次{trial_idx+1}: 提取的数据形状为{extracted_eeg.shape}，期望(32, {duration_4s})")
+            continue
+        
+        extracted_trials.append(extracted_eeg)
+        valid_trials += 1
+    
+    # 4. 转换为numpy数组
+    if len(extracted_trials) == 0:
+        raise ValueError("未成功提取任何试次数据，请检查事件标记值或数据")
+    
+    extracted_data = np.array(extracted_trials)  # 形状: (n_valid_trials, 32, 2000)
+    
+    print(f"成功提取 {valid_trials}/{n_trials} 个试次")
+    print(f"提取后数据形状: {extracted_data.shape}")
+    
+    # 5. 保存为MAT文件
+    if output_file is None:
+        # 自动生成输出文件名
+        input_path = Path(input_file)
+        output_file = input_path.parent / f"{input_path.stem}_4s{input_path.suffix}"
+    
+    # 创建输出字典
+    output_dict = {
+        'eeg_data_4s': extracted_data,  # 提取的4秒运动想象EEG
+        'labels': labels.flatten(),      # 原始标签
+        'fs': fs,                        # 采样率
+        'duration': 4.0,                 # 持续时间(秒)
+        'n_channels': 32,                # 通道数
+        'event_marker_used': event_marker,  # 使用的事件标记值
+        'source_file': input_file        # 源文件
+    }
+    
+    # 保存MAT文件
+    scipy.io.savemat(output_file, output_dict)
+    print(f"数据已保存到: {output_file}")
+    
+    return extracted_data, labels.flatten()
 
-# 7. 访问被试元数据（可选）
-# participants.tsv 文件包含了所有被试的临床和人口统计学信息（如表2）
-participants_tsv_path = os.path.join(dataset_root, 'participants.tsv')
-if os.path.exists(participants_tsv_path):
-    df_participants = pd.read_csv(participants_tsv_path, sep='\t')
-    subject_info = df_participants[df_participants['participant_id'] == f'sub-{subject_id}']
-    print("\n被试信息:")
-    print(subject_info.to_string(index=False))
-else:
-    print(f"\n未在根目录找到 participants.tsv 文件。")
+def batch_process_all_subjects(data_dir, subject_ids=None, event_marker=1):
+    """
+    批量处理所有被试的数据
+    
+    参数:
+    ----------
+    data_dir : str
+        数据目录的根路径
+    subject_ids : list, 可选
+        被试ID列表，如为None则自动查找
+    event_marker : int, 默认=1
+        事件标记值
+    """
+    
+    data_dir = Path(data_dir)
+    
+    # 如果未指定被试ID，自动查找
+    if subject_ids is None:
+        # 查找所有被试文件夹
+        subject_folders = [f for f in data_dir.iterdir() if f.is_dir() and f.name.startswith('sub-')]
+        subject_ids = []
+        for folder in subject_folders:
+            try:
+                # 从文件夹名提取ID，如"sub-01" -> 1
+                sub_id = int(folder.name.split('-')[1])
+                subject_ids.append(sub_id)
+            except:
+                continue
+        subject_ids.sort()
+    
+    print(f"找到 {len(subject_ids)} 个被试: {subject_ids}")
+    
+    # 处理每个被试
+    all_results = {}
+    
+    for sub_id in subject_ids:
+        print(f"\n{'='*50}")
+        print(f"处理被试 sub-{sub_id:02d}")
+        print('='*50)
+        
+        try:
+            # 构建输入文件路径
+            sub_folder = data_dir / f"sub-{sub_id:02d}"
+            input_file = sub_folder / f"sub-{sub_id:02d}_task-motor-imagery_eeg.mat"
+            
+            if not input_file.exists():
+                print(f"警告: 文件不存在 {input_file}，跳过")
+                continue
+            
+            # 处理单个被试
+            extracted_data, labels = extract_motor_imagery_4s(
+                input_file=str(input_file),
+                event_marker=event_marker
+            )
+            
+            all_results[sub_id] = {
+                'data': extracted_data,
+                'labels': labels,
+                'status': 'success'
+            }
+            
+        except Exception as e:
+            print(f"处理被试 sub-{sub_id:02d} 时出错: {e}")
+            all_results[sub_id] = {
+                'data': None,
+                'labels': None,
+                'status': f'error: {str(e)}'
+            }
+    
+    # 打印汇总信息
+    print(f"\n{'='*50}")
+    print("处理完成汇总:")
+    print('='*50)
+    
+    success_count = sum(1 for res in all_results.values() if res['status'] == 'success')
+    print(f"成功处理: {success_count}/{len(subject_ids)} 个被试")
+    
+    return all_results
 
-# 8. 数据访问示例
-# 获取第一个通道的前1000个时间点数据（如果需要）
-if raw.__class__.__name__ != 'Epochs':
-    data_array = raw.get_data()
-    # 假设我们想查看通道Cz（可能在索引'Cz'处）的数据片段
-    if 'Cz' in raw.ch_names:
-        cz_index = raw.ch_names.index('Cz')
-        cz_data_snippet = data_array[cz_index, :1000]  # 前1000个样本
-        print(f"\n通道 Cz 前1000个时间点的数据形状: {cz_data_snippet.shape}")
+if __name__ == "__main__":
+    # 使用示例
+    DATA_DIR = "src/datasets/21679035/sourcedata"  # 修改为您的数据目录路径
+    
+    # 方法1: 处理单个被试
+    # input_file = "/path/to/sub-01/sub-01_task-motor-imagery_eeg.mat"
+    # extracted_data, labels = extract_motor_imagery_4s(input_file, event_marker=1)
+    
+    # 方法2: 批量处理所有被试
+    # 指定要处理的被试ID列表
+    subject_ids_to_process = list(range(1,51))
+    
+    # 或者设置为None自动查找所有被试
+    # subject_ids_to_process = None
+    
+    results = batch_process_all_subjects(
+        data_dir=DATA_DIR,
+        subject_ids=subject_ids_to_process,
+        event_marker=1  # 事件标记值，根据实际数据调整
+    )

@@ -24,14 +24,14 @@ model: "train"  # "train", "evaluate", "predict"
 # Training Config
 Training:
   # target_subjects: "all"
-  # target_subjects: [7, 11, 22, 40, 45]
+  target_subjects: [7, 11, 22, 40, 45]
   # target_subjects: [11]
   # target_subjects: [4, 5, 13, 14, 18, 24, 28, 33, 42, 43, 47, 48, 49]
-  target_subjects: [3, 17, 25, 26, 31]
+  # target_subjects: [3, 17, 25, 26, 31]
   train_device: 'cuda'
-  batch_size: 16
+  batch_size: 32
   num_epochs: 200
-  learning_rate: 0.0001
+  learning_rate: 0.001
   weight_decay: 0.1
   k_folds: 5
   random_seed: 42

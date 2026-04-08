@@ -48,7 +48,8 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
     correct_predictions = 0
     total_samples = 0
 
-    for images, labels in data_loader:
+    progress_bar = tqdm(data_loader, desc='Training', leave=False)
+    for images, labels in progress_bar:
         images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(images)
@@ -60,6 +61,9 @@ def train_one_epoch(model, data_loader, criterion, optimizer, device):
         _, predicted = torch.max(outputs, 1)
         correct_predictions += (predicted == labels).sum().item()
         total_samples += labels.size(0)
+
+        # Update progress bar description
+        progress_bar.set_postfix({'Loss': loss.item()})
 
     epoch_loss = running_loss / total_samples
     epoch_accuracy = correct_predictions / total_samples
@@ -73,7 +77,7 @@ def validate(model, data_loader, criterion, device):
     total_samples = 0
 
     with torch.no_grad():
-        for images, labels in data_loader:
+        for images, labels in tqdm(data_loader, desc='Validation', leave=False):
             images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             loss = criterion(outputs, labels)
@@ -221,13 +225,7 @@ def train_model(model, dataset, train_config, subject_id=None):
         fold_history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
         fold_best_val_accuracy = 0.0
 
-        # Single progress bar for epochs with real-time metrics
-        epoch_progress_bar = tqdm(
-            range(num_epochs), 
-            desc=f'Sub{subject_id} Fold{fold_idx+1}',
-            bar_format='{desc} |{bar:20}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}'
-        )
-        
+        epoch_progress_bar = tqdm(range(num_epochs), desc=f'Fold {fold_idx+1} Epochs')
         for epoch in epoch_progress_bar:
             # Cosine annealing learning rate schedule
             current_lr = (1 + math.cos(epoch * math.pi / num_epochs)) * initial_learning_rate / 2
@@ -245,12 +243,14 @@ def train_model(model, dataset, train_config, subject_id=None):
             fold_history['val_loss'].append(val_loss)
             fold_history['val_acc'].append(val_acc)
 
-            # Update progress bar with all metrics in compact format
-            epoch_progress_bar.set_postfix_str(
-                f"LR:{current_lr:.1e} T:{train_loss:.3f}/{train_acc:.3f} V:{val_loss:.3f}/{val_acc:.3f}"
-            )
-            
-            # Log detailed info only to file
+            # Update progress bar
+            epoch_progress_bar.set_postfix({
+                'LR': f'{current_lr:.2e}',
+                'Train_L': f'{train_loss:.3f}',
+                'Val_L': f'{val_loss:.3f}',
+                'Val_Acc': f'{val_acc:.3f}'
+            })
+            # Log detailed info
             logger.info(f"Sub{subject_id}_Fold{fold_idx}_E{epoch:03d}: LR={current_lr:.6f}, "
                        f"Train=[L:{train_loss:.4f}, A:{train_acc:.4f}], "
                        f"Val=[L:{val_loss:.4f}, A:{val_acc:.4f}]")

@@ -1,0 +1,43 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke.yaml
+  subjects:
+  - 1
+experiment:
+  description: XW Stroke dataset classification using ADFCNN
+  name: xw_adfcnn_cpu_test
+  seed: 42
+logging:
+  console: true
+  level: INFO
+  tensorboard: false
+model:
+  args: {}
+  type: ADFCNN
+paths:
+  checkpoint_dir: ./src/checkpoints
+  data_dir: ./src/datasets
+  root_dir: ./experiments
+trainer:
+  args: {}
+  type: SupervisedTrainer
+training:
+  batch_size: 16
+  deterministic: false
+  device: cpu
+  early_stopping:
+    enabled: false
+    min_delta: 0.001
+    patience: 30
+  epochs: 1
+  k_folds: 5
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.5
+  scheduler:
+    type: cosine
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: png

@@ -1,0 +1,62 @@
+# Default experiment configuration
+# This is a template for EEG-BCI experiments
+
+experiment:
+  name: "default_experiment"
+  seed: 42
+  description: "Default EEG-BCI experiment configuration"
+
+# Data configuration
+data:
+  dataset: "XWStroke"  # Options: BCICIV2a, BCICIV2b, XWStroke, LowerStroke
+  subjects: "all"      # "all" or list of subject IDs, e.g., [1, 2, 3]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+# Model configuration
+model:
+  type: "EEGNet"       # Options: EEGNet, CNNLSTM, ADFCNN, GACLNet, FBCNet_Standard, etc.
+  args: {}             # Model-specific arguments (auto-populated from dataset info)
+
+# Training configuration
+training:
+  device: "cuda"       # "cuda" or "cpu"
+  epochs: 100
+  batch_size: 32
+  k_folds: 5           # Number of folds for cross-validation
+  deterministic: false # Set true for reproducibility (may slow down training)
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+  
+  scheduler:
+    type: "cosine"     # Options: cosine, step, plateau, none
+    
+  early_stopping:
+    enabled: false
+    patience: 20
+    min_delta: 0.001
+
+# Trainer configuration
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+# Path configuration
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+# Logging configuration
+logging:
+  level: "INFO"        # DEBUG, INFO, WARNING, ERROR
+  console: true        # Print to console
+  tensorboard: false   # Use TensorBoard logging
+
+# Visualization configuration
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

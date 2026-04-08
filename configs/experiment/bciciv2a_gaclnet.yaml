@@ -1,0 +1,54 @@
+# BCIC IV 2a dataset with GACLNet model
+
+experiment:
+  name: "BCICIV2a_GACLNet"
+  seed: 42
+  description: "BCI Competition IV 2a classification using GACLNet"
+
+data:
+  dataset: "BCICIV2a"
+  subjects: "all"
+  info_path: "configs/dataset/BCICIV2a.yaml"
+
+model:
+  type: "GACLNet"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 300
+  batch_size: 64
+  k_folds: 5
+  deterministic: false
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.075
+  
+  scheduler:
+    type: "cosine"
+    
+  early_stopping:
+    enabled: false
+    patience: 50
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

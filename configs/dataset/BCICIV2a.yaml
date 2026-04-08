@@ -1,0 +1,74 @@
+# configs/datasets/xwstroke.yaml
+dataset:
+  name: "BCICIV2a"
+  data_dir: "src/datasets/BCICIV2a"
+  original_sr: 250
+  num_channels: 22
+  num_classes: 4
+  num_subjects: 9
+  subjects: [1]
+  labels: [0, 1, 2, 3]  # 0: Left hand, 1: Right hand, 2: Foot, 3: Tongue
+  
+
+preprocessing:
+  windowing:
+    window_length_sec: 3.0
+    window_stride_sec: 1.0
+
+  resample:
+    target_sr: 250
+    method: "fft"
+  
+  channel_selection:
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
+
+  filter_bank:
+    filter_banks:
+      - [4, 12]
+      - [8, 16]
+      - [12, 20]
+      - [16, 24]
+      - [20, 28]
+      - [24, 32]
+      - [28, 36]
+      - [32, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore" # EMS, z-score
+    axis: -1  # Standardize along time dimension
+
+  augmentation:
+  # if dont want to use an augmentation, set its probability to 0
+    - method: "add_noise"
+      snr_db: 20
+      # probability: 0.6
+      probability: 0
+
+    - method: "channel_dropout"
+      dropout_rate: 0.1
+      # probability: 0.3
+      probability: 0
+
+    - method: "time_warp"
+      sigma: 0.2
+      # probability: 0.4
+      probability: 0
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline:
+    train:  # Only applied in training mode
+      - name: "gaussian_noise"
+      - name: "channel_dropout"
+      - name: "time_warp"
+    
+    val: []  # No augmentation for validation
+    test: [] # No augmentation for testing

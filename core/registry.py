@@ -85,9 +85,11 @@ class Registry:
         def _register(module: Any) -> Any:
             module_name = name if name is not None else module.__name__
             
-            if not force and module_name in self._module_dict:
-                raise KeyError(f"'{module_name}' is already registered in '{self._name}'. "
-                              f"Use force=True to override.")
+            if module_name in self._module_dict:
+                if not force:
+                    # Silently skip duplicate registrations
+                    return module
+                # If force=True, continue to override
             
             self._module_dict[module_name] = module
             return module

@@ -1,0 +1,97 @@
+"""
+Model definitions for EEG-BCI experiments.
+"""
+
+import torch.nn as nn
+from core.registry import MODELS
+
+
+def register_all_models():
+    """
+    Register all available models.
+    
+    This function should be called at startup to populate the model registry.
+    """
+    
+    # EEGNet
+    try:
+        from .EEGNet import EEGNet
+        MODELS.register('EEGNet')(EEGNet)
+    except ImportError as e:
+        print(f"Warning: Could not register EEGNet: {e}")
+    
+    # CNNLSTM variants
+    try:
+        from .CNNLSTM import CNNLSTM, MultiBand_CNNLSTM, Simplified_MultiBand_CNNLSTM
+        MODELS.register('CNNLSTM')(CNNLSTM)
+        MODELS.register('MultiBand_CNNLSTM')(MultiBand_CNNLSTM)
+        MODELS.register('Simplified_MultiBand_CNNLSTM')(Simplified_MultiBand_CNNLSTM)
+    except ImportError as e:
+        print(f"Warning: Could not register CNNLSTM models: {e}")
+    
+    # ADFCNN
+    try:
+        from .myADFCNN import ADFCNN
+        MODELS.register('ADFCNN')(ADFCNN)
+    except ImportError as e:
+        print(f"Warning: Could not register ADFCNN: {e}")
+    
+    # FilterBankCNN
+    try:
+        from .FBCNN import FilterBankCNN
+        
+        # Create adapter to handle different parameter names
+        class FilterBankCNNAdapter(nn.Module):
+            def __init__(self, num_channels, num_classes, num_bands, input_length, **kwargs):
+                super().__init__()
+                # FilterBankCNN uses: n_filterbanks, n_channels, n_times, n_classes
+                self.model = FilterBankCNN(
+                    n_filterbanks=num_bands,
+                    n_channels=num_channels,
+                    n_times=input_length,
+                    n_classes=num_classes
+                )
+            
+            def forward(self, x):
+                return self.model(x)
+        
+        MODELS.register('FilterBankCNN')(FilterBankCNNAdapter)
+    except ImportError as e:
+        print(f"Warning: Could not register FilterBankCNN: {e}")
+    
+    # FBCNet_Standard
+    try:
+        from .myFBCNet import FBCNet_Standard
+        
+        # Create adapter to handle different parameter names
+        class FBCNetAdapter(nn.Module):
+            def __init__(self, num_channels, num_classes, num_bands, input_length, **kwargs):
+                super().__init__()
+                # FBCNet_Standard uses: num_classes, num_channels, input_time_length, n_band
+                self.model = FBCNet_Standard(
+                    num_classes=num_classes,
+                    num_channels=num_channels,
+                    input_time_length=input_length,
+                    n_band=num_bands
+                )
+            
+            def forward(self, x):
+                return self.model(x)
+        
+        MODELS.register('FBCNet_Standard')(FBCNetAdapter)
+    except ImportError as e:
+        print(f"Warning: Could not register FBCNet_Standard: {e}")
+    
+    # GACLNet
+    try:
+        from .GACLNet import GACLNet
+        MODELS.register('GACLNet')(GACLNet)
+    except ImportError as e:
+        print(f"Warning: Could not register GACLNet: {e}")
+
+
+# Auto-register on import
+register_all_models()
+
+# Export registry for convenience
+__all__ = ['MODELS', 'register_all_models']

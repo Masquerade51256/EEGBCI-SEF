@@ -14,7 +14,8 @@ dataset:
 preprocessing:
   windowing:
     window_length_sec: 2.0
-    window_stride_sec: 1
+    window_stride_sec: 0.5
+    
 
   resample:
     target_sr: 250
@@ -35,18 +36,18 @@ preprocessing:
   # if dont want to use an augmentation, set its probability to 0
     - method: "add_noise"
       snr_db: 20
-      # probability: 0.3
-      probability: 0
+      probability: 0.3
+      # probability: 0
 
     - method: "channel_dropout"
       dropout_rate: 0.1
-      # probability: 0.3
-      probability: 0
+      probability: 0.3
+      # probability: 0
 
     - method: "time_warp"
       sigma: 0.2
-      # probability: 0.3
-      probability: 0
+      probability: 0.3
+      # probability: 0
 
 
 pipelines:

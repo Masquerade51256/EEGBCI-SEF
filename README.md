@@ -49,17 +49,22 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 
 - Please download **XuanWu** dataset from [this site](https://figshare.com/articles/dataset/EEG_datasets_of_stroke_patients/21679035/5), decompress and put all contents (especially `sourcedata`) into `src\datasets\21679035`.
 
-- Please download **BCICompetetion IV 2a** dataset from [this site](https://www.bbci.de/competition/iv/#download), and the true lable from [this site](https://www.bbci.de/competition/iv/results/ds2a/true_labels.zip). Decompress and put all files (including `.gdf` & `.mat`) into direction `src\datasets\BCICIV_2a`
+  - :warning::warning::warning: Run `preprocessing_XW.py` ( to extract the specific 4 sec MI signal) before train​ing.
+
+- Please download **BCICompetetion IV 2a** dataset from [this site](https://www.bbci.de/competition/iv/#download), and the true label from [this site](https://www.bbci.de/competition/iv/results/ds2a/true_labels.zip). 
+
+  - :warning::warning::warning: Decompress and put all files (including `.gdf` & `.mat`) into direction `src\datasets\BCICIV_2a`
 
   
 
+
 ### 3. Run Experiment
 
-- Just run `python train.py`
-  - You can run `python _train.py` now. It is a more elegant implementation, but still under updating.
-
-- You can change **Model**, **Dataset** and **other training configuration** in file `constant_value`. (It will be updated, and finally deprecated, in subsequent versions)
+- ~~Just run `python train.py`~~
+  - ~~You can run `python _train.py` now. It is a more elegant implementation, but still under updating.~~
+- ~~You can change **Model**, **Dataset** and **other training configuration** in file `constant_value`. (It will be updated, and finally deprecated, in subsequent versions)~~
   - For `_train.py`, you need change **these** configuration in the file `config/train_config/base_config.yaml`; while some other database relevant configuration in the file `config/data_config/DATASETNAME_config.yaml`
+- Now the old version `train.py` has been deprecated. The new one is updated from `_train.py`, and **rename as `torch_fold_train.py`** to distinguish it from other ML training script.
 
 
 ### 4. Check Results
@@ -78,7 +83,10 @@ A standardized, modular, and extensible platform for BCI algorithm experimentati
 
 
 
+## :notebook: Dev Log
 
+- April 2, 2026
+  - :red_circle: Add a script "preprocessing_XW.py" to correctly cut the MI signal.
 
 
 

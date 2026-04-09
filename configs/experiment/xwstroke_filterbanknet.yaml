@@ -1,0 +1,67 @@
+# XWStroke dataset with XWFilterBankNet model
+# This configuration uses multi-band filter bank for motor imagery classification
+
+experiment:
+  name: "XWStroke_XWFilterBankNet"
+  seed: 42
+  description: "XW Stroke dataset classification using XWFilterBankNet with multi-band filter bank"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_multiband.yaml"
+
+model:
+  type: "XWFilterBankNet"
+  args:
+    # Model will auto-populate these from dataset info:
+    # num_channels: 30 (from channel_selection)
+    # num_bands: 8 (from filter_banks)
+    # input_length: 500 (target_sr * window_length = 250 * 2)
+    # num_classes: 2
+    
+    # Customizable parameters
+    band_channels: 32        # Feature channels per band
+    temporal_kernel: 64      # Temporal convolution kernel size
+    dropout: 0.3             # Dropout rate
+    use_attention: true      # Enable cross-band attention
+    classifier_hidden: 0     # 0 = linear classifier, >0 = MLP
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  k_folds: 5
+  deterministic: false
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.5
+  
+  scheduler:
+    type: "cosine"
+    
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

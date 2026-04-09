@@ -1,0 +1,60 @@
+# BCICIV2a dataset with XWFilterBankNet model
+# Demonstrates cross-dataset compatibility
+
+experiment:
+  name: "BCICIV2a_XWFilterBankNet"
+  seed: 42
+  description: "BCICIV2a dataset classification using XWFilterBankNet with multi-band filter bank"
+
+data:
+  dataset: "BCICIV2a"
+  subjects: "all"
+  info_path: "configs/dataset/BCICIV2a_multiband.yaml"
+
+model:
+  type: "XWFilterBankNet"
+  args:
+    band_channels: 32
+    temporal_kernel: 64
+    dropout: 0.3
+    use_attention: true
+    classifier_hidden: 0
+
+training:
+  device: "cuda"
+  epochs: 300
+  batch_size: 64
+  k_folds: 5
+  deterministic: false
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.5
+  
+  scheduler:
+    type: "cosine"
+    
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

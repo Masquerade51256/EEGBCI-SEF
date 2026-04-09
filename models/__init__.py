@@ -114,6 +114,14 @@ def register_all_models():
         MODELS.register('GACLNet')(GACLNet)
     except ImportError as e:
         print(f"Warning: Could not register GACLNet: {e}")
+    
+    # XWFilterBankNet
+    try:
+        from .XWFilterBankNet import XWFilterBankNet, XWFilterBankNetLight
+        MODELS.register('XWFilterBankNet')(XWFilterBankNet)
+        MODELS.register('XWFilterBankNetLight')(XWFilterBankNetLight)
+    except ImportError as e:
+        print(f"Warning: Could not register XWFilterBankNet: {e}")
 
 
 # Auto-register on import

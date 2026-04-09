@@ -52,6 +52,7 @@ to prevent data leakage from overlapping windows.
         # Checkpoint configuration
         self.save_checkpoints = self.config.get('training.save_checkpoints', True)
         self.save_optimizer_state = self.config.get('training.save_optimizer_state', False)
+        self._checkpoint_warned = False  # Track if we've already warned about save failures
         
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -398,6 +399,7 @@ to prevent data leakage from overlapping windows.
         try:
             torch.save(checkpoint, checkpoint_path)
         except (RuntimeError, IOError, OSError) as e:
-            # 保存失败时记录警告但不中断训练
-            self._log(f"    Warning: Failed to save checkpoint: {e}", level='warning')
-            self._log(f"    Continuing training without saving this checkpoint...", level='warning')
+            # 保存失败时只在第一次记录警告，避免频繁打断进度条
+            if not self._checkpoint_warned:
+                self._log(f"    Warning: Checkpoint save failed (will retry silently): {str(e)[:80]}...", level='warning')
+                self._checkpoint_warned = True

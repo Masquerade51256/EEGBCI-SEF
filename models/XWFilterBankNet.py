@@ -52,8 +52,10 @@ class BandFeatureExtractor(nn.Module):
         self.kernel_temporal = kernel_temporal
         
         # Temporal convolution (band-specific temporal patterns)
+        # Use odd kernel size to avoid padding warning with 'same' padding
+        effective_kernel = kernel_temporal if kernel_temporal % 2 == 1 else kernel_temporal + 1
         self.temporal_conv = nn.Sequential(
-            nn.Conv2d(1, out_channels, (1, kernel_temporal), 
+            nn.Conv2d(1, out_channels, (1, effective_kernel), 
                      padding='same', bias=False),
             nn.BatchNorm2d(out_channels),
             nn.ELU()

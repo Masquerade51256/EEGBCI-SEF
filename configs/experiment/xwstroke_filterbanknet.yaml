@@ -35,7 +35,7 @@ training:
   deterministic: false
   
   # Checkpoint settings
-  save_checkpoints: true         # 是否保存模型检查点
+  save_checkpoints: false        # 临时禁用 checkpoint 保存，直到磁盘空间充足
   save_optimizer_state: false    # 是否保存优化器状态（false 可大幅减小文件大小）
   
   optimizer:
@@ -56,9 +56,9 @@ trainer:
   args: {}
 
 paths:
-  root_dir: "./experiments"
+  root_dir: "E:/EEGBCI_experiments"  # 改到 E 盘
   data_dir: "./src/datasets"
-  checkpoint_dir: "./src/checkpoints"
+  checkpoint_dir: "E:/EEGBCI_checkpoints"  # 改到 E 盘
 
 logging:
   level: "INFO"

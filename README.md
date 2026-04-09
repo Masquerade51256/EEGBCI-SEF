@@ -360,6 +360,20 @@ See `requirements.txt` for complete list.
 
 **Model not found**: Ensure model is registered in `models/__init__.py`
 
+**Checkpoint save failed / Disk space error**: 
+- Large models (e.g., XWFilterBankNet with 64M parameters) generate ~128-256MB checkpoint files per fold
+- **Solution 1**: Change checkpoint directory to a drive with more space in your config:
+  ```yaml
+  paths:
+    checkpoint_dir: "E:/EEGBCI_checkpoints"  # Use a drive with sufficient space
+  ```
+- **Solution 2**: Temporarily disable checkpoint saving:
+  ```yaml
+  training:
+    save_checkpoints: false
+  ```
+- **Solution 3**: Clean up old experiment directories in `experiments/` to free space
+
 ## :page_facing_up: License
 
 ## :busts_in_silhouette: Contact

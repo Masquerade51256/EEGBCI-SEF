@@ -122,18 +122,85 @@ python train.py --device cuda
 python train.py --device cpu
 ```
 
-#### Legacy Mode (Backward Compatible)
+#### Legacy Mode - Using `torch_fold_train.py`
 
-The old `constant_value.py` configuration still works:
+The original training script `torch_fold_train.py` is still supported for backward compatibility.
+
+**Configuration**
+
+Edit `constant_value.py` to select dataset and model:
 
 ```python
-# Edit constant_value.py
-SELECTED_DATASET = 3  # XWStroke
-SELECTED_MODEL = 1    # EEGNet
+# Dataset selection (index in DATASETS list)
+SELECTED_DATASET = 3  # 0:BCICIV_2a, 1:Croatian, 2:LowerStroke, 3:XWStroke
 
-# Then run
-python torch_fold_train.py
+# Model selection (index in MODELS list)
+SELECTED_MODEL = 1    # 0:EEGNet, 1:CNN_LSTM, 2:DeepConvNet, 3:ShallowConvNet, 4:GACLNet
+
+# Target subjects for training
+target_subjects = "all"  # or specify list like [1, 2, 3]
 ```
+
+Then edit the training configuration file (default: `config/train_config/base_config.yaml`):
+
+```yaml
+dataset_id: 3              # Should match SELECTED_DATASET above
+model_id: 1                # Should match SELECTED_MODEL above
+
+Training:
+  num_epochs: 200
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.5
+  k_folds: 5
+  train_device: "cuda"
+  target_subjects: "all"   # or list like [1, 2, 3]
+```
+
+**Running Training**
+
+```bash
+# Basic usage
+python torch_fold_train.py
+
+# The script will automatically:
+# 1. Load configuration from constant_value.py and config/train_config/base_config.yaml
+# 2. Train models for each subject with k-fold cross-validation
+# 3. Save checkpoints to src/checkpoints/
+# 4. Generate visualization plots to src/vis/
+# 5. Log training details to training.log
+```
+
+**Output Structure**
+
+```
+src/
+├── checkpoints/
+│   └── {DATASET_NAME}/
+│       └── {MODEL_NAME}/
+│           └── {subject_id}/
+│               └── best_fold{fold_idx}_acc{accuracy:.4f}.pt
+└── vis/
+    └── {DATASET_NAME}/
+        └── {MODEL_NAME}/
+            ├── subject_{subject_id}/
+            │   └── training_history_per_fold.png
+            └── subject_performance_comparison_{timestamp}.png
+```
+
+**Key Features**
+
+- **Real-time Progress**: Single progress bar per fold showing epoch progress with live metrics:
+  ```
+  Sub1 Fold1 |███████         | 10/100 [00:15<02:15] LR:1.0e-03 T:0.523/0.812 V:0.489/0.845
+  ```
+  Where `T:loss/acc` = Train loss/accuracy, `V:loss/acc` = Validation loss/accuracy
+
+- **Automatic Checkpoint Saving**: Best model for each fold is automatically saved
+
+- **Comprehensive Logging**: Detailed metrics logged to `training.log`
+
+**Note**: While `torch_fold_train.py` is maintained for compatibility, new projects are recommended to use the new `train.py` framework for better modularity and configuration management.
 
 ### 4. Results
 
@@ -295,8 +362,5 @@ See `requirements.txt` for complete list.
 
 ## :page_facing_up: License
 
-[Your License Here]
-
 ## :busts_in_silhouette: Contact
 
-[Your Contact Information]

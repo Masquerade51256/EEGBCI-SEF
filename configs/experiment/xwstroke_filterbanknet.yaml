@@ -34,6 +34,10 @@ training:
   k_folds: 5
   deterministic: false
   
+  # Checkpoint settings
+  save_checkpoints: true         # 是否保存模型检查点
+  save_optimizer_state: false    # 是否保存优化器状态（false 可大幅减小文件大小）
+  
   optimizer:
     type: "Adam"
     lr: 0.001

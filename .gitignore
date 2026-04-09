@@ -5,6 +5,8 @@
 # Datasets (large files, should not be in Git)
 src/datasets/*
 !src/datasets/.gitkeep
+# But keep Python scripts in datasets (data loading utilities)
+!src/datasets/**/*.py
 
 # Model checkpoints (large binary files)
 src/checkpoints/*
@@ -13,9 +15,11 @@ src/checkpoints/*
 *.ckpt
 
 # Experiment results (should use experiment tracking tools instead)
+# Ignore all experiment outputs but keep Python scripts and docs
 experiments/*
-!experiments/.gitkeep
-!experiments/README.md
+!experiments/*.py
+!experiments/*.md
+experiments/__pycache__/
 
 # Legacy experiment outputs
 src/results/*
@@ -26,6 +30,16 @@ training.log
 # IDE
 .vscode/
 .idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.bak
+*~
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

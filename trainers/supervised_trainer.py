@@ -49,6 +49,10 @@ to prevent data leakage from overlapping windows.
         # Loss function
         self.criterion = nn.CrossEntropyLoss()
         
+        # Checkpoint configuration
+        self.save_checkpoints = self.config.get('training.save_checkpoints', True)
+        self.save_optimizer_state = self.config.get('training.save_optimizer_state', False)
+        
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run training for all subjects with lazy data loading.
@@ -369,14 +373,21 @@ to prevent data leakage from overlapping windows.
             epoch: Current epoch
             metric: Performance metric
         """
+        if not self.save_checkpoints:
+            return
+        
+        # 构建 checkpoint，根据配置决定是否包含优化器状态
         checkpoint = {
             'epoch': epoch,
             'subject_id': subject_id,
             'fold': fold,
             'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
             'metric': metric
         }
+        
+        # 可选：保存优化器状态（会显著增加文件大小）
+        if self.save_optimizer_state:
+            checkpoint['optimizer_state_dict'] = optimizer.state_dict()
         
         checkpoint_path = self.paths.get_checkpoint_path(
             subject_id=subject_id,
@@ -384,4 +395,9 @@ to prevent data leakage from overlapping windows.
             metric=metric
         )
         
-        torch.save(checkpoint, checkpoint_path)
+        try:
+            torch.save(checkpoint, checkpoint_path)
+        except (RuntimeError, IOError, OSError) as e:
+            # 保存失败时记录警告但不中断训练
+            self._log(f"    Warning: Failed to save checkpoint: {e}", level='warning')
+            self._log(f"    Continuing training without saving this checkpoint...", level='warning')

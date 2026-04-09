@@ -24,6 +24,10 @@ training:
   k_folds: 5
   deterministic: false
   
+  # Checkpoint settings
+  save_checkpoints: true
+  save_optimizer_state: false
+  
   optimizer:
     type: "Adam"
     lr: 0.001

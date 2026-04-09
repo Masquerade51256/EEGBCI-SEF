@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 # from preprocessing.pipline import FilterBankProcessor, ExponentialMovingStandardizeProcessor
-from dataloader._dataset_Base import BaseDataset
+from legacy_dataloader._dataset_Base import BaseDataset
 
 
 class BCICompet2aIV(BaseDataset):

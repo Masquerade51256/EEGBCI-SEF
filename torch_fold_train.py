@@ -11,12 +11,12 @@ from tqdm import tqdm
 import numpy as np
 
 import constant_value
-from dataloader._get_data import load_single_subject_data
+from legacy_dataloader._get_data import load_single_subject_data
 from models._get_model import get_model
-from utils import load_config
+from legacy_utils import load_config
 
 # ==================== Configuration & Setup ====================
-config = load_config("config/train_config/base_config.yaml")
+config = load_config("legacy_config/train_config/base_config.yaml")
 train_device = torch.device(config['Training']['train_device'] if torch.cuda.is_available() else "cpu")
 print(f"Using device: {train_device}")
 

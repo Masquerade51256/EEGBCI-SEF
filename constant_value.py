@@ -46,7 +46,7 @@ weight_decay = 0.075
 k_folds = 5
 
 # Path
-dataInfo_path = os.path.join('config', 'dataset_config')
+dataInfo_path = os.path.join('legacy_config', 'dataset_config')
 log_path = os.path.join('training_logs')
 ckpt_path =  os.path.join('src', 'checkpoints')
 res_path = os.path.join('src', 'results')

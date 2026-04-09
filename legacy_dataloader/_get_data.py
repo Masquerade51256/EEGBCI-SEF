@@ -1,6 +1,6 @@
-from dataloader._dataset_BCICIV2a import BCICompet2aIV
-from dataloader._dataset_XWStroke import XWStrokeDataset
-from dataloader._dataset_LowerStroke import StrokeLowerLimbMI
+from legacy_dataloader._dataset_BCICIV2a import BCICompet2aIV
+from legacy_dataloader._dataset_XWStroke import XWStrokeDataset
+from legacy_dataloader._dataset_LowerStroke import StrokeLowerLimbMI
 import constant_value
 import os, yaml
 

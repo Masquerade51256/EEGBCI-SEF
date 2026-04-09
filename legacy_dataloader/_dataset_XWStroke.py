@@ -1,6 +1,6 @@
 import scipy.io
 import os
-from dataloader._dataset_Base import BaseDataset
+from legacy_dataloader._dataset_Base import BaseDataset
 
 class XWStrokeDataset(BaseDataset):
     def _load_mat_data(self, file_path):

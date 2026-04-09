@@ -95,7 +95,7 @@ src/datasets/
 
 **Note**: Run preprocessing scripts before training if required:
 ```bash
-python preprocessing_XW.py  # For XW Stroke dataset
+python legacy_preprocessing_XW.py  # For XW Stroke dataset
 ```
 
 ### 3. Running Experiments
@@ -141,7 +141,7 @@ SELECTED_MODEL = 1    # 0:EEGNet, 1:CNN_LSTM, 2:DeepConvNet, 3:ShallowConvNet, 4
 target_subjects = "all"  # or specify list like [1, 2, 3]
 ```
 
-Then edit the training configuration file (default: `config/train_config/base_config.yaml`):
+Then edit the training configuration file (default: `legacy_config/train_config/base_config.yaml`):
 
 ```yaml
 dataset_id: 3              # Should match SELECTED_DATASET above
@@ -164,7 +164,7 @@ Training:
 python torch_fold_train.py
 
 # The script will automatically:
-# 1. Load configuration from constant_value.py and config/train_config/base_config.yaml
+# 1. Load configuration from constant_value.py and legacy_config/train_config/base_config.yaml
 # 2. Train models for each subject with k-fold cross-validation
 # 3. Save checkpoints to src/checkpoints/
 # 4. Generate visualization plots to src/vis/

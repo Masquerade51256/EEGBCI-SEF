@@ -75,9 +75,11 @@ EEGBCI-SEF/
 ├── torch_fold_train.py            # Original training script
 ├── constant_value.py              # Original configuration
 ├── train.py (old)                 # Old training script
-├── dataloader/                    # Original data loaders
-├── config/                        # Original configs
-└── utils.py (old)                 # Old utils
+├── legacy_dataloader/             # Original data loaders (old framework)
+├── legacy_config/                 # Original configs (old framework)
+├── legacy_utils.py                # Old utils (old framework)
+├── legacy_plot.py                 # Old plotting script (old framework)
+└── legacy_preprocessing_XW.py     # Old preprocessing script (old framework)
 ```
 
 ## Key Components

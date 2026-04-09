@@ -9,7 +9,7 @@ import mne
 import os
 import numpy as np
 import pandas as pd
-from dataloader._dataset_Base import BaseDataset
+from legacy_dataloader._dataset_Base import BaseDataset
 from typing import List, Tuple, Dict, Any, Optional
 import warnings
 

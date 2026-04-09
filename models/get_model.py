@@ -6,7 +6,7 @@ from models.myADFCNN import ADFCNN
 from models.FBCNN import FilterBankCNN
 import constant_value
 import os
-import utils
+import legacy_utils as utils
 
 dataset_path = os.path.join(constant_value.dataInfo_path,f"{constant_value.DATASETS[constant_value.SELECTED_DATASET]}.yaml")
 

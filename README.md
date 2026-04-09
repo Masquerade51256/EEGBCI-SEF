@@ -362,17 +362,34 @@ See `requirements.txt` for complete list.
 
 **Checkpoint save failed / Disk space error**: 
 - Large models (e.g., XWFilterBankNet with 64M parameters) generate ~128-256MB checkpoint files per fold
-- **Solution 1**: Change checkpoint directory to a drive with more space in your config:
+- **Solution 1** (Recommended): Enable FP16 compression to reduce checkpoint size by ~50%:
+  ```yaml
+  training:
+    use_fp16_compression: true  # Saves ~50% disk space
+    save_optimizer_state: false  # Don't save optimizer state
+  ```
+- **Solution 2**: Set up automatic fallback to backup path when main disk is full:
   ```yaml
   paths:
-    checkpoint_dir: "E:/EEGBCI_checkpoints"  # Use a drive with sufficient space
+    checkpoint_dir: "./src/checkpoints"           # Primary path
+    fallback_checkpoint_dir: "E:/EEGBCI_checkpoints"  # Auto-switch when D: is full
   ```
-- **Solution 2**: Temporarily disable checkpoint saving:
+- **Solution 3**: Change checkpoint directory to a drive with more space:
+  ```yaml
+  paths:
+    checkpoint_dir: "E:/EEGBCI_checkpoints"
+  ```
+- **Solution 4**: Temporarily disable checkpoint saving:
   ```yaml
   training:
     save_checkpoints: false
   ```
-- **Solution 3**: Clean up old experiment directories in `experiments/` to free space
+- **Solution 5**: Clean up old experiment directories in `experiments/` to free space
+
+**Note on FP16 Compression**: 
+- Checkpoints are saved in FP16 format (half precision) to save ~50% space
+- When loading, they are automatically converted back to FP32 for training
+- Minimal impact on model performance (< 0.1% accuracy difference typically)
 
 ## :page_facing_up: License
 

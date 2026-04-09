@@ -109,6 +109,8 @@ class BaseTrainer(ABC):
         """
         Load a training checkpoint.
         
+        Supports both standard checkpoints and FP16 compressed checkpoints.
+        
         Args:
             filepath: Path to the checkpoint file
             
@@ -117,7 +119,14 @@ class BaseTrainer(ABC):
         """
         checkpoint = torch.load(filepath, map_location=self.device)
         
-        self.model.load_state_dict(checkpoint['model_state_dict'])
+        state_dict = checkpoint['model_state_dict']
+        
+        # 处理 FP16 压缩的 checkpoint：转换回 float32
+        if checkpoint.get('compressed', False):
+            state_dict = {k: v.float() if v.dtype == torch.float16 else v 
+                         for k, v in state_dict.items()}
+        
+        self.model.load_state_dict(state_dict)
         self.current_epoch = checkpoint.get('epoch', 0)
         self.global_step = checkpoint.get('global_step', 0)
         self.best_metric = checkpoint.get('best_metric', float('-inf'))

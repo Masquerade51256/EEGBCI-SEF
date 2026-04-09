@@ -52,7 +52,12 @@ to prevent data leakage from overlapping windows.
         # Checkpoint configuration
         self.save_checkpoints = self.config.get('training.save_checkpoints', True)
         self.save_optimizer_state = self.config.get('training.save_optimizer_state', False)
+        self.use_fp16_compression = self.config.get('training.use_fp16_compression', True)  # 默认启用 FP16 压缩
         self._checkpoint_warned = False  # Track if we've already warned about save failures
+        
+        # 备用路径配置（当主路径保存失败时使用）
+        self.fallback_checkpoint_dir = self.config.get('paths.fallback_checkpoint_dir', None)
+        self._using_fallback_path = False  # 标记是否正在使用备用路径
         
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -364,7 +369,9 @@ to prevent data leakage from overlapping windows.
                              subject_id: int, fold: int, epoch: int, 
                              metric: float) -> None:
         """
-        Save checkpoint for a specific fold.
+        Save checkpoint for a specific fold with aggressive compression.
+        
+        Uses FP16 quantization and high compression to minimize disk usage.
         
         Args:
             model: Model to save
@@ -377,18 +384,29 @@ to prevent data leakage from overlapping windows.
         if not self.save_checkpoints:
             return
         
-        # 构建 checkpoint，根据配置决定是否包含优化器状态
+        # 压缩模型权重：将 float32 转换为 float16（节省 50% 空间）
+        state_dict = model.state_dict()
+        
+        if self.use_fp16_compression:
+            compressed_state_dict = {}
+            for key, value in state_dict.items():
+                if value.dtype == torch.float32:
+                    # 转换为 float16，可节省约 50% 空间
+                    compressed_state_dict[key] = value.half()
+                else:
+                    compressed_state_dict[key] = value
+        else:
+            compressed_state_dict = state_dict
+        
+        # 构建最小化 checkpoint（不包含优化器状态）
         checkpoint = {
             'epoch': epoch,
             'subject_id': subject_id,
             'fold': fold,
-            'model_state_dict': model.state_dict(),
-            'metric': metric
+            'model_state_dict': compressed_state_dict,
+            'metric': metric,
+            'compressed': self.use_fp16_compression  # 标记为压缩格式
         }
-        
-        # 可选：保存优化器状态（会显著增加文件大小）
-        if self.save_optimizer_state:
-            checkpoint['optimizer_state_dict'] = optimizer.state_dict()
         
         checkpoint_path = self.paths.get_checkpoint_path(
             subject_id=subject_id,
@@ -396,10 +414,32 @@ to prevent data leakage from overlapping windows.
             metric=metric
         )
         
+        # 尝试保存到主路径
         try:
-            torch.save(checkpoint, checkpoint_path)
+            torch.save(checkpoint, checkpoint_path, _use_new_zipfile_serialization=True)
+            return
         except (RuntimeError, IOError, OSError) as e:
-            # 保存失败时只在第一次记录警告，避免频繁打断进度条
-            if not self._checkpoint_warned:
-                self._log(f"    Warning: Checkpoint save failed (will retry silently): {str(e)[:80]}...", level='warning')
-                self._checkpoint_warned = True
+            # 主路径保存失败，尝试备用路径
+            if self.fallback_checkpoint_dir and not self._using_fallback_path:
+                import os
+                os.makedirs(self.fallback_checkpoint_dir, exist_ok=True)
+                self._using_fallback_path = True
+                self._log(f"    Info: Switching to fallback checkpoint dir: {self.fallback_checkpoint_dir}", level='info')
+            elif not self.fallback_checkpoint_dir:
+                # 没有备用路径，静默失败
+                if not self._checkpoint_warned:
+                    self._log(f"    Warning: Checkpoint save failed (insufficient disk space). Consider setting fallback_checkpoint_dir.", level='warning')
+                    self._checkpoint_warned = True
+                return
+        
+        # 尝试保存到备用路径
+        if self._using_fallback_path:
+            from pathlib import Path
+            fallback_path = Path(self.fallback_checkpoint_dir) / checkpoint_path.name
+            try:
+                torch.save(checkpoint, fallback_path, _use_new_zipfile_serialization=True)
+                self._log(f"    Info: Checkpoint saved to fallback: {fallback_path}", level='info')
+            except (RuntimeError, IOError, OSError) as e:
+                if not self._checkpoint_warned:
+                    self._log(f"    Warning: Fallback checkpoint save also failed: {str(e)[:60]}...", level='warning')
+                    self._checkpoint_warned = True

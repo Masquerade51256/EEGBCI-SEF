@@ -35,8 +35,9 @@ training:
   deterministic: false
   
   # Checkpoint settings
-  save_checkpoints: false        # 临时禁用 checkpoint 保存，直到磁盘空间充足
+  save_checkpoints: true         # 是否保存模型检查点
   save_optimizer_state: false    # 是否保存优化器状态（false 可大幅减小文件大小）
+  use_fp16_compression: true     # 使用 FP16 压缩（可再节省 50% 空间）
   
   optimizer:
     type: "Adam"
@@ -56,9 +57,12 @@ trainer:
   args: {}
 
 paths:
-  root_dir: "E:/EEGBCI_experiments"  # 改到 E 盘
+  root_dir: "./experiments"
   data_dir: "./src/datasets"
-  checkpoint_dir: "E:/EEGBCI_checkpoints"  # 改到 E 盘
+  checkpoint_dir: "./src/checkpoints"
+  # 备用路径：当主路径磁盘空间不足时自动切换
+  # 如果不设置，checkpoint 保存失败时会静默跳过
+  fallback_checkpoint_dir: "E:/EEGBCI_checkpoints"
 
 logging:
   level: "INFO"

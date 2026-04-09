@@ -1,7 +1,31 @@
-# my Ignore
+# ========================================
+# Project-specific ignores
+# ========================================
+
+# Datasets (large files, should not be in Git)
 src/datasets/*
+!src/datasets/.gitkeep
+
+# Model checkpoints (large binary files)
 src/checkpoints/*
 *.pt
+*.pth
+*.ckpt
+
+# Experiment results (should use experiment tracking tools instead)
+experiments/*
+!experiments/.gitkeep
+!experiments/README.md
+
+# Legacy experiment outputs
+src/results/*
+src/vis/*
+training.log
+*.log
+
+# IDE
+.vscode/
+.idea/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

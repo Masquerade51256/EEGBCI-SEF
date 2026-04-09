@@ -51,16 +51,24 @@ to prevent data leakage from overlapping windows.
         
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Run training for all subjects.
+        Run training for all subjects with lazy data loading.
+        
+        Each subject's data is loaded on-demand to minimize memory usage.
         
         Args:
-            datasets: Dictionary containing 'subjects', 'info', and 'instances'
+            datasets: Dictionary containing 'subjects', 'info', and 'dataset_cls'
+                     (for lazy loading) or 'instances' (for pre-loaded data)
             
         Returns:
             Dictionary containing training results
         """
         subjects = datasets['subjects']
-        subject_instances = datasets['instances']
+        dataset_info = datasets.get('info', {})
+        
+        # Support both lazy loading and pre-loaded instances
+        use_lazy_loading = 'dataset_cls' in datasets
+        dataset_cls = datasets.get('dataset_cls')
+        subject_instances = datasets.get('instances', {})
         
         all_results = []
         all_histories = []
@@ -75,7 +83,11 @@ to prevent data leakage from overlapping windows.
             self._log(f"\nProcessing Subject: {subject_id}")
             self._log("-" * 40)
             
-            dataset = subject_instances[subject_id]
+            # Load data on-demand if using lazy loading
+            if use_lazy_loading:
+                dataset = dataset_cls(subject_id=subject_id, dataset_info=dataset_info)
+            else:
+                dataset = subject_instances[subject_id]
             
             # Train this subject
             subject_results, subject_history = self._train_subject(subject_id, dataset)
@@ -90,6 +102,12 @@ to prevent data leakage from overlapping windows.
             subject_viz_dir = self.paths.get_subject_viz_dir(subject_id)
             plot_training_history(subject_history, subject_viz_dir, 
                                  title=f'Subject {subject_id} Training History')
+            
+            # Free memory after training this subject
+            if use_lazy_loading:
+                del dataset
+                import gc
+                gc.collect()
         
         # Plot comparison across subjects
         plot_subject_comparison(all_results, self.paths.viz_dir)

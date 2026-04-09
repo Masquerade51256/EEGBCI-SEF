@@ -32,7 +32,33 @@ def register_all_models():
     # ADFCNN
     try:
         from .myADFCNN import ADFCNN
-        MODELS.register('ADFCNN')(ADFCNN)
+        
+        # Create adapter to handle multi-band input
+        class ADFCNNAdapter(nn.Module):
+            def __init__(self, num_channels, num_classes, num_bands, input_length, **kwargs):
+                super().__init__()
+                self.num_bands = num_bands
+                self.num_channels = num_channels
+                
+                # ADFCNN expects input shape [B, 1, C, T]
+                # But data comes as [B, num_bands, C, T]
+                # We reshape to [B, 1, num_bands*C, T]
+                self.model = ADFCNN(
+                    num_classes=num_classes,
+                    num_channels=num_channels * num_bands,  # Merge bands and channels
+                    num_bands=1,  # After reshape, we have 1 "band"
+                    input_length=input_length
+                )
+            
+            def forward(self, x):
+                # x: [B, num_bands, C, T]
+                B = x.shape[0]
+                # Reshape to [B, 1, num_bands*C, T]
+                # Use reshape instead of view to handle non-contiguous tensors
+                x = x.reshape(B, 1, self.num_channels * self.num_bands, -1)
+                return self.model(x)
+        
+        MODELS.register('ADFCNN')(ADFCNNAdapter)
     except ImportError as e:
         print(f"Warning: Could not register ADFCNN: {e}")
     

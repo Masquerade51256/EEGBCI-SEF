@@ -38,6 +38,5 @@ class SlidingWindowSegmenter(BaseProcessor):
         all_windowed_data = np.stack(windowed_data_list, axis=0).astype(np.float32)  # (n_total_windows, n_bands, n_channels, window_len)
         all_windowed_labels = np.array(windowed_labels_list, dtype=np.int64)
         all_group_ids = np.array(all_group_ids, dtype=np.int64)
-        print(all_group_ids.shape)
         return all_windowed_data, all_windowed_labels, all_group_ids
     

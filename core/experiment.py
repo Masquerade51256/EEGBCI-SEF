@@ -171,9 +171,9 @@ class ExperimentManager:
         
     def build_dataset(self) -> None:
         """
-        Build datasets based on configuration.
+        Build dataset configuration without loading data.
         
-        Creates train, validation, and test datasets as specified.
+        Data is loaded on-demand during training to minimize memory usage.
         """
         dataset_config = self.config.get('data', {})
         dataset_type = dataset_config.get('dataset')
@@ -198,22 +198,20 @@ class ExperimentManager:
         else:
             dataset_info = dataset_config.get('info', {})
         
-        # Build datasets for each subject
+        # Get target subjects
         target_subjects = dataset_config.get('subjects', 'all')
         if target_subjects == 'all':
             target_subjects = dataset_info.get('dataset', {}).get('subjects', [1])
         
+        # Store configuration for lazy loading
         self.datasets = {
             'subjects': target_subjects,
             'info': dataset_info,
-            'instances': {}
+            'dataset_cls': dataset_cls,
+            # instances will be loaded on-demand during training
         }
         
-        for subject_id in target_subjects:
-            dataset = dataset_cls(subject_id=subject_id, dataset_info=dataset_info)
-            self.datasets['instances'][subject_id] = dataset
-            
-        self._info(f"Built datasets for {len(target_subjects)} subjects")
+        self._info(f"Configured for {len(target_subjects)} subjects (lazy loading)")
         
     def build_model(self) -> None:
         """
@@ -234,8 +232,8 @@ class ExperimentManager:
             available = MODELS.list_keys()
             raise ValueError(f"Unknown model '{model_type}'. Available: {available}")
         
-        # Prepare model arguments
-        model_args = model_config.get('args', {}).copy()
+        # Prepare model arguments (handle None case)
+        model_args = (model_config.get('args') or {}).copy()
         
         # Auto-populate from dataset info if available
         if 'datasets' in self.__dict__ and 'info' in self.datasets:

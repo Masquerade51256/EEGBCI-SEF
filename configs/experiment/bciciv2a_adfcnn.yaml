@@ -1,0 +1,70 @@
+# BCIC IV 2a Dataset with ADFCNN Model Experiment Configuration
+# BCI Competition IV 2a: 4-class motor imagery (left hand, right hand, foot, tongue)
+# Model: ADFCNN (Attention-based Dual-Branch Feature CNN)
+
+experiment:
+  name: "BCICIV2a_ADFCNN"
+  seed: 42
+  description: "BCIC IV 2a 4-class motor imagery classification using ADFCNN"
+
+# Data configuration
+data:
+  dataset: "BCICIV2a"           # Dataset name (must be registered)
+  subjects: "all"               # "all" or list of subject IDs: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  info_path: "configs/dataset/BCICIV2a.yaml"  # Dataset-specific configuration
+
+# Model configuration
+model:
+  type: "ADFCNN"                # Model type (must be registered)
+  args: {}                      # Model arguments (auto-populated from dataset info)
+    # The following are auto-populated if not specified:
+    # - num_channels: 22 (from BCICIV2a.yaml channel_selection)
+    # - num_classes: 4 (left hand, right hand, foot, tongue)
+    # - num_bands: 8 (from filter_bank configuration)
+    # - input_length: 750 (3 seconds * 250 Hz)
+
+# Training configuration
+training:
+  device: "cuda"                # "cuda" or "cpu"
+  epochs: 200                   # Number of training epochs
+  batch_size: 32                # Batch size for training
+  k_folds: 5                    # Number of folds for cross-validation
+  deterministic: false          # Set true for reproducibility (may slow down training)
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001                   # Learning rate
+    weight_decay: 0.5           # L2 regularization (BCICIV2a typically uses higher weight decay)
+  
+  scheduler:
+    type: "cosine"              # Cosine annealing scheduler
+    # For cosine scheduler, no additional parameters needed
+    # Learning rate schedule: lr * (1 + cos(epoch * pi / epochs)) / 2
+    
+  early_stopping:
+    enabled: false              # Enable early stopping
+    patience: 20                # Number of epochs to wait for improvement
+    min_delta: 0.001            # Minimum change to qualify as improvement
+
+# Trainer configuration
+trainer:
+  type: "SupervisedTrainer"     # Trainer class (must be registered)
+  args: {}                      # Additional trainer arguments
+
+# Path configuration
+paths:
+  root_dir: "./experiments"     # Root directory for experiment outputs
+  data_dir: "./src/datasets"    # Root directory for datasets
+  checkpoint_dir: "./src/checkpoints"
+
+# Logging configuration
+logging:
+  level: "INFO"                 # DEBUG, INFO, WARNING, ERROR
+  console: true                 # Print to console
+  tensorboard: false            # Use TensorBoard logging
+
+# Visualization configuration
+visualization:
+  plot_history: true            # Plot training history per subject
+  plot_subject_comparison: true # Plot comparison across all subjects
+  save_format: "png"

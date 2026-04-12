@@ -1,0 +1,75 @@
+# Transfer Learning Experiment Configuration
+# This is an example configuration for transfer learning experiments
+
+experiment:
+  name: "TransferLearning_XWStroke_EEGNet"
+  seed: 42
+
+# Data configuration
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5]  # Target subjects for transfer learning
+  info_path: "configs/dataset/XWStroke.yaml"
+
+# Model configuration
+model:
+  type: "EEGNet"
+  args: {}
+
+# Training configuration
+training:
+  device: "cuda"
+  # Total epochs = freeze_epochs + unfreeze_epochs (for gradual strategy)
+  # Or just use this value for other strategies
+  epochs: 150
+  batch_size: 32
+  k_folds: 5
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+# Transfer Learning Trainer Configuration
+trainer:
+  type: "TransferLearningTrainer"
+  args:
+    # Path to pretrained checkpoint (required for transfer learning)
+    # This should be a checkpoint from source domain/subject
+    pretrained_path: "experiments/pretrain_xwstroke/checkpoints/subject_1_fold_0_acc_0.8500.pt"
+    
+    # Freezing strategy:
+    # - "none": No freezing, direct fine-tuning (same as standard training)
+    # - "all": Freeze all feature layers, only train classifier
+    # - "gradual": Two-stage: frozen training + fine-tuning (recommended)
+    # - "selective": Selectively freeze layers based on layers_to_unfreeze
+    freeze_strategy: "gradual"
+    
+    # Configuration for "gradual" strategy
+    freeze_epochs: 50      # Epochs to train with frozen layers
+    unfreeze_epochs: 100   # Epochs to train after unfreezing
+    
+    # Learning rates for different phases
+    learning_rate_frozen: 0.001    # LR for frozen phase
+    learning_rate_finetune: 0.0001 # LR for fine-tuning phase (usually smaller)
+    
+    # Configuration for "selective" strategy (optional)
+    # List of layer name patterns to unfreeze, others will be frozen
+    # layers_to_unfreeze:
+    #   - "conv"
+    #   - "classifier"
+    
+    # Warmup epochs (optional)
+    warmup_epochs: 0
+
+# Path configuration
+paths:
+  root_dir: "./experiments"
+  fallback_checkpoint_dir: null  # Optional: backup location for checkpoints
+
+# Logging configuration
+logging:
+  level: "INFO"
+  console: true

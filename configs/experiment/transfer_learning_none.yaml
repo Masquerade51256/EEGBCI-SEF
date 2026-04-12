@@ -1,0 +1,44 @@
+# Transfer Learning Configuration - Direct Fine-tuning (none strategy)
+# Use this when you want to fine-tune directly without freezing
+
+experiment:
+  name: "TL_None_XWStroke_EEGNet"
+  seed: 42
+
+data:
+  dataset: "XWStroke"
+  subjects: [2, 3, 4, 5]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "EEGNet"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 32
+  k_folds: 5
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.0005  # Use smaller learning rate for fine-tuning
+    weight_decay: 0.01
+
+trainer:
+  type: "TransferLearningTrainer"
+  args:
+    # Path to pretrained checkpoint
+    pretrained_path: "experiments/pretrain_xwstroke/checkpoints/subject_1_fold_0_acc_0.8500.pt"
+    
+    # Direct fine-tuning without freezing
+    freeze_strategy: "none"
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

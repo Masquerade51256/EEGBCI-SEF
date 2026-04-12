@@ -1,0 +1,57 @@
+# Transfer Learning Configuration - Selective Freezing
+# Use this when you want fine-grained control over which layers to train
+
+experiment:
+  name: "TL_Selective_XWStroke_EEGNet"
+  seed: 42
+
+data:
+  dataset: "XWStroke"
+  subjects: [2, 3, 4, 5]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "EEGNet"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 32
+  k_folds: 5
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "TransferLearningTrainer"
+  args:
+    # Path to pretrained checkpoint
+    pretrained_path: "experiments/pretrain_xwstroke/checkpoints/subject_1_fold_0_acc_0.8500.pt"
+    
+    # Selective freezing strategy
+    freeze_strategy: "selective"
+    
+    # Layer name patterns to unfreeze (others will be frozen)
+    # Common patterns for EEG models:
+    # - "conv": convolutional layers
+    # - "depthwise": depthwise separable convolutions
+    # - "separable": separable convolutions  
+    # - "classifier": classification head
+    # - "fc": fully connected layers
+    # - "bn" or "batchnorm": batch normalization layers
+    layers_to_unfreeze:
+      - "classifier"   # Unfreeze classification head
+      - "conv2"        # Unfreeze later convolutional layers
+      - "bn"           # Unfreeze batch normalization layers
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

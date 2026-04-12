@@ -7,7 +7,7 @@ experiment:
 
 data:
   dataset: "XWStroke"
-  subjects: "all"
+  subjects: [1,2,3,6,7,11,19,29,40,45]
   info_path: "configs/dataset/XWStroke.yaml"
 
 model:

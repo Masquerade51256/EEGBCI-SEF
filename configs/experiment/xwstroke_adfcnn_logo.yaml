@@ -1,0 +1,65 @@
+# LOGO Experiment: ADFCNN on XWStroke Dataset
+#
+# For heterogeneous stroke datasets, this configuration groups subjects
+# by clinical characteristics (e.g., severity) and performs leave-one-group-out.
+#
+# Advantages:
+#   - More realistic for clinical applications
+#   - Handles patient subgroups better than pure LOSO
+#   - Still memory-efficient with streaming option
+
+experiment:
+  name: "XWStroke_ADFCNN_LOGO"
+  seed: 42
+
+# Data configuration
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+  info_path: "configs/dataset/XWStroke.yaml"
+  # Note: For actual grouping, add subject_info to dataset config:
+  # subject_info:
+  #   "1": {severity: "mild"}
+  #   "2": {severity: "severe"}
+  #   ...
+
+# Model configuration
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 32
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+# LOGO Trainer Configuration
+trainer:
+  type: "LOGOTrainer"
+  args:
+    # Grouping key from dataset subject_info metadata
+    # Options: "severity", "age_group", "lesion_location", etc.
+    # If not found in metadata, will auto-create groups by subject ID
+    grouping_key: "severity"
+    
+    # Use streaming mode for memory efficiency
+    streaming: true
+    
+    # Gradient accumulation for larger effective batch
+    gradient_accumulation_steps: 4
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

@@ -47,12 +47,17 @@ class TransferLearningTrainer(BaseTrainer):
     FREEZE_GRADUAL = "gradual"     # 分阶段：先冻结训练，后解冻微调
     FREEZE_SELECTIVE = "selective" # 选择性冻结（保留部分层可训练）
     
-    def __init__(self, **kwargs):
+    def __init__(self, model=None, config=None, device=None, paths=None, logger=None, **kwargs):
         """
         Initialize the transfer learning trainer.
         
         Args:
-            **kwargs: Passed to BaseTrainer, plus transfer learning specific args:
+            model: The neural network model to train
+            config: Training configuration
+            device: Computation device
+            paths: Path manager for saving outputs
+            logger: Logger instance
+            **kwargs: Transfer learning specific args:
                 - pretrained_path: Path to pretrained checkpoint
                 - freeze_strategy: Freezing strategy (none/all/gradual/selective)
                 - freeze_epochs: Epochs to train with frozen layers (for gradual)
@@ -62,7 +67,7 @@ class TransferLearningTrainer(BaseTrainer):
                 - layers_to_unfreeze: List of layer names to unfreeze (for selective)
                 - warmup_epochs: Warmup epochs before main training
         """
-        super().__init__(**kwargs)
+        super().__init__(model=model, config=config, device=device, paths=paths, logger=logger)
         
         # Transfer learning configuration
         self.pretrained_path = self.config.get('trainer.args.pretrained_path')

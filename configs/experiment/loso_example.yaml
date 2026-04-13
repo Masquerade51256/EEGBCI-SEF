@@ -1,0 +1,52 @@
+# LOSO (Leave One Subject Out) Experiment Configuration
+# 
+# This configuration performs subject-independent evaluation:
+# - For each subject: train on all other subjects, test on the left-out subject
+# - This evaluates how well the model generalizes to unseen subjects
+
+experiment:
+  name: "LOSO_XWStroke_EEGNet"
+  seed: 42
+
+# Data configuration
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # All subjects for LOSO
+  info_path: "configs/dataset/XWStroke.yaml"
+
+# Model configuration
+model:
+  type: "EEGNet"
+  args: {}
+
+# Training configuration
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 64  # Can use larger batch size with LOSO (more training data)
+  # Note: k_folds is not used in LOSO (subjects are the folds)
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+# LOSO Trainer Configuration
+trainer:
+  type: "LOSOTrainer"
+  args:
+    # Optional: Number of inner folds for cross-validation within training set
+    # Set to 0 (default) to use all training data without inner CV
+    inner_k_folds: 0
+    
+    # Optional: Balance classes across subjects (experimental)
+    balance_classes: false
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

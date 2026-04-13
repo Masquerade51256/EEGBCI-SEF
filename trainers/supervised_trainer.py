@@ -26,14 +26,19 @@ class SupervisedTrainer(BaseTrainer):
 to prevent data leakage from overlapping windows.
     """
     
-    def __init__(self, **kwargs):
+    def __init__(self, model=None, config=None, device=None, paths=None, logger=None, **kwargs):
         """
         Initialize the supervised trainer.
         
         Args:
-            **kwargs: Passed to BaseTrainer
+            model: The neural network model to train
+            config: Training configuration
+            device: Computation device
+            paths: Path manager for saving outputs
+            logger: Logger instance
+            **kwargs: Additional arguments (ignored)
         """
-        super().__init__(**kwargs)
+        super().__init__(model=model, config=config, device=device, paths=paths, logger=logger)
         
         # Training configuration
         self.epochs = self.config.get('training.epochs', 100)

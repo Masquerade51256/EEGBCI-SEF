@@ -1,0 +1,66 @@
+# LOSO Experiment: ADFCNN on BCICIV 2a Dataset
+# 
+# This configuration performs Leave One Subject Out cross-validation
+# to evaluate ADFCNN's cross-subject generalization on BCICIV 2a.
+#
+# Dataset Info:
+#   - 9 subjects
+#   - 22 EEG channels
+#   - 4 classes (left hand, right hand, foot, tongue)
+#   - 8 filter banks (4-40 Hz)
+
+experiment:
+  name: "BCICIV2a_ADFCNN_LOSO"
+  seed: 42
+
+# Data configuration
+data:
+  dataset: "BCICIV2a"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9]  # All 9 subjects for LOSO
+  info_path: "configs/dataset/BCICIV2a.yaml"
+
+# Model configuration
+model:
+  type: "ADFCNN"
+  args: {}
+  # Model arguments will be auto-populated from dataset:
+  #   - num_channels: 22 (from channel_selection)
+  #   - num_classes: 4
+  #   - num_bands: 8 (from filter_bank)
+  #   - input_length: 750 (3s * 250Hz)
+
+# Training configuration
+training:
+  device: "cuda"
+  epochs: 150
+  batch_size: 64  # Larger batch size due to more training data in LOSO
+  # Note: k_folds is not used in LOSO (subjects serve as natural folds)
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+# LOSO Trainer Configuration
+trainer:
+  type: "LOSOTrainer"
+  args:
+    # Optional: Inner k-fold cross-validation within training set
+    # Set to 0 to use all training data without inner validation split
+    inner_k_folds: 0
+    
+    # Optional: Balance classes across subjects (experimental)
+    balance_classes: false
+
+# Path configuration
+paths:
+  root_dir: "./experiments"
+  # Optional: Fallback checkpoint directory if main disk is full
+  # fallback_checkpoint_dir: "D:/backup/checkpoints"
+
+# Logging configuration
+logging:
+  level: "INFO"
+  console: true

@@ -1,0 +1,61 @@
+# Streaming LOSO Experiment: ADFCNN on XWStroke Dataset
+# 
+# For large-scale datasets (50 subjects), this configuration uses
+# streaming data loading to maintain constant memory usage.
+#
+# Key Features:
+#   - Loads only 1-2 subjects into memory at a time
+#   - Gradient accumulation for effective large batch training
+#   - Supports mixed precision training for speed
+
+experiment:
+  name: "XWStroke_ADFCNN_Streaming_LOSO"
+  seed: 42
+
+# Data configuration
+data:
+  dataset: "XWStroke"
+  # Can use all 50 subjects - memory is managed by streaming
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+# Model configuration
+model:
+  type: "ADFCNN"
+  args: {}
+
+# Training configuration
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 32  # Per-subject batch size
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+# Streaming LOSO Trainer Configuration
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    # Number of subjects to keep in memory cache (1 = minimal memory)
+    subject_buffer_size: 1
+    
+    # Gradient accumulation steps to simulate larger effective batch size
+    # Effective batch size = batch_size * gradient_accumulation_steps
+    gradient_accumulation_steps: 4
+    
+    # Mixed precision training (faster, less memory)
+    mixed_precision: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

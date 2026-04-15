@@ -112,6 +112,34 @@ class BaseDataset(Dataset, ABC):
         resampler = ResampleProcessor(target_sfreq=self.target_sr, original_sfreq=self.original_sr)
         resampled_data = resampler.process(raw_data)
         
+        # Artifact removal pipeline (optional)
+        # Configured under dataset_info['preprocessing']['artifact_removal_pipeline']
+        artifact_pipeline_config = self.dataset_info.get('preprocessing', {}).get('artifact_removal_pipeline')
+        if artifact_pipeline_config:
+            import copy
+            from preprocessing.factory import ProcessorFactory
+            
+            # Deep copy to avoid mutating the original config dict
+            artifact_pipeline_config = copy.deepcopy(artifact_pipeline_config)
+            
+            # Auto-inject EOG channel names from dataset.EOG_channels if available
+            eog_channel_indices = self.dataset_info.get('dataset', {}).get('EOG_channels')
+            if eog_channel_indices is not None:
+                n_channels = resampled_data.shape[-2]
+                if n_channels == 32:
+                    from preprocessing.artifact_removal.base import BaseArtifactRemovalProcessor
+                    ch_names = list(BaseArtifactRemovalProcessor.DEFAULT_XWSTROKE_CH_NAMES)
+                else:
+                    ch_names = [f'EEG{i}' for i in range(n_channels)]
+                eog_ch_names = [ch_names[i] for i in eog_channel_indices if 0 <= i < len(ch_names)]
+                
+                for proc_config in artifact_pipeline_config:
+                    if 'eog_channels' not in proc_config:
+                        proc_config['eog_channels'] = eog_ch_names
+            
+            artifact_pipeline = ProcessorFactory.create_pipeline_from_config(artifact_pipeline_config)
+            resampled_data = artifact_pipeline.process(resampled_data)
+        
         # Channel selection
         selected_data = resampled_data[:, self.channels_selected, :]
         

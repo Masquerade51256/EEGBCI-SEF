@@ -1,0 +1,60 @@
+# Thwe et al. (2026) - Faithful SASICA + CNN-LSTM reproduction
+# This configuration attempts to match the paper's preprocessing and protocol
+# as closely as possible.
+
+experiment:
+  name: "Thwe2026_SASICA_CNNLSTM_Paper"
+  seed: 42
+  description: "XWStroke with paper-faithful SASICA and ThweCNNLSTM (500Hz, full 4s trial)"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_singleband_sasica_paper.yaml"
+
+model:
+  type: "ThweCNNLSTM"
+  args: {}
+
+training:
+  device: "cuda"
+  # Paper does not specify epochs; 500 is generous for 40 trials per subject
+  epochs: 500
+  # Smaller batch size for the small per-subject dataset (40 trials)
+  batch_size: 16
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    # Paper does not mention weight decay; set to 0 to avoid over-regularization
+    weight_decay: 0.0
+
+  # Paper does not mention learning-rate scheduling; disable cosine annealing
+  scheduler:
+    type: "none"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

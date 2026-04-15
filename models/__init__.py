@@ -123,6 +123,15 @@ def register_all_models():
     except ImportError as e:
         print(f"Warning: Could not register XWFilterBankNet: {e}")
 
+    # Thwe et al. (2026) models
+    try:
+        from .ThweCNNLSTM import ThweCNN, ThweLSTM, ThweCNNLSTM
+        MODELS.register('ThweCNN')(ThweCNN)
+        MODELS.register('ThweLSTM')(ThweLSTM)
+        MODELS.register('ThweCNNLSTM')(ThweCNNLSTM)
+    except ImportError as e:
+        print(f"Warning: Could not register ThweCNNLSTM models: {e}")
+
 
 # Auto-register on import
 register_all_models()

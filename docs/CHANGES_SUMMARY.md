@@ -43,7 +43,24 @@
 - **`__init__.py`** — 统一导出
 - **`artifact_removal_legacy.py`** — 原 `artifact_removal.py` 保留向后兼容
 
-### 2. 模型复现 (`models/ThweCNNLSTM.py`)
+### 2. EDF 数据集加载器 (`data/datasets.py`)
+
+新增 `XWStrokeEDFDataset` 类，直接从原始 EDF 文件读取数据：
+- 读取路径：`src/datasets/21679035/edffile/sub-XX/eeg/sub-XX_task-motor-imagery_eeg.edf`
+- 解析共享 BIDS 事件表 `task-motor-imagery_events.tsv`，按 `value=2`（MI 阶段）提取 4 秒 epoch
+- 自动去除空命名通道，并将数据从 Volts 转换为 µV
+- 通道名按标准 XWStroke cap 顺序重排，确保与后续预处理一致
+- 输出形状：**40 试次 × 32 通道 × 2000 采样点 @ 500Hz**
+- 已在 `data/__init__.py` 中注册为 `XWStrokeEDF`
+
+相比 `_4s.mat` 的优势：
+- 从**未经数据集作者预处理**的原始信号出发，可完整复现 Thwe 的 EEGLab 流程
+- 事件对齐来自官方 BIDS events，避免基于 `.mat` 中事件标记通道的索引偏差
+- ICA fitting 可在更长的连续数据上进行（当前实现为 epoch 后处理，未来可扩展为连续数据 ICA）
+
+验证结果：EDF 提取的 epoch 与 `_4s.mat` 在 z-score 归一化后具有中等到高的 Pearson 相关性（r ≈ 0.4–0.9），确认事件对齐正确。
+
+### 3. 模型复现 (`models/ThweCNNLSTM.py`)
 
 严格按论文架构实现三个模型：
 

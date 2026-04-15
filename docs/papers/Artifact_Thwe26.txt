@@ -1,0 +1,1015 @@
+===== PAGE 1 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31880 
+ 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+Integrating EEG Artifact Removal with Deep 
+Learning for Accurate Motor Imagery 
+Classification in Acute Stroke 
+ 
+Yamin Thwe 
+Department of Mechatronics Engineering, Rajamangala University of Technology, Thanyaburi, Thailand 
+yamin_t@mail.rmutt.ac.th 
+ 
+Dechrit Maneetham 
+Department of Mechatronics Engineering, Rajamangala University of Technology, Thanyaburi, Thailand 
+dechrit_m@rmutt.ac.th (corresponding author) 
+ 
+Padma Nyoman Crisnapati 
+Department of Mechatronics Engineering, Rajamangala University of Technology, Thanyaburi, Thailand 
+crisnapati@rmutt.ac.th 
+Received: 4 October 2025 | Revised: 15 November 2025 and 26 November 2025 | Accepted: 28 November 2025 
+Licensed under a CC-BY 4.0 license | Copyright (c) by the authors | DOI: https://doi.org/10.48084/etasr.15300 
+ABSTRACT 
+Nowadays, the number of stroke incidents has increased, particularly in aging populations and areas with 
+limited access to healthcare. This rise has highlighted the need for innovative assistance solutions to 
+improve the quality of life of stroke survivors. This study aimed to address the challenges of noisy and 
+artifact-laden Electroencephalogram (EEG) data by employing preprocessing with autonomous and semi-
+autonomous artifact removal techniques, including the use of EEGLab. This study focuses on the 
+classification of EEG data for stroke patients using Long Short-Term Memory (LSTM) and Convolutional 
+Neural Networks (CNNs). Combining the strengths of CNNs and LSTMs, a hybrid model leverages both 
+spatial and temporal features of EEG data to improve classification accuracy. The hybrid CNN-LSTM 
+model outperforms individual CNN and LSTM models in classifying motor imagery tasks, demonstrating 
+its potential for robust brain-computer interface applications in stroke rehabilitation. This integrative 
+approach not only improves classification performance but also sets the stage for more effective 
+therapeutic interventions, ultimately aiming to enhance patient outcomes. 
+Keywords-EEG; stroke patients; artifact removal; CNN; LSTM; hybrid model; brain-computer interface 
+I. 
+INTRODUCTION  
+According to recent epidemiological studies, the incidence 
+of strokes has increased in the last few decades, particularly in 
+aging populations and regions with limited access to preventive 
+healthcare [1, 2]. This rise has underscored the urgent need for 
+innovative solutions to improve rehabilitation outcomes for 
+stroke survivors [3]. Stroke survivors often face significant 
+challenges in controlling assistive devices, such as wheelchairs, 
+due to motor impairments resulting from their condition [4]. 
+These difficulties can seriously impact their quality of life, 
+limiting their independence and mobility [5]. Traditional 
+rehabilitation methods sometimes fail to address these issues 
+comprehensively, necessitating the exploration of advanced 
+technologies to bridge this gap and provide better support for 
+stroke patients [6]. Electroencephalography (EEG) offers a 
+promising avenue, enabling new methods to assist stroke 
+survivors through Brain-Computer Interfaces (BCIs) [7]. 
+This study focuses on the classification of Motor Imagery 
+Electroencephalography (MI-EEG) signal data from stroke 
+patients [8] using Long Short-Term Memory (LSTM) and 
+Convolutional Neural Networks (CNNs) [9, 10]. Accurate 
+classification of motor imagery tasks from EEG signals is 
+crucial to advance the development of effective BCI systems 
+[11]. Such systems can significantly improve the ability of 
+stroke survivors to control assistive devices through brain 
+signals, bypassing impaired motor pathways [12]. This 
+approach builds on the existing body of research, leveraging 
+the capabilities of EEG to address a critical need in stroke 
+rehabilitation. 
+Current state-of-the-art research has extensively explored 
+the use of various machine learning techniques for the 
+classification of EEG signals [13-15]. Previous studies have 
+demonstrated the potential of deep learning models, such as 
+CNNs and LSTMs, in capturing complex patterns in EEG data 
+[16-20]. 
+Among 
+these, 
+CNNs 
+have 
+shown 
+superior 
+
+
+===== PAGE 2 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31881 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+performance in spatial feature extraction, while LSTMs excel 
+in handling temporal dependencies in time-series data [21-23]. 
+However, most existing solutions focus solely on either CNNs 
+or LSTMs, rarely combining their strengths to improve 
+classification accuracy. Additionally, preprocessing EEG data 
+using tools like EEGLab for artifact removal, Power Spectral 
+Density (PSD) analysis, and Event-Related Desynchronization 
+(ERD) assessment is crucial, but often underemphasized. To 
+overcome these limitations, this study presents a hybrid 
+approach that integrates these advanced techniques.  
+The main limitation of current approaches is their 
+suboptimal performance when dealing with the noisy and 
+artifact-laden nature of EEG data from stroke patients. This 
+study aimed to address this limitation by systematically 
+comparing the performance of CNNs and LSTMs, both 
+individually and combined, to identify the most effective model 
+for EEG classification. In addition, advanced preprocessing 
+techniques are employed, including the use of the Multiple 
+Artifact Rejection Algorithm (MARA), Semi-Automated 
+Selection of Independent Components for Artifact Correction 
+(SASICA), and Eyes and Muscle Artifact Removal (EMAR), 
+are employed to enhance the quality of the EEG data before 
+analysis [24-27]. Through these enhancements, this study 
+sought to develop a more accurate and reliable system for 
+classifying EEG signals in stroke rehabilitation. 
+The study involved EEG data from 50 acute stroke patients 
+performing motor imagery tasks. The data were preprocessed 
+using EEGLab, which includes filtering, re-referencing, 
+Independent Component Analysis (ICA) for artifact removal, 
+and visualizations such as heat maps and topographical plots. 
+Advanced artifact detection and removal techniques, including 
+MARA, SASICA, and EMAR, were performed using ICLable. 
+The cleaned and processed data were then used to train and 
+evaluate the CNN, LSTM, and hybrid CNN-LSTM models. 
+Performance was assessed based on classification accuracy and 
+other relevant metrics. The results suggest that the combination 
+of CNN and LSTM can effectively harness both spatial and 
+temporal features in the EEG data, leading to improved 
+classification performance.  
+II. 
+RESEARCH METHODOLOGY 
+A systematic analysis of brain activity was performed using 
+EEG to determine its correlation with motor functions, 
+specifically hand movements. The process begins with the 
+acquisition of brain signals through EEG. Raw EEG data is 
+then preprocessed to remove noise and artifacts, producing 
+clean time-series data. Preprocessing is crucial as it ensures the 
+quality and reliability of the data for subsequent analysis. The 
+clean data was then visualized to identify distinct patterns of 
+neural activity associated with different motor tasks. Figure 1 
+provides a visual representation of the entire process. This 
+research process can be outlined as follows: 
+ Data Acquisition: The motor imagery EEG dataset utilized 
+in this study was obtained from [28] and includes .edf files 
+containing motor imagery event information. Following 
+data collection, EEGLab is employed to analyze and 
+preprocess the data to prepare it for the following phases. 
+ 
+Fig. 1.  
+Research overview. 
+ Preprocessing: The raw EEG data undergoes a series of 
+cleaning processes to eliminate noise and artifacts. This 
+involves filtering, re-referencing, and employing ICA for 
+artifact removal. Advanced techniques, such as MARA, 
+SASICA, and EMAR, are utilized to ensure the highest data 
+quality. Following this, features are extracted from the 
+cleaned data for further analysis. 
+ Labeling and Feature Extraction: Labeling is performed to 
+assign categories to the data points, indicating the specific 
+motor imagery task associated with each segment.  
+ Classification: The extracted features are subsequently used 
+to train neural network models. In this study, both 
+Convolutional Neural Networks (CNNs) and Long Short-
+Term Memory (LSTM) networks are employed to classify 
+motor imagery tasks. CNNs are proficient in capturing 
+spatial features, whereas LSTMs excel at handling temporal 
+dependencies in the data. Additionally, this study explores a 
+hybrid CNN-LSTM model [29] to leverage the strengths of 
+both approaches. 
+ Evaluation: The performance of the CNN, LSTM, and 
+hybrid CNN-LSTM models is evaluated based on 
+classification accuracy and other relevant metrics. The 
+objective is to identify the most effective model for 
+accurately predicting hand movements from EEG data. 
+A. Dataset Description 
+The dataset was acquired at Xuanwu Hospital, Capital 
+Medical University, Beijing, China, using a wireless 32-
+channel semi-dry EEG acquisition system (ZhenTec NT1) [30]. 
+It comprises recordings from 50 acute stroke patients within 1-
+30 days post-stroke who performed standardized left- and right-
+hand motor imagery tasks [31]. Each participant completed 40 
+trials, and EEG signals were recorded at a sampling frequency 
+of 500 Hz.  
+B. EEGLab Study 
+EEGLab was employed for EEG data processing and 
+analysis. EEGLab is a powerful, open-source MATLAB 
+toolbox designed for the processing of EEG data [32, 33]. The 
+Biosig library was used to facilitate the use of .edf files. Table I 
+presents details on the motor imagery data of one participant. 
+
+
+===== PAGE 3 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31882 
+ 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+TABLE I.  
+STROKE EEG DATA INFORMATION 
+Name
+Value
+Description
+Channels 
+per frame
+31 
+31 EEG electrodes recorded simultaneously 
+Frames per 
+epoch
+160000
+160000 times per epoch (Frames per Epoch=Sampling 
+rate × Record Duration)
+Epochs
+1
+1 continuous segment of data.
+Events 
+120 
+120 specific markers or triggers within the recording 
+(40: instruction events, 40 break events, 20 left motor 
+imagery events, and 20 right motor imagery events)
+Sampling 
+rate (Hz)
+500 
+500 samples per second for each channel 
+Epoch start 
+(s)
+0.000 
+Epoch starts at 0 seconds (beginning of the recording).
+Epoch end 
+(s)
+320 
+Epoch ends at 320 seconds (~5min). 
+Reference Average
+EEG data referenced to the average of all channels to 
+reduce noise.
+Channel 
+location
+Yes 
+Locations of the 31 EEG channels are provided. 
+ICA 
+weights
+Yes 
+Data has undergone ICA for artifact removal and 
+source separation. 
+ 
+C. Setting Channel Location 
+Electrode localization is vital for the interpretation of EEG 
+data, especially when spatial resolution is essential [34]. The 
+dataset includes the spatial coordinates of EEG electrodes, 
+provided in a .locs file format, which details the (x, y, z) 
+positions of each electrode relative to a standard head model or 
+a specific reference point. Table II provides the spatial 
+coordinates for each EEG electrode, specified in degrees and 
+normalized radial distances. 
+TABLE II.  
+EEG ELECTRODE PLACEMENT AND 
+COORDINATES 
+Electrode Angle
+Radial 
+distance Label Electrode Angle
+Radial 
+distance 
+Label 
+1
+-18
+0.51111
+Fp1
+17
+90
+0.51111
+T4
+2
+18
+0.51111
+Fp2
+18
+180
+0.12778
+CPz
+3
+0
+0.25556
+Fz
+19
+-118
+0.27778
+CP3
+4
+-39
+0.33333
+F3
+20
+118
+0.27778
+CP4
+5
+39
+0.33333
+F4
+21
+-108
+0.51111
+TP7
+6
+-54
+0.51111
+F7
+22
+108
+0.51111
+TP8
+7
+54
+0.51111
+F8
+23
+180
+0.25556
+Pz
+8
+0
+0.12778
+FCz
+24
+-141
+0.33333
+P3
+9
+-62
+0.27778
+FC3
+25
+141
+0.33333
+P4
+10
+62
+0.27778
+FC4
+26
+-126
+0.51111
+T5
+11
+-72
+0.51111
+FT7
+27
+126
+0.51111
+T6
+12
+72
+0.51111
+FT8
+28
+180
+0.51111
+Oz
+13
+90
+0
+Cz
+29
+-162
+0.51111
+O1
+14
+-90
+0.25556
+C3
+30
+162
+0.51111
+O2
+15
+90
+0.25556
+C4
+31
+-43
+0.65
+HEOL
+16
+-90
+0.51111
+T3
+32
+23
+0.71
+HEOR
+ 
+D. Re-Referencing 
+Initially, the EEG signals were referenced to the CPz 
+electrode. Changing the reference after recording is called re-
+referencing, which can help reduce noise and improve signal 
+quality. This study employed the Common Average Reference 
+(CAR) method, which is often recommended for obtaining a 
+more balanced representation of cortical activity. In the CAR 
+method, the new reference is the average of the electrical 
+activity measured across all scalp channels. The formula for 
+calculating the re-referenced signal 
+ at electrode  is shown 
+in (1), where  is the original signal at electrode , and  is the 
+total number of electrodes. The transformation can also be 
+expressed as in (2), where _
+  is the initial online 
+reference (e.g., CPz). 
+
+ =  −
+
+ 
+V
+
+
+  
+ 
+ 
+(1) 
+
+ =  
+ −_
+ −( 
+
+ 
+V −_
+
+
+
+) 
+(2) 
+E. Filtering 
+Filtering is a critical preprocessing step in EEG data 
+analysis to remove noise and artifacts from the recorded signals 
+[35]. A 0–500 Hz bandpass filter was applied to the EEG data 
+to preserve relevant signals while reducing noise. The bandpass 
+filter can be mathematically represented as in (3), where () is 
+the filtered signal, () is the original EEG signal, and ℎ() is 
+the impulse response of the bandpass filter. In the frequency 
+domain, this can be expressed using the convolution equation 
+(4). () is the Fourier transform of the filtered signal,  () is 
+the Fourier transform of the original signal, and !() is the 
+frequency response of the filter. 
+() = "
+(#)ℎ( −#)$#
+%
+&%
+ 
+ 
+ 
+(3) 
+() =  () ∗!()  
+ 
+ 
+(4) 
+F. Independent Component Analysis (ICA) 
+ICA is a powerful computational method used in EEG data 
+analysis to separate mixed signals into their underlying 
+independent components [36]. By applying ICA, artifacts such 
+as eye blinks, muscle movements, and line noise can be 
+isolated, 
+facilitating 
+cleaner 
+neural 
+signal 
+analysis. 
+Mathematically, if   represents the observed mixed signals and 
+(  represents the independent sources, ICA aims to find an 
+unmixing matrix ) as shown in (5). Here, ) is calculated so 
+that the statistical independence of ( is maximized. ICA was 
+performed using EEGLab. 
+( = )  
+ 
+ 
+ 
+ 
+(5) 
+ICLabel was used, which is an EEGLab plugin to automate 
+the classification of independent components. ICLabel 
+leverages a machine learning model trained on expert-labeled 
+data to classify each component into categories such as brain, 
+muscle, eye, heart, line noise, and channel noise. The ICLabel 
+algorithm calculates the probability * that a given component  
+belongs to each category, providing a probabilistic output that 
+helps in making informed decisions about which components 
+to retain or reject. The classification can be represented as in 
+(6), where + is the score assigned to category  and , is the 
+total number of categories. 
+*(-./012) = 
+34
+∑
+36
+7
+689
+ 
+ 
+ 
+(6) 
+Artifact detection and removal are essential steps in EEG 
+preprocessing to ensure data quality and reliability. This study 
+employed a combination of automated and manual methods to 
+
+
+===== PAGE 4 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31883 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+identify and eliminate artifacts from the EEG data. MARA is a 
+semi-automatic method for detecting and removing artifacts 
+from EEG data using a machine learning approach [37]. The 
+algorithm involves two primary steps: feature extraction from 
+Independent Components (ICs) and classification of these 
+components. The features used in MARA include kurtosis, 
+spatial average deviation, spatial variance, temporal kurtosis, 
+temporal variance, and others. These features are extracted 
+from each IC to capture various characteristics of the EEG 
+signals. A pre-trained linear classifier, typically using Linear 
+Discriminant Analysis (LDA), then determines whether an IC 
+is an artifact based on these features. The decision function for 
+the classifier can be written as in (7), where : is the weight 
+vector learned from training data,  is the feature vector of an 
+IC, and ; is the bias term. The classification decision is made 
+based on the sign of ; if  < 0, the IC is classified as an 
+artifact, and if  > 0, it is classified as a non-artifact. 
+ = :? @ ;  
+ 
+ 
+ 
+(7) 
+SASICA is a semi-automatic method used for selecting 
+artifact ICs to define threshold values for different metrics [37]. 
+These metrics include correlation with Electrooculogram 
+(EOG) channels, power spectrum, signal variance, and kurtosis. 
+The correlation with EOG channels is calculated using (8), 
+where AB is the IC time series and CDE is the EOG signal. The 
+power spectrum, calculated as in (9), helps identify specific 
+patterns indicative of artifacts. Signal variance is given by (10), 
+and kurtosis is given by (11). High values in these metrics often 
+indicate the presence of artifacts. SASICA combines these 
+metrics to provide a composite score, marking components that 
+exceed user-defined thresholds as artifacts. 
+B122FGH = 
+I
+J(KI,FGH)
+MKIMFGH   
+ 
+ 
+(8) 
+*() = |O(AB())|P  
+ 
+ 
+(9) 
+QKI
+P = 
+
+ ∑
+(AB −RKI)P
+
+
+ 
+ 
+ 
+(10) 
+,S2(AB) =
+
+ ∑
+(
+KI4& TUV
+MUV
+
+
+)W  
+ 
+(11) 
+EMAR was performed to ensure the highest data quality. 
+This process involves visually inspecting independent 
+components and manually flagging those that represent 
+artifacts. The following MATLAB code snippet illustrates the 
+manual artifact removal procedure using EEGLAB's pop_icflag 
+function. 
+Matlab Code 
+EEG = pop_icflag(EEG, [NaN NaN; 0.9 1; 0.9 1; NaN NaN; NaN NaN; NaN 
+NaN; NaN NaN]);
+[ALLEEG,EEG,CURRENTSET]=eeg_store(ALLEEG,EEG,CURRENTSET;
+ 
+G. Dataset Modeling 
+This study implemented three neural network models for 
+EEG classification: a CNN, an LSTM, and a hybrid CNN-
+LSTM. The CNN consists of a 1D convolutional layer (64 
+filters, kernel size 3, ReLU), followed by max-pooling, 
+flattening, a dense layer (50 units, ReLU), and a softmax output 
+layer. The LSTM model includes an LSTM layer with 50 units 
+(ReLU) to capture temporal dependencies, followed by a 
+softmax 
+output. 
+The 
+hybrid 
+CNN-LSTM 
+combines 
+convolutional layers for spatial feature extraction with LSTM 
+layers for temporal learning, ending with a softmax output 
+(Figure 2). All models were compiled with the Adam 
+optimizer, categorical cross-entropy loss, and accuracy as the 
+evaluation metric. 
+ 
+ 
+Fig. 2.  
+Hybrid CNN-LSTM Architecture. 
+III. 
+RESULTS AND DISCUSSION 
+The results of this study were compared with previous 
+works, including studies that used the same acute stroke motor 
+imagery dataset. In [30], classification accuracies between 55% 
+and 72% were reported, with its best-performing approach 
+(TWFB+DGFMDRM) achieving 72.21%. These results 
+highlight the inherent difficulty of decoding motor imagery in 
+acute stroke patients, where EEG signals are affected by noise, 
+non-stationarity, and variability related to neural impairment. 
+Other works focused on a single preprocessing method or on 
+evaluating CNN or LSTM models independently [29, 38]. 
+MARA, SASICA, and EMAR were applied for artifact 
+removal on the EEG dataset. Each method improves data 
+quality by targeting different types of artifacts. Figure 3 shows 
+EEG traces after MARA, with smoother signals and reduced 
+noise. MARA uses a machine learning approach based on 
+spatial and temporal features, effectively removing eye blinks, 
+muscle movements, and heartbeats. However, aggressive 
+removal can produce overly uniform signals, reducing 
+variability and obscuring differences between cognitive states, 
+such as the strong correlation observed between C3 and C4. 
+SASICA semi-automatically identifies artifacts using multiple 
+criteria, including channel correlations and power spectrum, 
+which is particularly effective at removing eye movement 
+artifacts. EMAR specifically targets eye-blink and muscle-
+related artifacts, resulting in cleaner signals in affected regions. 
+However, other artifacts may persist.  
+Figure 4 shows the classification and properties of various 
+independent components extracted from the EEG dataset using 
+the EEGLab toolbox. Each component is represented by a scalp 
+topography plot and labeled with its source type (e.g., brain, 
+heart, channel noise). The topography plots show the spatial 
+distribution of EEG activity, with colors indicating signal 
+intensity and components classified as "Brain," "Heart," and 
+"Noise."  
+ 
+
+
+===== PAGE 5 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31884 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+ 
+Fig. 3.  
+EEG time series plot after MARA artifact removal. 
+Figure 5 shows the EEG correlation matrix after MARA, 
+revealing strong correlations, including a value of 1 between 
+C3 and C4, which limits the distinction of directional thoughts 
+due to excessive artifact removal. In contrast, SASICA and 
+EMAR produce more moderate correlations. MARA removes a 
+wide range of artifacts, but performance varies across subjects 
+and models.  
+ 
+Fig. 4.  
+Visualization of component attributes for one subject.
+ 
+ 
+Fig. 5.  
+EEG correlation matrix after MARA. 
+Fig. 6.  
+Accuracy of the EMAR artifact removal technique. 
+
+
+===== PAGE 6 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31885 
+ 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+For the CNN, the accuracy ranges in 51–90%, with some 
+subjects (e.g., sub_06, sub_13, sub_21) showing very high 
+scores. LSTM achieves 51–80%, generally lower than CNN, 
+while CNN-LSTM reaches 51–91%. SASICA balances 
+automation and specificity, targeting artifacts like eye 
+movements. The accuracy of the CNN is very high (81–100%), 
+with several subjects near perfect. LSTM achieves 55–91%, 
+generally outperforming MARA. CNN-LSTM reaches 85–
+100%, showing strong improvements from SASICA's artifact 
+removal. EMAR focuses on eye and muscle artifacts, with 
+effectiveness depending on operator expertise. CNN accuracy 
+ranges from 82–99%, consistently high across subjects. LSTM 
+scores 57–92%, higher than MARA and similar to SASICA. 
+CNN-LSTM ranges in 60–100% as shown in Figure 6, with 
+many subjects performing well, highlighting the benefits of 
+manually cleaned data. 
+IV. 
+CONCLUSION 
+This study contributes to the area of EEG-based motor 
+imagery prediction for stroke rehabilitation by combining 
+sophisticated artifact removal techniques with a hybrid deep 
+learning model, thus overcoming the shortcomings of existing 
+methods. Conventional approaches often prove inadequate for 
+dealing with EEG data contaminated with noise and artifacts, 
+thereby impeding the progress of dependable BCI systems. 
+This study addresses this disparity by using a fusion of CNN 
+and LSTM models, which allows the use of both spatial and 
+temporal characteristics of the EEG data, leading to a notable 
+improvement in classification accuracy. The scientific rationale 
+for this study is based on the strong preprocessing framework 
+that improves the quality of EEG data by using techniques such 
+as MARA, SASICA, and EMAR. Visually, MARA produces 
+the smoothest overall signal, indicating comprehensive artifact 
+removal, while SASICA shows noticeable improvement but 
+retains some variability, suggesting partial artifact removal. 
+EMAR effectively reduces specific artifacts, resulting in 
+cleaner signals in affected segments, though not as uniformly 
+smooth as MARA. Each artifact removal method has its 
+strengths: MARA offers the most comprehensive cleaning but 
+can homogenize the data too much, SASICA balances 
+automation and specificity, and EMAR excels in targeting eye 
+and muscle artifacts. 
+These methods effectively eliminate different types of 
+artifacts, resulting in cleaner and more dependable EEG 
+signals. The application of this preprocessing technique, in 
+conjunction with the hybrid CNN-LSTM model, exhibits a 
+greater capacity to categorize motor imagery tasks compared to 
+separate models. SASICA particularly stands out for CNN and 
+CNN-LSTM models, achieving near-perfect accuracy for many 
+subjects. EMAR removal, while effective, depends on the 
+operator's skill but generally provides excellent results for 
+CNN and CNN-LSTM models. MARA, while comprehensive, 
+shows more variability in performance, suggesting it might 
+over-remove or miss certain artifacts, impacting the model's 
+accuracy. SASICA stands out with high average accuracy, 
+achieving 95% for CNN and 96% for CNN-LSTM, 
+highlighting its effectiveness in artifact removal. Similarly, the 
+EMAR method also delivers strong performance, with 95% for 
+CNN and 96% for CNN-LSTM, though it relies on operator 
+skill. MARA, while comprehensive, shows more variability, 
+with a lower average accuracy of 67% for CNN and 69% for 
+CNN-LSTM, suggesting it may over-remove or miss certain 
+artifacts, impacting model performance.   
+This advancement lays the foundation for the development 
+of more efficient BCI systems in stroke rehabilitation. Future 
+research should prioritize the expansion of this approach to 
+bigger and more varied datasets to confirm its applicability and 
+investigate the incorporation of real-time feedback mechanisms 
+in BCI applications to improve the effectiveness of 
+rehabilitation interventions. Current research is examining the 
+potential use of these methods in various neurological disorders 
+and exploring the application of transfer learning to customize 
+models for individual patient traits. This research aims to create 
+personalized and adaptable tools for neurorehabilitation, 
+ultimately leading to better patient outcomes. 
+ACKNOWLEDGMENT 
+The authors sincerely thank Rajamangala University of 
+Technology Thanyaburi (RMUTT) for their support and the 
+dataset owner for providing essential data for patients with 
+acute stroke. 
+REFERENCES 
+[1] J. Li, Q. Zhong, S. Yuan, and F. Zhu, ''Trends in deaths and disability-
+adjusted life-years of stroke attributable to low physical activity 
+worldwide, 1990–2019,'' BMC Public Health, vol. 23, no. 1, Nov. 2023, 
+Art. no. 2242, https://doi.org/10.1186/s12889-023-17162-w. 
+[2] T. Yahya et al., ''Stroke in young adults: Current trends, opportunities 
+for prevention and pathways forward,'' American Journal of Preventive 
+Cardiology, 
+vol. 
+3, 
+Sept. 
+2020, 
+Art. 
+no. 
+100085, 
+https://doi.org/10.1016/j.ajpc.2020.100085. 
+[3] L. Nedkoff, T. Briffa, D. Zemedikun, S. Herrington, and F. L. Wright, 
+''Global Trends in Atherosclerotic Cardiovascular Disease,'' Clinical 
+Therapeutics, vol. 45, no. 11, pp. 1087–1091, Nov. 2023, 
+https://doi.org/10.1016/j.clinthera.2023.09.020. 
+[4] R. Suppiah, N. Kim, K. Abidi, and A. Sharma, ''A comprehensive review 
+of motor movement challenges and rehabilitative robotics,'' Smart 
+Health, 
+vol. 
+29, 
+Sept. 
+2023, 
+Art. 
+no. 
+100402, 
+https://doi.org/10.1016/j.smhl.2023.100402. 
+[5] Y. C. Chen, W. Chou, R. B. Hong, J. H. Lee, and J. H. Chang, ''Home-
+based rehabilitation versus hospital-based rehabilitation for stroke 
+patients in post-acute care stage: Comparison on the quality of life,'' 
+Journal of the Formosan Medical Association, vol. 122, no. 9, pp. 862–
+871, Sept. 2023, https://doi.org/10.1016/j.jfma.2023.05.007. 
+[6] J. Saraiva, G. Rosa, S. Fernandes, and J. B. Fernandes, ''Current Trends 
+in Balance Rehabilitation for Stroke Survivors: A Scoping Review of 
+Experimental Studies,'' International Journal of Environmental Research 
+and Public Health, vol. 20, no. 19, Sept. 2023, Art. no. 6829, 
+https://doi.org/10.3390/ijerph20196829. 
+[7] H. Yadav and S. Maini, ''Electroencephalogram based brain-computer 
+interface: Applications, challenges, and opportunities,'' Multimedia Tools 
+and Applications, vol. 82, no. 30, pp. 47003–47047, Dec. 2023, 
+https://doi.org/10.1007/s11042-023-15653-x. 
+[8] P. Autthasan et al., ''MIN2Net: End-to-End Multi-Task Learning for 
+Subject-Independent Motor Imagery EEG Classification,'' IEEE 
+Transactions on Biomedical Engineering, vol. 69, no. 6, pp. 2105–2118, 
+Jun. 2022, https://doi.org/10.1109/TBME.2021.3137184. 
+[9] Κ. Μ. Tsiouris, V. C. Pezoulas, M. Zervakis, S. Konitsiotis, D. D. 
+Koutsouris, and D. I. Fotiadis, ''A Long Short-Term Memory deep 
+learning network for the prediction of epileptic seizures using EEG 
+signals,'' Computers in Biology and Medicine, vol. 99, pp. 24–37, Aug. 
+2018, https://doi.org/10.1016/j.compbiomed.2018.05.019. 
+
+
+===== PAGE 7 =====
+Engineering, Technology & Applied Science Research 
+Vol. 16, No. 1, 2026, 31880-31886 
+31886 
+ 
+ 
+www.etasr.com 
+Thwe et al.: Integrating EEG Artifact Removal with Deep Learning for Accurate Motor Imagery … 
+ 
+[10] S. Sheykhivand, Z. Mousavi, T. Y. Rezaii, and A. Farzamnia, 
+''Recognizing Emotions Evoked by Music Using CNN-LSTM Networks 
+on EEG Signals,'' IEEE Access, vol. 8, pp. 139332–139345, 2020, 
+https://doi.org/10.1109/ACCESS.2020.3011882. 
+[11] A. Tiwari, ''A logistic binary Jaya optimization-based channel selection 
+scheme for motor-imagery classification in brain-computer interface,'' 
+Expert Systems with Applications, vol. 223, Aug. 2023, Art. no. 119921, 
+https://doi.org/10.1016/j.eswa.2023.119921. 
+[12] W. A. Awuah et al., ''Bridging Minds and Machines: The Recent 
+Advances 
+of 
+Brain-Computer 
+Interfaces 
+in 
+Neurological 
+and 
+Neurosurgical Applications,'' World Neurosurgery, vol. 189, pp. 138–
+153, Sept. 2024, https://doi.org/10.1016/j.wneu.2024.05.104. 
+[13] M. Varlı and H. Yılmaz, ''Multiple classification of EEG signals and 
+epileptic seizure diagnosis with combined deep learning,'' Journal of 
+Computational Science, vol. 67, Mar. 2023, Art. no. 101943, 
+https://doi.org/10.1016/j.jocs.2023.101943. 
+[14] J. R. De Miras, A. J. Ibáñez-Molina, M. F. Soriano, and S. Iglesias-
+Parro, ''Schizophrenia classification using machine learning on resting 
+state EEG signal,'' Biomedical Signal Processing and Control, vol. 79, 
+Jan. 2023, Art. no. 104233, https://doi.org/10.1016/j.bspc.2022.104233. 
+[15] F. Hassan, S. F. Hussain, and S. M. Qaisar, ''Fusion of multivariate EEG 
+signals for schizophrenia detection using CNN and machine learning 
+techniques,'' Information Fusion, vol. 92, pp. 466–478, Apr. 2023, 
+https://doi.org/10.1016/j.inffus.2022.12.019. 
+[16] M. Jafari et al., ''Emotion recognition in EEG signals using deep 
+learning methods: A review,'' Computers in Biology and Medicine, vol. 
+165, 
+Oct. 
+2023, 
+Art. 
+no. 
+107450, 
+https://doi.org/10.1016/j.compbiomed.2023.107450. 
+[17] X. Wang, Y. Wang, D. Liu, Y. Wang, and Z. Wang, ''Automated 
+recognition of epilepsy from EEG signals using a combining space–time 
+algorithm of CNN-LSTM,'' Scientific Reports, vol. 13, no. 1, Sept. 2023, 
+Art. no. 14876, https://doi.org/10.1038/s41598-023-41537-z. 
+[18] S. Shanmugam and S. Dharmar, ''A CNN-LSTM hybrid network for 
+automatic seizure detection in EEG signals,'' Neural Computing and 
+Applications, vol. 35, no. 28, pp. 20605–20617, Oct. 2023, 
+https://doi.org/10.1007/s00521-023-08832-2. 
+[19] H. Albaqami, G. M. Hassan, and A. Datta, ''MP-SeizNet: A multi-path 
+CNN Bi-LSTM Network for seizure-type classification using EEG,'' 
+Biomedical Signal Processing and Control, vol. 84, Jul. 2023, Art. no. 
+104780, https://doi.org/10.1016/j.bspc.2023.104780. 
+[20] J. Wang, S. Cheng, J. Tian, and Y. Gao, ''A 2D CNN-LSTM hybrid 
+algorithm using time series segments of EEG data for motor imagery 
+classification,'' Biomedical Signal Processing and Control, vol. 83, May 
+2023, Art. no. 104627, https://doi.org/10.1016/j.bspc.2023.104627. 
+[21] X. Liu, S. Xiong, X. Wang, T. Liang, H. Wang, and X. Liu, ''A compact 
+multi-branch 1D convolutional neural network for EEG-based motor 
+imagery classification,'' Biomedical Signal Processing and Control, vol. 
+81, 
+Mar. 
+2023, 
+Art. 
+no. 
+104456, 
+https://doi.org/10.1016/j.bspc.2022.104456. 
+[22] J. Zhang and K. Li, ''A multi-view CNN encoding for motor imagery 
+EEG signals,'' Biomedical Signal Processing and Control, vol. 85, Aug. 
+2023, Art. no. 105063, https://doi.org/10.1016/j.bspc.2023.105063. 
+[23] S. Soni, S. Chaudhary, and K. P. Miyapuram, ''Enhancing Motor 
+Imagery based Brain Computer Interfaces for Stroke Rehabilitation,'' in 
+Proceedings of the 7th Joint International Conference on Data Science 
+& Management of Data (11th ACM IKDD CODS and 29th COMAD), 
+Bangalore 
+India, 
+Jan. 
+2024, 
+pp. 
+439–443, 
+https://doi.org/10.1145/3632410.3632441. 
+[24] C. B. Gonsisko, D. P. Ferris, and R. J. Downey, ''iCanClean Improves 
+Independent Component Analysis of Mobile Brain Imaging with EEG,'' 
+Sensors, 
+vol. 
+23, 
+no. 
+2, 
+Jan. 
+2023, 
+Art. 
+no. 
+928, 
+https://doi.org/10.3390/s23020928. 
+[25] K. Kotowski, J. Ochab, K. Stapor, and W. Sommer, ''The importance of 
+ocular artifact removal in single-trial ERP analysis: The case of the 
+N250 in face learning,'' Biomedical Signal Processing and Control, vol. 
+79, 
+Jan. 
+2023, 
+Art. 
+no. 
+104115, 
+https://doi.org/10.1016/j.bspc.2022.104115. 
+[26] K. Kyriaki, D. Koukopoulos, and C. A. Fidas, ''A Comprehensive 
+Survey of EEG Preprocessing Methods for Cognitive Load Assessment,'' 
+IEEE 
+Access, 
+vol. 
+12, 
+pp. 
+23466–23489, 
+2024, 
+https://doi.org/10.1109/ACCESS.2024.3360328. 
+[27] K. Gramann, ''Mobile EEG for neurourbanism research - What could 
+possibly go wrong? A critical review with guidelines,'' Journal of 
+Environmental Psychology, vol. 96, Jun. 2024, Art. no. 102308, 
+https://doi.org/10.1016/j.jenvp.2024.102308. 
+[28] "EEG datasets of stroke patients." figshare, Dec. 07, 2022, 
+https://doi.org/10.6084/m9.figshare.21679035.v5. 
+[29] A. Raza and M. Z. Yusoff, ''Development of a CNN-LSTM Deep 
+Learning Model for Motor Imagery EEG Classification for BCI 
+Applications,'' Engineering, Technology & Applied Science Research, 
+vol. 
+15, 
+no. 
+3, 
+pp. 
+22705–22711, 
+Jun. 
+2025, 
+https://doi.org/10.48084/etasr.9945. 
+[30] H. Liu et al., ''An EEG motor imagery dataset for brain computer 
+interface in acute stroke patients,'' Scientific Data, vol. 11, no. 1, Jan. 
+2024, Art. no. 131, https://doi.org/10.1038/s41597-023-02787-8. 
+[31] D. Dadebayev, W. W. Goh, and E. X. Tan, ''EEG-based emotion 
+recognition: Review of commercial EEG devices and machine learning 
+techniques,'' Journal of King Saud University - Computer and 
+Information Sciences, vol. 34, no. 7, pp. 4385–4401, July 2022, 
+https://doi.org/10.1016/j.jksuci.2021.03.009. 
+[32] A. Delorme, ''EEG is better left alone,'' Scientific Reports, vol. 13, no. 1, 
+Feb. 2023, Art. no. 2372, https://doi.org/10.1038/s41598-023-27528-0. 
+[33] M. Fayaz, ''The bibliometric analysis of EEGLAB software in the Web 
+of Science indexed articles,'' Neuroscience Informatics, vol. 4, no. 1, 
+Mar. 2024, Art. no. 100154, https://doi.org/10.1016/j.neuri.2023.100154. 
+[34] J. D. Nielsen, O. Puonti, R. Xue, A. Thielscher, and K. H. Madsen, 
+''Evaluating the influence of anatomical accuracy and electrode positions 
+on EEG forward solutions,'' NeuroImage, vol. 277, Aug. 2023, Art. no. 
+120259, https://doi.org/10.1016/j.neuroimage.2023.120259. 
+[35] F. Lopes et al., ''Removing artefacts and periodically retraining improve 
+performance of neural network-based seizure prediction models,'' 
+Scientific Reports, vol. 13, no. 1, Apr. 2023, Art. no. 5918, 
+https://doi.org/10.1038/s41598-023-30864-w. 
+[36] R. K. Das, A. Martin, T. Zurales, D. Dowling, and A. Khan, ''A Survey 
+on EEG Data Analysis Software,'' Sci, vol. 5, no. 2, Jun. 2023, Art. no. 
+23, https://doi.org/10.3390/sci5020023. 
+[37] M. G. Asogbon et al., ''Analysis of Artifactual Components Rejection 
+Threshold towards Enhanced Characterization of Neural Activity in 
+Post-Stroke Survivor,'' in 2023 45th Annual International syrence of the 
+IEEE Engineering in Medicine & Biology Society (EMBC), Sydney, 
+Australia, 
+Jul. 
+2023, 
+pp. 
+1–5, 
+https://doi.org/10.1109/EMBC40787.2023.10340688. 
+[38] X. Zhang, L. He, Q. Gao, and N. Jiang, ''Performance of the Action 
+Observation-Based Brain–Computer Interface in Stroke Patients and 
+Gaze Metrics Analysis,'' IEEE Transactions on Neural Systems and 
+Rehabilitation 
+Engineering, 
+vol. 
+32, 
+pp. 
+1370–1379, 
+2024, 
+https://doi.org/10.1109/TNSRE.2024.3379995. 
+
+

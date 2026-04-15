@@ -1,0 +1,55 @@
+# Ablation: MAT baseline (no artifact removal) + ADFCNN
+# Purpose: baseline for comparing EDF vs MAT and with/without artifact removal
+
+experiment:
+  name: "Ablation_MAT_Baseline_ADFCNN"
+  seed: 42
+  description: "XWStroke MAT data without artifact removal, using ADFCNN (paper-faithful settings)"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_paper_base.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.0
+
+  scheduler:
+    type: "none"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

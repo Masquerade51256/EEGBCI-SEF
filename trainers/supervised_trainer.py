@@ -46,6 +46,7 @@ to prevent data leakage from overlapping windows.
         self.learning_rate = self.config.get('training.optimizer.lr', 1e-3)
         self.weight_decay = self.config.get('training.optimizer.weight_decay', 0.01)
         self.k_folds = self.config.get('training.k_folds', 5)
+        self.scheduler_type = self.config.get('training.scheduler.type', 'cosine')
         
         # Store model class and args for reinitialization
         self.model_type = self.config.get('model.type')
@@ -152,16 +153,29 @@ to prevent data leakage from overlapping windows.
         Returns:
             Tuple of (results_dict, training_history)
         """
-        # Setup k-fold
-        kfold = GroupKFold(n_splits=self.k_folds)
+        # Setup train/validation splitting
+        fold_splits = []
+        if self.k_folds == 1:
+            # Simple train-test split (80/20) when k_folds=1
+            from sklearn.model_selection import train_test_split
+            indices = np.arange(len(dataset))
+            labels = getattr(dataset, 'labels', None)
+            stratify = labels if labels is not None and len(np.unique(labels)) >= 2 else None
+            train_idx, val_idx = train_test_split(
+                indices, test_size=0.2, random_state=42, stratify=stratify
+            )
+            fold_splits.append((train_idx, val_idx))
+            self._log("  Train/Test split (80/20)")
+        else:
+            kfold = GroupKFold(n_splits=self.k_folds)
+            fold_splits = list(kfold.split(dataset, groups=dataset.group_ids))
         
         fold_histories = []
         fold_best_accuracies = []
         
-        for fold_idx, (train_idx, val_idx) in enumerate(
-            kfold.split(dataset, groups=dataset.group_ids)
-        ):
-            self._log(f"  Fold {fold_idx + 1}/{self.k_folds}")
+        for fold_idx, (train_idx, val_idx) in enumerate(fold_splits):
+            if self.k_folds > 1:
+                self._log(f"  Fold {fold_idx + 1}/{self.k_folds}")
             
             # Create data loaders
             train_subset = Subset(dataset, train_idx)
@@ -171,13 +185,13 @@ to prevent data leakage from overlapping windows.
                 train_subset, 
                 batch_size=self.batch_size,
                 shuffle=True,
-                generator=torch.Generator(device=self.device)
+                generator=torch.Generator()
             )
             val_loader = DataLoader(
                 val_subset,
                 batch_size=self.batch_size,
                 shuffle=False,
-                generator=torch.Generator(device=self.device)
+                generator=torch.Generator()
             )
             
             # Create fresh model for this fold
@@ -207,8 +221,11 @@ to prevent data leakage from overlapping windows.
             for epoch in epoch_progress_bar:
                 self.current_epoch = epoch
                 
-                # Cosine annealing learning rate
-                lr = self._compute_lr(epoch)
+                # Learning rate scheduling
+                if self.scheduler_type == 'cosine':
+                    lr = self._compute_lr(epoch)
+                else:
+                    lr = self.learning_rate
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = lr
                 

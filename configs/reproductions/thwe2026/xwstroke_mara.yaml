@@ -1,0 +1,55 @@
+# Thwe et al. (2026) - MARA artifact removal + CNN-LSTM reproduction
+# Multiple Artifact Rejection Algorithm
+
+experiment:
+  name: "Thwe2026_MARA_CNNLSTM"
+  seed: 42
+  description: "XWStroke single-band with MARA and ThweCNNLSTM"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_singleband_mara.yaml"
+
+model:
+  type: "ThweCNNLSTM"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

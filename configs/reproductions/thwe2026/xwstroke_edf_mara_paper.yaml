@@ -1,0 +1,55 @@
+# Thwe et al. (2026) - EDF-based MARA + CNN-LSTM reproduction
+# Loads directly from original .edf files instead of pre-processed .mat files.
+
+experiment:
+  name: "Thwe2026_EDF_MARA_CNNLSTM_Paper"
+  seed: 42
+  description: "XWStroke EDF with paper-faithful MARA and ThweCNNLSTM (500Hz, full 4s trial)"
+
+data:
+  dataset: "XWStrokeEDF"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_EDF_mara_paper.yaml"
+
+model:
+  type: "ThweCNNLSTM"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 500
+  batch_size: 16
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.0
+
+  scheduler:
+    type: "none"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

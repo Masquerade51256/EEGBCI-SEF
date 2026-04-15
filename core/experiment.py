@@ -83,11 +83,6 @@ class ExperimentManager:
             device_str = 'cpu'
         
         device = torch.device(device_str)
-        
-        # Set default tensor type for CUDA
-        if device.type == 'cuda':
-            torch.set_default_tensor_type(torch.cuda.FloatTensor)
-            
         return device
     
     def setup(self) -> None:

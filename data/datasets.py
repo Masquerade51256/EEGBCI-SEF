@@ -197,6 +197,108 @@ class XWStrokeDataset(BaseDataset):
         return data, labels
 
 
+class XWStrokeEDFDataset(BaseDataset):
+    """
+    XuanWu Stroke dataset loaded from original EDF files.
+    
+    This dataset loader reads the raw EDF recordings and parses BIDS event
+    information to extract the 4-second motor imagery (MI) epochs. It is
+    designed to closely match the preprocessing pipeline described in
+    Thwe et al. (2026), which starts from .edf files rather than
+    pre-processed .mat files.
+    
+    Expected data layout:
+        src/datasets/21679035/edffile/sub-XX/eeg/sub-XX_task-motor-imagery_eeg.edf
+    Events are read from the shared BIDS TSV:
+        src/datasets/21679035/task-motor-imagery_events.tsv
+    """
+    
+    def _load_raw_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load raw EDF data and extract MI epochs.
+        
+        Returns:
+            Tuple of (data, labels) where data shape is (n_trials, n_channels, n_timepoints)
+        """
+        import mne
+        import pandas as pd
+        import os
+        
+        # Get configuration
+        data_dir = self.dataset_info.get('dataset', {}).get('data_dir', 'src/datasets/21679035')
+        events_tsv = self.dataset_info.get('dataset', {}).get('events_tsv', 'task-motor-imagery_events.tsv')
+        mi_value = self.dataset_info.get('dataset', {}).get('mi_event_value', 2)
+        
+        # Build EDF file path
+        edf_file = os.path.join(
+            data_dir, 'edffile', f'sub-{self.subject_id:02d}', 'eeg',
+            f'sub-{self.subject_id:02d}_task-motor-imagery_eeg.edf'
+        )
+        
+        if not os.path.exists(edf_file):
+            raise FileNotFoundError(f"EDF file not found: {edf_file}")
+        
+        # Load EDF
+        raw = mne.io.read_raw_edf(edf_file, preload=True, verbose='WARNING')
+        
+        # Remove empty-named channel if present (stim placeholder in this dataset)
+        picks = [ch for ch in raw.ch_names if ch.strip()]
+        raw.pick(picks)
+        
+        sfreq = raw.info['sfreq']
+        
+        # Read events TSV
+        events_path = os.path.join(data_dir, events_tsv)
+        if not os.path.exists(events_path):
+            raise FileNotFoundError(f"Events TSV not found: {events_path}")
+        
+        events_df = pd.read_csv(events_path, sep='\t')
+        
+        # Filter MI events
+        mi_events = events_df[events_df['value'] == mi_value].copy()
+        if len(mi_events) == 0:
+            raise ValueError(f"No MI events (value={mi_value}) found in {events_path}")
+        
+        # Extract epochs
+        # The TSV uses milliseconds for onset and duration
+        epochs_data = []
+        labels = []
+        
+        for _, row in mi_events.iterrows():
+            onset_sec = row['onset'] / 1000.0
+            duration_sec = row['duration'] / 1000.0
+            
+            start_sample = int(round(onset_sec * sfreq))
+            end_sample = start_sample + int(round(duration_sec * sfreq))
+            
+            epoch = raw.get_data(start=start_sample, stop=end_sample)  # (n_channels, n_times)
+            epochs_data.append(epoch)
+            labels.append(int(row['trial_type']))
+        
+        data = np.array(epochs_data)  # (n_trials, n_channels, n_times)
+        labels = np.array(labels)
+        
+        # Convert from Volts to uV for consistency with typical EEG processing
+        data = data * 1e6
+        
+        # Reorder channels to match standard XWStroke cap order if needed
+        ch_names = [ch.upper() for ch in raw.ch_names]
+        standard_order = [
+            'FP1', 'FP2', 'FZ', 'F3', 'F4', 'F7', 'F8', 'FCZ', 'FC3', 'FC4',
+            'FT7', 'FT8', 'CZ', 'C3', 'C4', 'T3', 'T4', 'CPZ', 'CP3', 'CP4',
+            'TP7', 'TP8', 'PZ', 'P3', 'P4', 'T5', 'T6', 'OZ', 'O1', 'O2',
+            'HEOL', 'HEOR'
+        ]
+        
+        if set(ch_names) >= set(standard_order):
+            reorder_idx = [ch_names.index(ch) for ch in standard_order if ch in ch_names]
+            if len(reorder_idx) == data.shape[1]:
+                data = data[:, reorder_idx, :]
+        
+        print(f"[Subject {self.subject_id}] Loaded EDF: {data.shape}, sfreq={sfreq}Hz, labels={labels[:5]}...")
+        return data, labels
+
+
 class LowerStrokeDataset(BaseDataset):
     """
     Lower Limb Stroke dataset.

@@ -2,6 +2,9 @@
 # Project-specific ignores
 # ========================================
 
+# Research Papers
+docs/papers/*.pdf
+
 # Datasets (large files, should not be in Git)
 src/datasets/*
 !src/datasets/.gitkeep

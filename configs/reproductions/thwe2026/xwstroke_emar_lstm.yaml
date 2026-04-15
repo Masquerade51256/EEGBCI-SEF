@@ -1,0 +1,54 @@
+# Thwe et al. (2026) - EMAR artifact removal + LSTM reproduction
+
+experiment:
+  name: "Thwe2026_EMAR_LSTM"
+  seed: 42
+  description: "XWStroke single-band with EMAR and ThweLSTM"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_singleband_emar.yaml"
+
+model:
+  type: "ThweLSTM"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

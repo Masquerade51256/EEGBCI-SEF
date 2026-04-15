@@ -1,10 +1,10 @@
 # src/preprocessing/factory.py
 from typing import Dict, Any, Type
 from preprocessing.base_processor import BaseProcessor
-from preprocessing.filterbank import FilterBankProcessor
+from preprocessing.filter_banks import FilterBankProcessor
 from preprocessing.resample import ResampleProcessor
-from preprocessing.artifact_removal import ArtifactRemovalProcessor
-from preprocessing.augmentation import DataAugmentationProcessor
+from preprocessing.artifact_removal import ArtifactRemovalProcessor, EMARProcessor, SASICAProcessor, MARAProcessor
+from preprocessing.data_augmentation import DataAugmentationProcessor
 
 
 class ProcessorFactory:
@@ -18,6 +18,9 @@ class ProcessorFactory:
         'filterbank': FilterBankProcessor,
         'resample': ResampleProcessor,
         'artifact_removal': ArtifactRemovalProcessor,
+        'emar': EMARProcessor,
+        'sasica': SASICAProcessor,
+        'mara': MARAProcessor,
         'augmentation': DataAugmentationProcessor,
     }
     
@@ -74,7 +77,7 @@ class ProcessorFactory:
         Returns:
             Configured ProcessingPipeline instance.
         """
-        from .base import ProcessingPipeline
+        from preprocessing.base_processor import ProcessingPipeline
         
         pipeline = ProcessingPipeline()
         

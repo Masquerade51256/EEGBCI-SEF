@@ -1,0 +1,74 @@
+# configs/datasets/XWStroke_EDF_paper.yaml
+# XWStroke dataset loaded directly from original EDF files.
+# This config is designed to closely match Thwe et al. (2026) preprocessing.
+
+dataset:
+  name: "XWStrokeEDF"
+  # Root directory of the BIDS-like dataset
+  data_dir: "src/datasets/21679035"
+  # BIDS events TSV filename (located in data_dir)
+  events_tsv: "task-motor-imagery_events.tsv"
+  # Event value corresponding to the 4-second MI phase
+  mi_event_value: 2
+  # EDF sampling rate (must match actual EDF files)
+  original_sr: 500
+  num_channels: 32
+  num_classes: 2
+  num_subjects: 50
+  subjects: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50]
+  EOG_channels: [30,31]
+  labels: [1, 2]  # 1: Left hand, 2: Right hand
+  
+preprocessing:
+  windowing:
+    # Use full 4-second MI epoch with no overlap to match paper's 40 trials per subject
+    window_length_sec: 4.0
+    window_stride_sec: 4.0
+    
+  resample:
+    # Keep original 500 Hz sampling rate
+    target_sr: 500
+  
+  channel_selection:
+    # Retain all 32 channels (including HEOL/HEOR)
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+
+  # Broadband filter to approximate paper's 0-500 Hz acquisition bandpass
+  filter_bank:
+    filter_banks:
+      - [0.5, 100]
+    normalize: true
+
+  artifact_removal_pipeline:
+    - name: "mara_clean"
+      type: "mara"
+      sfreq: 500
+      strategy: "unsupervised"
+      nu: 0.3
+      gamma: "scale"
+      highpass_freq: 1.0
+      apply_car: true
+
+  # NO normalization (paper does not mention trial-wise normalization)
+  normalization:
+    method: "none"
+
+  # NO data augmentation (paper does not mention augmentation)
+  augmentation:
+    - method: "add_noise"
+      snr_db: 20
+      probability: 0
+    - method: "channel_dropout"
+      dropout_rate: 0.1
+      probability: 0
+    - method: "time_warp"
+      sigma: 0.2
+      probability: 0
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+  sample_pipeline: []
+  augmentation_pipeline: []

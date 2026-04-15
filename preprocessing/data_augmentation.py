@@ -3,7 +3,7 @@ from preprocessing.base_processor import BaseProcessor
 
 class DataAugmentationProcessor(BaseProcessor):
     """数据增强处理器。在样本级别（trial/window）进行操作。"""
-    def __init__(self, methods: list):
+    def __init__(self, methods: list, name: str = "", **kwargs):
         """
         Args:
             methods: 增强方法列表，如 ['time_warp', 'add_noise', 'channel_dropout']

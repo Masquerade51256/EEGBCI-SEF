@@ -58,6 +58,20 @@ class BaseDataset(Dataset, ABC):
         # Load and process data
         self.data, self.labels, self.group_ids = self._load_and_process_data()
         
+        # Data augmentation (sample-level, applied in __getitem__ for train mode)
+        self.augmentor = None
+        augmentation_config = dataset_info.get('preprocessing', {}).get('augmentation', [])
+        if augmentation_config:
+            from preprocessing.factory import ProcessorFactory
+            # Filter out zero-probability methods to avoid unnecessary overhead
+            active_methods = [m for m in augmentation_config if m.get('probability', 0) > 0]
+            if active_methods:
+                self.augmentor = ProcessorFactory.create_processor(
+                    name="sample_augmentation",
+                    processor_type="augmentation",
+                    methods=active_methods
+                )
+        
     def __len__(self) -> int:
         """Return the number of samples in the dataset."""
         return len(self.data)
@@ -74,6 +88,9 @@ class BaseDataset(Dataset, ABC):
         """
         data = self.data[idx]
         label = self.labels[idx]
+        
+        if self.mode == "train" and self.augmentor is not None:
+            data = self.augmentor.process(data)
         
         if self.transform:
             data = self.transform(data)

@@ -133,8 +133,9 @@ class BaseDataset(Dataset, ABC):
         segmenter = SlidingWindowSegmenter(window_len, window_stride)
         final_data, final_labels, group_ids = segmenter(filtered_data, labels=labels)
         
-        # Print final processed data shape for verification
-        print(f"[Subject {self.subject_id}] Data loaded: shape={final_data.shape}, n_classes={len(np.unique(final_labels))}, n_samples={len(final_labels)}")
+        # Log final processed data shape for verification (debug level to avoid cluttering progress bars)
+        import logging
+        logging.debug(f"[Subject {self.subject_id}] Data loaded: shape={final_data.shape}, n_classes={len(np.unique(final_labels))}, n_samples={len(final_labels)}")
         
         return final_data, final_labels, group_ids
     

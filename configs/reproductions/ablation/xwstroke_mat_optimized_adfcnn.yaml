@@ -1,0 +1,55 @@
+# Optimized within-subject training regimen for ADFCNN on XWStroke.
+# Fixes small-sample training issues: smaller batch, early stopping, weight decay, augmentation.
+
+experiment:
+  name: "Ablation_MAT_Optimized_ADFCNN"
+  seed: 42
+  description: "XWStroke MAT data with optimized small-sample training: batch=8, early stopping, wd=0.01, augmentation"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_paper_optimized.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 8
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "none"
+
+  early_stopping:
+    enabled: true
+    patience: 20
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

@@ -75,25 +75,25 @@ def load_subject_raw(subject_id, data_dir):
     return data2d, labels
 
 
-def extract_trials(data2d, fs, channels, pre_trig=800, post_trig=2000, win_start=800, win_len=2000):
+def extract_trials(data2d, fs, channels, pre_trig=800, post_trig=2000):
     """
     Extract epochs around marker==2 triggers.
-    Default parameters match MATLAB TWFB_DGFMDM.m:
-      - take -1.6s to +4s around trigger (2800 samples)
-      - after filtering, keep 0s to +4s (2000 samples)
-    Returns: (n_trials, n_samples, n_channels)
+    MATLAB code processes a 2800-sample segment (-1.6s to +4s),
+    applies filtering, and then discards the first 800 samples as burn-in.
+    We return the full 2800-sample notch-filtered segments so that each
+    method can apply its own bandpass on the long segment and then window.
+    Returns: (n_trials, 2800, n_channels)
     """
     marker = data2d[:, -1]
     triggers = np.where(marker == 2)[0]
     n_ch = len(channels)
-    eeg = np.zeros((len(triggers), win_len, n_ch))
     total_len = pre_trig + post_trig
+    eeg = np.zeros((len(triggers), total_len, n_ch))
     for i, trig in enumerate(triggers):
         seg = data2d[trig - pre_trig : trig + post_trig, :][:, channels]
-        # MATLAB pipeline: notch -> bandpass -> window
+        # Notch filter only; bandpass is applied by each method before windowing
         seg = notch_filter(seg, fs, axis=0)
-        # bandpass will be applied later per frequency band
-        eeg[i] = seg[win_start : win_start + win_len, :]
+        eeg[i] = seg
     return eeg
 
 
@@ -134,7 +134,7 @@ def twfb_dgfmdm(eeg, labels, fs, freq_bands, n_repeats=10, train_size=24):
         best_total_right = 0
 
         for fl, fh in freq_bands:
-            eeg_filt = np.array([bandpass_filter(trial, fs, fl, fh, axis=0) for trial in eeg])
+            eeg_filt = np.array([bandpass_filter(trial, fs, fl, fh, axis=0)[800:, :] for trial in eeg])
             covs = compute_covariances(eeg_filt)
 
             clf = FgMDM(metric="riemann")
@@ -167,7 +167,7 @@ def tslda_dgfmdm(eeg, labels, fs, freq_bands, n_repeats=10, train_size=24):
     Here we follow the paper validation: one band [8,30] Hz.
     """
     n_trials = len(labels)
-    eeg_filt = np.array([bandpass_filter(trial, fs, 8, 30, axis=0) for trial in eeg])
+    eeg_filt = np.array([bandpass_filter(trial, fs, 8, 30, axis=0)[800:, :] for trial in eeg])
     covs = compute_covariances(eeg_filt)
 
     accs = []
@@ -220,13 +220,13 @@ def csp_lda(eeg, labels, fs, n_repeats=10, train_size=24):
     """
     CSP + LDA reproduction.
     MATLAB CSP_LDA.m uses a single [8,30] Hz band and 4 CSP components.
+    CSP is fitted strictly on the training set each fold to avoid data leakage.
     """
     n_trials = len(labels)
-    eeg_filt = np.array([bandpass_filter(trial, fs, 8, 30, axis=0) for trial in eeg])
+    # MATLAB PlotAccuracy.m uses 4-30 Hz for CSP_LDA
+    eeg_filt = np.array([bandpass_filter(trial, fs, 4, 30, axis=0)[800:, :] for trial in eeg])
     # MNE CSP expects (n_epochs, n_channels, n_times)
     X = eeg_filt.transpose(0, 2, 1)
-    csp = CSP(n_components=4, reg=None, log=True, norm_trace=False)
-    X_csp = csp.fit_transform(X, labels)
 
     accs = []
     left_nums = []
@@ -238,9 +238,14 @@ def csp_lda(eeg, labels, fs, n_repeats=10, train_size=24):
         train_idx = perm[:train_size]
         test_idx = perm[train_size:]
 
+        # MATLAB CSP.m normalizes covariance by trace(EE); match with norm_trace=True
+        csp = CSP(n_components=4, reg=None, log=True, norm_trace=True)
+        X_train = csp.fit_transform(X[train_idx], labels[train_idx])
+        X_test = csp.transform(X[test_idx])
+
         lda = LinearDiscriminantAnalysis()
-        lda.fit(X_csp[train_idx], labels[train_idx])
-        pred = lda.predict(X_csp[test_idx])
+        lda.fit(X_train, labels[train_idx])
+        pred = lda.predict(X_test)
         acc = np.mean(pred == labels[test_idx]) * 100
 
         accs.append(acc)
@@ -259,21 +264,16 @@ def csp_lda(eeg, labels, fs, n_repeats=10, train_size=24):
 def fbcsp_svm(eeg, labels, fs, n_repeats=10, train_size=24):
     """
     FBCSP + SVM reproduction.
-    MATLAB FBCSP_SVM.m uses filter banks 8-12, 9-13, ..., 26-30 Hz (19 bands)
-    with 4 CSP components per band and an SVM classifier.
-    MNE does not ship FBCSP, so we build it manually with per-band CSPs.
+    MATLAB FBCSP_SVM.m uses filter banks [10,13], [13,16], [16,19], [19,22], [22,25] Hz
+    with 4 CSP components per band and an SVM classifier (fitcecoc in MATLAB).
+    CSP is fitted strictly on the training set each fold to avoid data leakage.
     """
     n_trials = len(labels)
-    # Build 19 overlapping bands: [8,12] to [26,30]
-    bands = [(f, f + 4) for f in range(8, 27)]
-    # Pre-filter data for each band and stack CSP features
+    # MATLAB uses exactly these 5 bands
+    bands = [(10, 13), (13, 16), (16, 19), (19, 22), (22, 25)]
     X = eeg.transpose(0, 2, 1)  # (trials, channels, times)
-    X_fb_list = []
-    for fl, fh in bands:
-        eeg_filt = np.array([bandpass_filter(trial.T, fs, fl, fh, axis=0).T for trial in X])
-        csp = CSP(n_components=4, reg=None, log=True, norm_trace=False)
-        X_fb_list.append(csp.fit_transform(eeg_filt, labels))
-    X_fb = np.hstack(X_fb_list)
+    # MATLAB FBCSP_SVM.m first applies a broad 4-30 Hz filter
+    X_pre = np.array([bandpass_filter(trial.T, fs, 4, 30, axis=0)[800:, :].T for trial in X])
 
     accs = []
     left_nums = []
@@ -285,9 +285,20 @@ def fbcsp_svm(eeg, labels, fs, n_repeats=10, train_size=24):
         train_idx = perm[:train_size]
         test_idx = perm[train_size:]
 
+        X_fb_list_train = []
+        X_fb_list_test = []
+        for fl, fh in bands:
+            eeg_filt = np.array([bandpass_filter(trial.T, fs, fl, fh, axis=0)[800:, :].T for trial in X_pre])
+            csp = CSP(n_components=4, reg=None, log=True, norm_trace=True)
+            X_fb_list_train.append(csp.fit_transform(eeg_filt[train_idx], labels[train_idx]))
+            X_fb_list_test.append(csp.transform(eeg_filt[test_idx]))
+
+        X_fb_train = np.hstack(X_fb_list_train)
+        X_fb_test = np.hstack(X_fb_list_test)
+
         svm = SVC(kernel="linear", C=1.0)
-        svm.fit(X_fb[train_idx], labels[train_idx])
-        pred = svm.predict(X_fb[test_idx])
+        svm.fit(X_fb_train, labels[train_idx])
+        pred = svm.predict(X_fb_test)
         acc = np.mean(pred == labels[test_idx]) * 100
 
         accs.append(acc)

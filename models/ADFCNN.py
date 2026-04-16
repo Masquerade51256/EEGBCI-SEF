@@ -3,15 +3,56 @@ import torch
 import torch.nn as nn
 from models.layers import Conv2dWithConstraint, LazyLinearWithConstraint, PositionalEncodingFourier
 
+
+class BandwiseSpectral(nn.Module):
+    """Apply the same Conv2d to each frequency band independently (shared weights)."""
+    def __init__(self, F1, kernel_size, padding='same', max_norm=2.):
+        super(BandwiseSpectral, self).__init__()
+        self.conv = Conv2dWithConstraint(1, F1, kernel_size=(1, kernel_size),
+                                         padding=padding, max_norm=max_norm)
+        self.bn = nn.BatchNorm2d(F1)
+
+    def forward(self, x):
+        # x: (B, num_bands, C, T)
+        B, N, C, T = x.shape
+        x = x.reshape(B * N, 1, C, T)
+        x = self.conv(x)
+        x = self.bn(x)
+        x = x.reshape(B, N, -1, C, T)  # (B, num_bands, F1, C, T)
+        return x
+
+
+class BandAttention(nn.Module):
+    """Squeeze-and-Excitation style attention over frequency bands."""
+    def __init__(self, num_bands, channels, reduction=4):
+        super(BandAttention, self).__init__()
+        hidden = max(1, (num_bands * channels) // reduction)
+        self.fc = nn.Sequential(
+            nn.Linear(num_bands * channels, hidden),
+            nn.ReLU(),
+            nn.Linear(hidden, num_bands * channels),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        # x: (B, num_bands, F_out, C, T)
+        B, N, F, C, T = x.shape
+        stats = x.mean(dim=[3, 4])               # (B, num_bands, F)
+        stats_flat = stats.reshape(B, N * F)
+        attn = self.fc(stats_flat).reshape(B, N, F, 1, 1)
+        x = (x * attn).sum(dim=1)                # (B, F, C, T)
+        return x
+
+
 class backbone(nn.Module):
     def __init__(self,
                 num_channels: int,
                 num_bands: int,
                 F1=8, D=1, F2= 'auto', P1=4, P2=8, pool_mode= 'mean',
-                drop_out=0.25, layer_scale_init_value = 1e-6, nums = 4):
+                drop_out=0.25, layer_scale_init_value = 1e-6, nums = 4,
+                use_band_attention=True):
         super(backbone, self).__init__()
 
-        # ... [保留原有的所有层定义，如spectral_1, spectral_2, spatial_1, spatial_2, w_q, w_k, w_v等] ...
         pooling_layer = dict(max=nn.MaxPool2d, mean=nn.AvgPool2d)[pool_mode]
 
         pooling_size = 0.3
@@ -20,19 +61,27 @@ class backbone(nn.Module):
         if F2 == 'auto':
             F2 = F1 * D
 
-        # Spectral
-        self.spectral_1 = nn.Sequential(
-            Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 125], padding='same',  max_norm=2.),
-            nn.BatchNorm2d(F1),
-            )
-        self.spectral_2 = nn.Sequential(
-            Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 30], padding='same', max_norm=2.),
-            nn.BatchNorm2d(F1),
-            )
+        self.use_band_attention = use_band_attention and (num_bands > 1)
+
+        if self.use_band_attention:
+            self.band_spectral_1 = BandwiseSpectral(F1, 125, padding='same', max_norm=2.)
+            self.band_attn_1 = BandAttention(num_bands, F1, reduction=4)
+            self.band_spectral_2 = BandwiseSpectral(F1, 30, padding='same', max_norm=2.)
+            self.band_attn_2 = BandAttention(num_bands, F1, reduction=4)
+        else:
+            # Spectral
+            self.spectral_1 = nn.Sequential(
+                Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 125], padding='same',  max_norm=2.),
+                nn.BatchNorm2d(F1),
+                )
+            self.spectral_2 = nn.Sequential(
+                Conv2dWithConstraint(num_bands, F1, kernel_size=[1, 30], padding='same', max_norm=2.),
+                nn.BatchNorm2d(F1),
+                )
 
         # Spatial
         self.spatial_1 = nn.Sequential(
-            Conv2dWithConstraint(F1, F2, (num_channels, 1), padding=0, groups=F1, bias=False, max_norm=2.), # 注意: 输入通道应为F1
+            Conv2dWithConstraint(F1, F2, (num_channels, 1), padding=0, groups=F1, bias=False, max_norm=2.),
             nn.BatchNorm2d(F2),
             nn.ELU(),
             nn.Dropout(drop_out),
@@ -46,7 +95,7 @@ class backbone(nn.Module):
 
         self.spatial_2 = nn.Sequential(
             Conv2dWithConstraint(F1, F2, kernel_size=[num_channels, 1], padding='valid',
-                                                 max_norm=2.), # 注意: 输入通道应为F1
+                                                 max_norm=2.),
             nn.BatchNorm2d(F2),
             ActSquare(),
             pooling_layer((1, 75), stride=25),
@@ -57,17 +106,18 @@ class backbone(nn.Module):
 
         self.flatten = nn.Flatten()
         self.drop = nn.Dropout(drop_out)
-        # 注意力层的线性变换，其输入特征数需要是 F2 * 某个值，但这里我们先按原结构，后续在forward中调整
-        # 注意：由于spatial_1和spatial_2的输出在时间维拼接，其第二维（通道维）都是F2，但时间维长度可能不同。
-        # 我们需要在forward中计算拼接后展平的特征数，这里先占位。
         self._attention_feat_dim = None
-        self.w_q = nn.Linear(0, 0) # 占位，将在首次前向传播后初始化
+        self.w_q = nn.Linear(0, 0)
         self.w_k = nn.Linear(0, 0)
         self.w_v = nn.Linear(0, 0)
 
     def forward(self, x):
-        x_1 = self.spectral_1(x)
-        x_2 = self.spectral_2(x)
+        if self.use_band_attention:
+            x_1 = self.band_attn_1(self.band_spectral_1(x))
+            x_2 = self.band_attn_2(self.band_spectral_2(x))
+        else:
+            x_1 = self.spectral_1(x)
+            x_2 = self.spectral_2(x)
 
         x_filter_1 = self.spatial_1(x_1) # 形状: [B, F2, 1, T1]
         x_filter_2 = self.spatial_2(x_2) # 形状: [B, F2, 1, T2]
@@ -132,9 +182,11 @@ class ADFCNN(nn.Module):
                 num_classes: int,
                 num_channels: int,
                 num_bands: int,
-                input_length: int):
+                input_length: int,
+                use_band_attention=True):
         super(ADFCNN, self).__init__()
-        self.backbone = backbone(num_channels=num_channels, num_bands=num_bands)
+        self.backbone = backbone(num_channels=num_channels, num_bands=num_bands,
+                                 use_band_attention=use_band_attention)
 
         # 关键：动态获取backbone输出的特征维度
         # 创建一个虚拟输入来探测特征维度

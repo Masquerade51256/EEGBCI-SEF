@@ -1,0 +1,55 @@
+# Ablation: MAT baseline with single broadband filter (no filter bank) + ADFCNN
+# Purpose: direct comparison against the 5-filter-bank ADFCNN setup.
+
+experiment:
+  name: "Ablation_MAT_SingleBand_ADFCNN"
+  seed: 42
+  description: "XWStroke MAT data with single broadband filter [0.5,100] Hz, using ADFCNN"
+
+data:
+  dataset: "XWStroke"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_paper_single_band.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  k_folds: 5
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.0
+
+  scheduler:
+    type: "none"
+
+  early_stopping:
+    enabled: false
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+  data_dir: "./src/datasets"
+  checkpoint_dir: "./src/checkpoints"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

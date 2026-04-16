@@ -123,8 +123,16 @@ preprocessing:
     eps: 1.0e-10
   filter_bank:
     filter_banks:
-    - - 0.5
-      - 100
+    - - 8
+      - 12
+    - - 12
+      - 16
+    - - 16
+      - 20
+    - - 20
+      - 24
+    - - 24
+      - 30
     normalize: true
   normalization:
     method: none

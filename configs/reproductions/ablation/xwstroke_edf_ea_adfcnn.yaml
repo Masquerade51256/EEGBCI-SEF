@@ -1,15 +1,15 @@
-# Ablation: EDF baseline (no artifact removal) + ADFCNN
-# Purpose: baseline for raw EDF data without artifact removal
+# Ablation: EDF with Euclidean Alignment + ADFCNN
+# Purpose: evaluate EA effect on raw EDF data
 
 experiment:
-  name: "Ablation_EDF_Baseline_ADFCNN"
+  name: "Ablation_EDF_EA_ADFCNN"
   seed: 42
-  description: "XWStroke EDF raw data without artifact removal, using ADFCNN (paper-faithful settings)"
+  description: "XWStroke EDF raw data with Euclidean Alignment, using ADFCNN (paper-faithful settings)"
 
 data:
   dataset: "XWStrokeEDF"
-  subjects: "all" 
-  info_path: "configs/dataset/XWStroke_EDF_paper.yaml"
+  subjects: "all"
+  info_path: "configs/dataset/XWStroke_EDF_ea_paper.yaml"
 
 model:
   type: "ADFCNN"

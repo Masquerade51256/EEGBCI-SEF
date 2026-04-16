@@ -5,6 +5,7 @@ from preprocessing.filter_banks import FilterBankProcessor
 from preprocessing.resample import ResampleProcessor
 from preprocessing.artifact_removal import ArtifactRemovalProcessor, EMARProcessor, SASICAProcessor, MARAProcessor
 from preprocessing.data_augmentation import DataAugmentationProcessor
+from preprocessing.euclidean_alignment import EuclideanAlignmentProcessor
 
 
 class ProcessorFactory:
@@ -22,6 +23,7 @@ class ProcessorFactory:
         'sasica': SASICAProcessor,
         'mara': MARAProcessor,
         'augmentation': DataAugmentationProcessor,
+        'euclidean_alignment': EuclideanAlignmentProcessor,
     }
     
     @classmethod

@@ -165,6 +165,16 @@ class BaseDataset(Dataset, ABC):
         filter_bank = FilterBankProcessor(filter_banks=self.filter_banks, sample_rate=self.target_sr)
         filtered_data = filter_bank(selected_data)
         
+        # Euclidean Alignment (optional)
+        # Recommended placement: after temporal filtering (filter bank),
+        # before sliding window segmentation / model input.
+        ea_config = self.dataset_info.get('preprocessing', {}).get('euclidean_alignment')
+        if ea_config is not None and ea_config.get('enabled', False):
+            from preprocessing.euclidean_alignment import EuclideanAlignmentProcessor
+            eps = ea_config.get('eps', 1e-10)
+            ea_proc = EuclideanAlignmentProcessor(name="ea", eps=eps)
+            filtered_data = ea_proc.process(filtered_data)
+        
         # Adjust labels if needed (convert from 1-based to 0-based indexing)
         labels = raw_labels
         if len(labels) > 0 and np.min(labels) >= 1:

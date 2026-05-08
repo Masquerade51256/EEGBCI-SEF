@@ -130,6 +130,35 @@ class XWStrokeDataset(Dataset):
 
         # 4. Label shift (1,2 to 0,1)
         adjusted_labels = raw_labels - 1
+        
+        # Optional: remap left/right labels to affected/unaffected
+        label_mapping = self.info.get('dataset', {}).get('label_mapping', 'lr')
+        if label_mapping != 'lr':
+            import sys
+            project_root = os.path.join(os.path.dirname(__file__), '..')
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            from data.datasets import _load_paralysis_side
+            paralysis_side = _load_paralysis_side(self.subject_id, self.info)
+            
+            # Current labels are 0-based: 0=left, 1=right
+            if label_mapping == 'affected':
+                # Target: 0=affected, 1=unaffected
+                if paralysis_side == 'left':
+                    pass  # 0->0 (left/affected), 1->1 (right/unaffected)
+                else:  # 'right'
+                    adjusted_labels = 1 - adjusted_labels  # 0->1 (left/unaffected), 1->0 (right/affected)
+            elif label_mapping == 'unaffected_first':
+                # Target: 0=unaffected, 1=affected
+                if paralysis_side == 'left':
+                    adjusted_labels = 1 - adjusted_labels  # 0->1 (left/affected), 1->0 (right/unaffected)
+                else:  # 'right'
+                    pass  # 0->0 (left/unaffected), 1->1 (right/affected)
+            else:
+                raise ValueError(f"Unknown label_mapping: {label_mapping}")
+            
+            # Update config so downstream knows labels are remapped
+            self.info['dataset']['labels'] = [0, 1]
 
         # 5. Sliding window segmentation
         final_data, final_labels, final_group_ids = self._apply_sliding_window(processed_eeg_data, adjusted_labels)

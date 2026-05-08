@@ -1,0 +1,54 @@
+{
+  "selected_subjects": [
+    5,
+    7,
+    8,
+    9,
+    10,
+    12,
+    15,
+    16,
+    19,
+    30,
+    31,
+    32,
+    40,
+    43,
+    49
+  ],
+  "selection_strategy": "stratified by LOSO performance + ParalysisSide + NIHSS",
+  "subset_stats": {
+    "n": 15,
+    "ParalysisSide": {
+      "left": 9,
+      "right": 6
+    },
+    "NIHSS_mean": 3.8,
+    "NIHSS_std": 2.1111946516469904,
+    "MBI_mean": 74.4,
+    "MBI_std": 19.282856931185567,
+    "mRS_mean": 2.2,
+    "mRS_std": 1.4735767952260144,
+    "acc_LOSO_mean": 0.5063333333333333,
+    "acc_LOSO_std": 0.0434028746030666,
+    "acc_within_mean": 0.6961666666666667,
+    "acc_within_std": 0.05556621425530685
+  },
+  "full_stats": {
+    "n": 50,
+    "ParalysisSide": {
+      "left": 28,
+      "right": 22
+    },
+    "NIHSS_mean": 4.16,
+    "NIHSS_std": 2.852567765565414,
+    "MBI_mean": 70.94,
+    "MBI_std": 18.22132637032435,
+    "mRS_mean": 2.68,
+    "mRS_std": 1.4489968380692533,
+    "acc_LOSO_mean": 0.5071,
+    "acc_LOSO_std": 0.044585277152615184,
+    "acc_within_mean": 0.6951999999999999,
+    "acc_within_std": 0.06131288941293881
+  }
+}

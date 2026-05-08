@@ -1,0 +1,63 @@
+# 5F Dataset with ADFCNN - LOSO Multi-Band Experiment
+#
+# Uses 8 filter banks (4-36 Hz) to capture motor-imagery related
+# frequency components. ADFCNN adapter merges bands into a single
+# pseudo-channel before feeding into the model.
+#
+# Note: ADFCNN adapter reshapes [B, num_bands, C, T] -> [B, 1, num_bands*C, T]
+# so the model sees num_channels = 21 * 8 = 168 as input height.
+
+experiment:
+  name: "5F_ADFCNN_LOSO_MultiBand"
+  seed: 42
+  description: "5F finger MI with multi-band filter banks + ADFCNN + LOSO"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F_multiband.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+    # Auto-populated:
+    # num_channels: 21, num_classes: 5, input_length: 250, num_bands: 8
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "LOSOTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

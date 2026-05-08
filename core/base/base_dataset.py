@@ -180,6 +180,9 @@ class BaseDataset(Dataset, ABC):
         if len(labels) > 0 and np.min(labels) >= 1:
             labels = labels - 1
         
+        # Optional dataset-specific label remapping
+        labels = self._remap_labels(labels)
+        
         # Sliding window segmentation
         from preprocessing.slide_windows import SlidingWindowSegmenter
         window_len = int(self.dataset_info.get('preprocessing', {}).get('windowing', {}).get('window_length_sec', 3) * self.target_sr)
@@ -193,6 +196,21 @@ class BaseDataset(Dataset, ABC):
         logging.debug(f"[Subject {self.subject_id}] Data loaded: shape={final_data.shape}, n_classes={len(np.unique(final_labels))}, n_samples={len(final_labels)}")
         
         return final_data, final_labels, group_ids
+    
+    def _remap_labels(self, labels: np.ndarray) -> np.ndarray:
+        """
+        Optional label remapping hook.
+        
+        Override in subclasses to implement dataset-specific label mapping
+        (e.g., left/right -> affected/unaffected for stroke datasets).
+        
+        Args:
+            labels: Array of labels (0-based indexing)
+            
+        Returns:
+            Remapped labels
+        """
+        return labels
     
     @abstractmethod
     def _load_raw_data(self) -> Tuple[np.ndarray, np.ndarray]:

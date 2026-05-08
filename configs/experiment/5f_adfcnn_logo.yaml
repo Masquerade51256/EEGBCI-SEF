@@ -1,0 +1,84 @@
+# 5F Dataset with ADFCNN - LOGO Experiment
+#
+# Leave-One-Group-Out (LOGO) cross-validation.
+# Subjects are grouped by some criteria (e.g., data size, recording date)
+# and evaluation leaves out entire groups.
+#
+# For 5F with only 8 subjects, a practical grouping is by
+# number of sessions (high-data vs low-data subjects):
+#   Group 1 (high-data): B(4), E(3), F(3) -> subjects [2, 4, 5]
+#   Group 2 (med-data):  A(2), C(2), G(2), I(2) -> subjects [1, 3, 6, 8]
+#   Group 3 (low-data):  H(1) -> subjects [7]
+#
+# This tests generalization across data-rich vs data-poor conditions.
+
+experiment:
+  name: "5F_ADFCNN_LOGO"
+  seed: 42
+  description: "5F finger MI LOGO: ADFCNN with subject-grouped cross-validation"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F.yaml"
+  # Subject grouping metadata (optional, auto-created if not present)
+  subject_info:
+    "1": { group: "med_data" }
+    "2": { group: "high_data" }
+    "3": { group: "med_data" }
+    "4": { group: "high_data" }
+    "5": { group: "high_data" }
+    "6": { group: "med_data" }
+    "7": { group: "low_data" }
+    "8": { group: "med_data" }
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "LOGOTrainer"
+  args:
+    # Grouping key from subject_info metadata
+    grouping_key: "group"
+
+    # Use streaming mode for memory efficiency
+    streaming: false
+
+    # Gradient accumulation
+    gradient_accumulation_steps: 1
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

@@ -13,6 +13,47 @@ import scipy.io as sio
 from core.base.base_dataset import BaseDataset
 
 
+def _load_paralysis_side(subject_id: int, dataset_info: dict) -> str:
+    """
+    Load paralysis side for a given subject from participants.tsv.
+    
+    Args:
+        subject_id: Subject ID (integer)
+        dataset_info: Dataset configuration dictionary
+        
+    Returns:
+        'left' or 'right'
+    """
+    import pandas as pd
+    
+    participants_tsv = dataset_info.get('dataset', {}).get('participants_tsv')
+    if participants_tsv is None:
+        data_dir = dataset_info.get('dataset', {}).get('data_dir', '')
+        candidates = [
+            os.path.join(os.path.dirname(data_dir), 'participants.tsv'),
+            os.path.join(data_dir, 'participants.tsv'),
+            'src/datasets/21679035/participants.tsv',
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                participants_tsv = path
+                break
+        if participants_tsv is None:
+            raise FileNotFoundError(
+                f"participants.tsv not found. Searched: {candidates}. "
+                f"Please specify 'participants_tsv' in dataset config."
+            )
+    
+    participants = pd.read_csv(participants_tsv, sep='\t')
+    sub_str = f'sub-{subject_id:02d}'
+    sub_info = participants[participants['Participant_ID'] == sub_str]
+    
+    if len(sub_info) == 0:
+        raise ValueError(f"Subject {sub_str} not found in {participants_tsv}")
+    
+    return str(sub_info['ParalysisSide'].values[0]).lower()
+
+
 class BCICIV2aDataset(BaseDataset):
     """
     BCI Competition IV 2a dataset.
@@ -195,6 +236,43 @@ class XWStrokeDataset(BaseDataset):
             data = np.transpose(data, (0, 2, 1))
         
         return data, labels
+    
+    def _remap_labels(self, labels: np.ndarray) -> np.ndarray:
+        """
+        Remap left/right labels to affected/unaffected based on paralysis side.
+        
+        Configured via dataset_info['dataset']['label_mapping']:
+            - 'lr': no remapping (default), 0=left, 1=right
+            - 'affected': 0=affected side, 1=unaffected side
+            - 'unaffected_first': 0=unaffected side, 1=affected side
+        """
+        label_mapping = self.dataset_info.get('dataset', {}).get('label_mapping', 'lr')
+        if label_mapping == 'lr':
+            return labels
+        
+        paralysis_side = _load_paralysis_side(self.subject_id, self.dataset_info)
+        
+        # Original after 0-based shift: 0=left, 1=right
+        if label_mapping == 'affected':
+            # Target: 0=affected, 1=unaffected
+            if paralysis_side == 'left':
+                # Left is affected -> no change
+                return labels
+            else:  # 'right'
+                # Right is affected -> flip
+                return 1 - labels
+                
+        elif label_mapping == 'unaffected_first':
+            # Target: 0=unaffected, 1=affected
+            if paralysis_side == 'left':
+                # Left is affected -> flip
+                return 1 - labels
+            else:  # 'right'
+                # Right is affected -> no change
+                return labels
+                
+        else:
+            raise ValueError(f"Unknown label_mapping: {label_mapping}")
 
 
 class XWStrokeEDFDataset(BaseDataset):
@@ -297,6 +375,43 @@ class XWStrokeEDFDataset(BaseDataset):
         
         print(f"[Subject {self.subject_id}] Loaded EDF: {data.shape}, sfreq={sfreq}Hz, labels={labels[:5]}...")
         return data, labels
+    
+    def _remap_labels(self, labels: np.ndarray) -> np.ndarray:
+        """
+        Remap left/right labels to affected/unaffected based on paralysis side.
+        
+        Configured via dataset_info['dataset']['label_mapping']:
+            - 'lr': no remapping (default), 0=left, 1=right
+            - 'affected': 0=affected side, 1=unaffected side
+            - 'unaffected_first': 0=unaffected side, 1=affected side
+        """
+        label_mapping = self.dataset_info.get('dataset', {}).get('label_mapping', 'lr')
+        if label_mapping == 'lr':
+            return labels
+        
+        paralysis_side = _load_paralysis_side(self.subject_id, self.dataset_info)
+        
+        # Original after 0-based shift: 0=left, 1=right
+        if label_mapping == 'affected':
+            # Target: 0=affected, 1=unaffected
+            if paralysis_side == 'left':
+                # Left is affected -> no change
+                return labels
+            else:  # 'right'
+                # Right is affected -> flip
+                return 1 - labels
+                
+        elif label_mapping == 'unaffected_first':
+            # Target: 0=unaffected, 1=affected
+            if paralysis_side == 'left':
+                # Left is affected -> flip
+                return 1 - labels
+            else:  # 'right'
+                # Right is affected -> no change
+                return labels
+                
+        else:
+            raise ValueError(f"Unknown label_mapping: {label_mapping}")
 
 
 class LowerStrokeDataset(BaseDataset):
@@ -335,5 +450,163 @@ class LowerStrokeDataset(BaseDataset):
             data = np.expand_dims(data, axis=0)
         elif data.shape[1] < data.shape[2]:
             data = np.transpose(data, (0, 2, 1))
+        
+        return data, labels
+
+
+class FiveFingerDataset(BaseDataset):
+    """
+    5F (Five Finger) dataset from Kaya et al. (2018).
+    
+    Single-hand five-finger motor imagery dataset.
+    5 classes: thumb, index finger, middle finger, ring finger, pinkie finger.
+    
+    Dataset details:
+        - 8 subjects (A, B, C, E, F, G, H, I)
+        - 20 recording sessions (mix of 200 Hz and 1000 Hz)
+        - 22 input channels (19 EEG + A1, A2 + X5 sync)
+        - ~900 trials per session, ~300 trials per class per session
+        - Marker codes: 1=thumb, 2=index, 3=middle, 4=ring, 5=pinkie
+        - Stimulus duration: 1 s, inter-trial interval: 1.5-2.5 s
+    
+    Reference:
+        Kaya, M., Binli, M. K., Ozbay, E., Yanar, H., & Mishchenko, Y. (2018).
+        A large electroencephalographic motor imagery dataset for
+        electroencephalographic brain computer interfaces.
+        Scientific Data, 5, 180211.
+    """
+    
+    # Subject ID mapping: 1->A, 2->B, ..., 8->I (note: no Subject D)
+    SUBJECT_MAP = {
+        1: 'A', 2: 'B', 3: 'C', 4: 'E',
+        5: 'F', 6: 'G', 7: 'H', 8: 'I'
+    }
+    
+    # Inverse mapping for convenience
+    SUBJECT_INV_MAP = {v: k for k, v in SUBJECT_MAP.items()}
+    
+    def _load_raw_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load raw data from .mat files for a specific subject.
+        
+        Handles mixed sampling rates (200 Hz and 1000 Hz) by resampling
+        all trials to a uniform number of time points based on target_sr
+        and epoch_duration.
+        
+        Returns:
+            Tuple of (data, labels) where:
+            - data: shape (n_trials, n_channels, n_timepoints)
+            - labels: shape (n_trials,)
+        """
+        from scipy import signal
+        
+        data_dir = self.dataset_info.get('dataset', {}).get('data_dir', 'src/datasets/5F')
+        
+        # Epoch extraction settings
+        epoch_duration = self.dataset_info.get('dataset', {}).get('epoch_duration_sec', 1.0)
+        target_sr = self.dataset_info.get('preprocessing', {}).get('resample', {}).get('target_sr', 250)
+        
+        # Number of time points after resampling
+        n_timepoints_target = int(round(epoch_duration * target_sr))
+        
+        # Get subject letter from ID
+        if self.subject_id not in self.SUBJECT_MAP:
+            raise ValueError(
+                f"Invalid subject_id {self.subject_id} for 5F dataset. "
+                f"Valid IDs: {list(self.SUBJECT_MAP.keys())}"
+            )
+        subject_letter = self.SUBJECT_MAP[self.subject_id]
+        
+        # Find all .mat files for this subject
+        # Pattern: 5F-Subject{LETTER}-*.mat
+        all_files = sorted([
+            f for f in os.listdir(data_dir)
+            if f.endswith('.mat') and f.startswith(f'5F-Subject{subject_letter}-')
+        ])
+        
+        if not all_files:
+            raise FileNotFoundError(
+                f"No 5F data files found for Subject {subject_letter} (ID={self.subject_id}) "
+                f"in {data_dir}"
+            )
+        
+        # Remove duplicate files (e.g., "... (1).mat" identical copies)
+        unique_files = []
+        seen_base = set()
+        for f in all_files:
+            # Normalize: remove " (1)" suffix before extension
+            base = f.replace(' (1)', '')
+            if base not in seen_base:
+                seen_base.add(base)
+                unique_files.append(f)
+        
+        all_trials = []
+        all_labels = []
+        
+        for filename in unique_files:
+            filepath = os.path.join(data_dir, filename)
+            mat_data = sio.loadmat(filepath)
+            
+            if 'o' not in mat_data:
+                raise ValueError(f"Expected structured array 'o' not found in {filepath}")
+            
+            o = mat_data['o']
+            
+            # Extract fields from structured array
+            marker = o['marker'][0, 0].flatten()
+            eeg_data = o['data'][0, 0]  # shape: (n_samples, 22)
+            sfreq_raw = float(o['sampFreq'][0, 0].flatten()[0])
+            
+            # Exclude X5 sync channel (index 21), keep first 21 channels
+            eeg_data = eeg_data[:, :21]
+            
+            # Find trial onsets: marker transitions from 0 to 1-5
+            trial_onsets = []
+            trial_labels = []
+            for i in range(len(marker) - 1):
+                if marker[i] == 0 and marker[i + 1] in [1, 2, 3, 4, 5]:
+                    trial_onsets.append(i + 1)
+                    trial_labels.append(int(marker[i + 1]))
+            
+            if not trial_onsets:
+                print(f"[Warning] No trials found in {filename}")
+                continue
+            
+            # Extract epochs and resample if needed
+            for onset, label in zip(trial_onsets, trial_labels):
+                # Extract fixed-duration epoch
+                n_samples_epoch = int(round(epoch_duration * sfreq_raw))
+                end = min(onset + n_samples_epoch, eeg_data.shape[0])
+                epoch = eeg_data[onset:end, :].T  # -> (n_channels, n_timepoints)
+                
+                # If epoch is shorter than expected (last trial), pad with zeros
+                if epoch.shape[-1] < n_samples_epoch:
+                    pad_width = n_samples_epoch - epoch.shape[-1]
+                    epoch = np.pad(epoch, ((0, 0), (0, pad_width)), mode='constant')
+                
+                # Resample to target number of time points if needed
+                if epoch.shape[-1] != n_timepoints_target:
+                    epoch = np.apply_along_axis(
+                        lambda x: signal.resample(x, n_timepoints_target),
+                        axis=-1,
+                        arr=epoch
+                    )
+                
+                all_trials.append(epoch.astype(np.float32))
+                all_labels.append(label)
+        
+        if not all_trials:
+            raise ValueError(
+                f"No valid trials extracted for Subject {subject_letter} (ID={self.subject_id})"
+            )
+        
+        data = np.stack(all_trials, axis=0)  # (n_trials, n_channels, n_timepoints)
+        labels = np.array(all_labels, dtype=np.int64)
+        
+        print(
+            f"[Subject {subject_letter} (ID={self.subject_id})] "
+            f"Loaded {len(labels)} trials from {len(unique_files)} file(s), "
+            f"shape={data.shape}, labels={np.unique(labels, return_counts=True)}"
+        )
         
         return data, labels

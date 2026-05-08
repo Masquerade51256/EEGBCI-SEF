@@ -285,7 +285,7 @@ class LOSOTrainer(BaseTrainer):
             train_dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            generator=torch.Generator(device=self.device),
+            generator=torch.Generator(device='cpu'),
             drop_last=False
         )
         
@@ -293,7 +293,7 @@ class LOSOTrainer(BaseTrainer):
             test_dataset,
             batch_size=self.batch_size,
             shuffle=False,
-            generator=torch.Generator(device=self.device)
+            generator=torch.Generator(device='cpu')
         )
         
         # Setup optimizer

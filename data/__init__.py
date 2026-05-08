@@ -7,7 +7,7 @@ from core.base.base_dataset import BaseDataset
 
 # Import and register datasets
 try:
-    from .datasets import BCICIV2aDataset, XWStrokeDataset, XWStrokeEDFDataset, LowerStrokeDataset
+    from .datasets import BCICIV2aDataset, XWStrokeDataset, XWStrokeEDFDataset, LowerStrokeDataset, FiveFingerDataset
     
     # Register datasets
     DATASETS.register('BCICIV2a')(BCICIV2aDataset)
@@ -15,6 +15,8 @@ try:
     DATASETS.register('XWStroke')(XWStrokeDataset)
     DATASETS.register('XWStrokeEDF')(XWStrokeEDFDataset)
     DATASETS.register('LowerStroke')(LowerStrokeDataset)
+    DATASETS.register('5F')(FiveFingerDataset)
+    DATASETS.register('FiveFinger')(FiveFingerDataset)
     
 except ImportError as e:
     print(f"Warning: Could not register datasets: {e}")
@@ -26,4 +28,5 @@ __all__ = [
     'XWStrokeDataset',
     'XWStrokeEDFDataset',
     'LowerStrokeDataset',
+    'FiveFingerDataset',
 ]

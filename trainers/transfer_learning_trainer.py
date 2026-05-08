@@ -257,13 +257,13 @@ class TransferLearningTrainer(BaseTrainer):
                 train_subset,
                 batch_size=self.batch_size,
                 shuffle=True,
-                generator=torch.Generator(device=self.device)
+                generator=torch.Generator(device='cpu')
             )
             val_loader = DataLoader(
                 val_subset,
                 batch_size=self.batch_size,
                 shuffle=False,
-                generator=torch.Generator(device=self.device)
+                generator=torch.Generator(device='cpu')
             )
             
             # Create model and load pretrained weights

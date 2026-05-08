@@ -1,0 +1,36 @@
+{
+  "selected_subjects": [
+    4,
+    6,
+    19,
+    24,
+    28,
+    36,
+    39,
+    44,
+    47,
+    49
+  ],
+  "subset_stats": {
+    "n": 10,
+    "ParalysisSide": {
+      "left": 6,
+      "right": 4
+    },
+    "acc_LOSO_mean": 0.5155000000000001,
+    "acc_LOSO_std": 0.04901530373260986,
+    "acc_within_mean": 0.69175,
+    "acc_within_std": 0.034637006542457174
+  },
+  "full_stats": {
+    "n": 50,
+    "ParalysisSide": {
+      "left": 28,
+      "right": 22
+    },
+    "acc_LOSO_mean": 0.5071,
+    "acc_LOSO_std": 0.044585277152615184,
+    "acc_within_mean": 0.6951999999999999,
+    "acc_within_std": 0.06131288941293881
+  }
+}

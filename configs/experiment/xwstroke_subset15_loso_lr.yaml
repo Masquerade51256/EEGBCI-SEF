@@ -1,0 +1,42 @@
+# LOSO Experiment: XWStroke 15-subject subset with Left/Right labels
+# Task A (Benchmark): Left hand vs Right hand
+# Model: ADFCNN (consistent with prior XWStroke LOSO baseline)
+
+experiment:
+  name: "XWStroke_Subset15_LOSO_LR"
+  seed: 42
+  description: "LOSO cross-validation on 15-subject subset with left/right labels"
+
+data:
+  dataset: "XWStroke"
+  subjects: [5, 7, 8, 9, 10, 12, 15, 16, 19, 30, 31, 32, 40, 43, 49]
+  info_path: "configs/dataset/XWStroke_subset15.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 64
+  save_checkpoints: true
+  use_fp16_compression: true
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "LOSOTrainer"
+  args:
+    inner_k_folds: 0
+    balance_classes: false
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

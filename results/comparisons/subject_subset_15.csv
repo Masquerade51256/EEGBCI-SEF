@@ -1,0 +1,16 @@
+﻿subject_id,Gender,Age,Duration,ParalysisSide,Handedness,NIHSS,MBI,mRS,StrokeLocation,acc_LOSO,acc_within_mean,acc_ADFCNN_5fold,acc_XWFilterBankNet_5fold
+5,female,44,4,left,right,4,60,4,Left pons,0.495,0.685,0.575,0.6900000000000001
+7,male,62,5,right,right,2,100,1,Left pons,0.51,0.7799999999999999,0.675,0.7699999999999999
+8,male,64,5,left,right,3,85,2,Right basal ganglia,0.565,0.7375,0.55,0.7
+9,male,57,3,right,right,6,55,1,Left paraventricular,0.51,0.6950000000000001,0.625,0.755
+10,male,55,2,left,right,3,55,0,Right pons,0.575,0.62375,0.55,0.645
+12,male,58,1,right,right,1,100,1,Left medulla oblongata,0.5,0.7,0.65,0.725
+15,male,63,1,left,left,7,55,1,"Right fronto-parietal temporo-occipital lobe, Right inner watershed",0.51,0.695,0.75,0.7050000000000001
+16,male,57,1,right,right,4,90,2,Left basal ganglia,0.535,0.63375,0.55,0.6599999999999999
+19,female,62,1,left,right,8,40,4,"Right paraventricular, Right basal ganglia",0.515,0.6862499999999999,0.725,0.67
+30,male,68,4,left,right,4,100,1,Right paraventricular,0.52,0.80375,0.7,0.74
+31,female,59,5,right,right,3,80,3,"Left corona radiata, Left centrum semiovale",0.53,0.67625,0.65,0.78
+32,male,74,2,right,right,3,81,4,Left pons,0.41,0.6525,0.7,0.71
+40,female,56,6,left,right,6,65,4,Right pons,0.51,0.7775000000000001,0.675,0.7849999999999999
+43,male,32,3,left,right,2,65,4,Right frontal lobe,0.485,0.6475000000000001,0.675,0.7150000000000001
+49,male,52,3,left,right,1,85,1,Right basal ganglia,0.425,0.6487499999999999,0.625,0.6699999999999999

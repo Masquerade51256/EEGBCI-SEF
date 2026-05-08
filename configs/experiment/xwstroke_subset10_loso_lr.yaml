@@ -1,0 +1,39 @@
+# LOSO Experiment: XWStroke 10-subject quick validation (Left/Right labels)
+
+experiment:
+  name: "XWStroke_Subset10_LOSO_LR"
+  seed: 42
+  description: "Quick LOSO validation on 10-subject subset with left/right labels"
+
+data:
+  dataset: "XWStroke"
+  subjects: [4, 6, 19, 24, 28, 36, 39, 44, 47, 49]
+  info_path: "configs/dataset/XWStroke_subset10.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 64
+  save_checkpoints: true
+  use_fp16_compression: true
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "LOSOTrainer"
+  args:
+    inner_k_folds: 0
+    balance_classes: false
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

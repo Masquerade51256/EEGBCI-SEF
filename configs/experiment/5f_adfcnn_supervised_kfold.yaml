@@ -1,0 +1,63 @@
+# 5F Dataset with ADFCNN - Supervised K-Fold Experiment
+#
+# Within-subject evaluation using GroupKFold cross-validation.
+# Each subject is evaluated independently with 5-fold CV.
+# Group IDs ensure non-overlapping windows from the same trial
+# are not split across train/test sets.
+#
+# Use this when you want to evaluate within-subject performance
+# rather than cross-subject generalization.
+
+experiment:
+  name: "5F_ADFCNN_Supervised_KFold"
+  seed: 42
+  description: "5F finger MI within-subject: ADFCNN + 5-fold GroupKFold"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 150
+  batch_size: 32
+  k_folds: 5
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: true
+    patience: 20
+    min_delta: 0.001
+
+trainer:
+  type: "SupervisedTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

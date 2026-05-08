@@ -1,0 +1,63 @@
+# 5F Dataset with XWFilterBankNet - LOSO Cross-Validation Experiment
+# 
+# This configuration uses multi-band filter banks (8 bands)
+# with the XWFilterBankNet model, which is designed for
+# cross-band attention over multiple frequency bands.
+
+experiment:
+  name: "5F_FilterBankNet_LOSO"
+  seed: 42
+  description: "5F finger MI classification with XWFilterBankNet using LOSO evaluation"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F_multiband.yaml"
+
+model:
+  type: "XWFilterBankNet"
+  args:
+    band_channels: 32
+    temporal_kernel: 64
+    dropout: 0.3
+    use_attention: true
+    classifier_hidden: 0
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.5
+  
+  scheduler:
+    type: "cosine"
+    
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "LOSOTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

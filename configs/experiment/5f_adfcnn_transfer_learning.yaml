@@ -1,0 +1,82 @@
+# 5F Dataset with ADFCNN - Transfer Learning Experiment
+#
+# Two-stage transfer learning strategy:
+#   Stage 1 (freeze_epochs): Train with frozen backbone (feature extraction)
+#   Stage 2 (unfreeze_epochs): Fine-tune entire network with lower LR
+#
+# Use this after running a pre-training experiment (e.g., 5f_adfcnn_loso_singleband)
+# to obtain a pretrained checkpoint. Then set pretrained_path to that checkpoint
+# and run this config on a target subject or subset.
+#
+# For 5F with only 8 subjects, a practical workflow is:
+#   1. Pre-train on 6 subjects
+#   2. Transfer to the remaining 2 subjects
+
+experiment:
+  name: "5F_ADFCNN_TransferLearning"
+  seed: 42
+  description: "5F finger MI transfer learning: ADFCNN + gradual unfreezing"
+
+data:
+  dataset: "5F"
+  # Target subjects for transfer (e.g., subjects with fewer data)
+  subjects: [7, 8]
+  info_path: "configs/dataset/5F.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 150
+  batch_size: 32
+  k_folds: 5
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+trainer:
+  type: "TransferLearningTrainer"
+  args:
+    # Path to pretrained checkpoint (UPDATE THIS after pre-training)
+    # Example: "experiments/5F_ADFCNN_LOSO_SingleBand/checkpoints/subject_1_fold_0_acc_0.4500.pt"
+    pretrained_path: null
+
+    # Freezing strategy:
+    # - "none": Direct fine-tuning (no freezing)
+    # - "all": Freeze backbone, only train classifier
+    # - "gradual": Two-stage training (recommended)
+    # - "selective": Selective layer unfreezing
+    freeze_strategy: "gradual"
+
+    # Stage 1: Feature extraction with frozen backbone
+    freeze_epochs: 50
+    learning_rate_frozen: 0.001
+
+    # Stage 2: Fine-tuning entire network
+    unfreeze_epochs: 100
+    learning_rate_finetune: 0.0001
+
+paths:
+  root_dir: "./experiments"
+  fallback_checkpoint_dir: null
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

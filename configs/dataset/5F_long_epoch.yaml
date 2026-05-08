@@ -1,0 +1,59 @@
+# configs/dataset/5F_long_epoch.yaml
+# Five Finger (5F) dataset with extended 2-second epochs
+# and sliding window segmentation for increased sample count.
+
+dataset:
+  name: "5F"
+  data_dir: "src/datasets/5F"
+  original_sr: 250
+  num_channels: 21
+  num_classes: 5
+  num_subjects: 8
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  labels: [1, 2, 3, 4, 5]
+  epoch_duration_sec: 2.0
+
+preprocessing:
+  windowing:
+    window_length_sec: 1.0
+    window_stride_sec: 0.5
+
+  resample:
+    target_sr: 250
+    method: "fft"
+
+  channel_selection:
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+  filter_bank:
+    filter_banks:
+      - [4, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore"
+    axis: -1
+
+  augmentation:
+    - method: "add_noise"
+      snr_db: 20
+      probability: 0
+
+    - method: "channel_dropout"
+      dropout_rate: 0.1
+      probability: 0
+
+    - method: "time_warp"
+      sigma: 0.2
+      probability: 0
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline: []

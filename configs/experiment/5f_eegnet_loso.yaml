@@ -1,0 +1,66 @@
+# 5F Dataset with EEGNet - LOSO Cross-Validation Experiment
+# 
+# This configuration evaluates subject-independent generalization
+# on the 5-finger motor imagery dataset using Leave-One-Subject-Out (LOSO).
+#
+# Dataset: Kaya et al. (2018) 5F
+#   - 8 subjects, 5 classes (thumb, index, middle, ring, pinkie)
+#   - 21 EEG channels, 1-second epochs @ 250 Hz
+
+experiment:
+  name: "5F_EEGNet_LOSO"
+  seed: 42
+  description: "5F finger MI classification with EEGNet using LOSO evaluation"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F.yaml"
+
+model:
+  type: "EEGNet"
+  args: {}
+    # Auto-populated from dataset config:
+    # num_channels: 21
+    # num_classes: 5
+    # input_length: 250 (250 Hz * 1 s)
+    # num_bands: 1
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+  
+  scheduler:
+    type: "cosine"
+    
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "LOSOTrainer"
+  args: {}
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

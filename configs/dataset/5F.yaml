@@ -1,0 +1,75 @@
+# configs/dataset/5F.yaml
+# Five Finger (5F) dataset configuration
+# 
+# Dataset: Kaya et al. (2018) 5F single-hand five-finger motor imagery
+#   - 8 subjects (A, B, C, E, F, G, H, I)
+#   - 5 classes: thumb(1), index(2), middle(3), ring(4), pinkie(5)
+#   - Mixed sampling rates: 200 Hz and 1000 Hz (resampled during loading)
+#   - 21 EEG channels (19 standard 10/20 + A1, A2; X5 sync excluded)
+#   - ~900 trials per session, ~1800-2700 trials per subject
+#
+# Note: original_sr is set equal to target_sr because the dataset loader
+# internally resamples mixed-rate files to a uniform sampling rate.
+
+dataset:
+  name: "5F"
+  data_dir: "src/datasets/5F"
+  original_sr: 250
+  num_channels: 21
+  num_classes: 5
+  num_subjects: 8
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  labels: [1, 2, 3, 4, 5]  # 1: thumb, 2: index, 3: middle, 4: ring, 5: pinkie
+  # Duration of each epoch extracted around stimulus onset (seconds)
+  # Stimulus duration in the experiment is 1 s; adjust as needed
+  epoch_duration_sec: 1.0
+
+preprocessing:
+  windowing:
+    # Use full epoch with no overlap by default (1-s epoch @ 250 Hz -> 250 samples)
+    window_length_sec: 1.0
+    window_stride_sec: 1.0
+
+  resample:
+    target_sr: 250
+    method: "fft"
+
+  channel_selection:
+    # All 21 EEG channels (X5 sync channel is excluded in the loader)
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+
+  filter_bank:
+    filter_banks:
+      - [4, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore"
+    axis: -1
+
+  augmentation:
+    - method: "add_noise"
+      snr_db: 20
+      probability: 0
+
+    - method: "channel_dropout"
+      dropout_rate: 0.1
+      probability: 0
+
+    - method: "time_warp"
+      sigma: 0.2
+      probability: 0
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline:
+    - "gaussian_noise"
+    - "channel_dropout"
+    - "time_warp"

@@ -1,0 +1,11 @@
+﻿subject_id,Gender,Age,Duration,ParalysisSide,Handedness,NIHSS,MBI,mRS,StrokeLocation,acc_LOSO,acc_within_mean,acc_ADFCNN_5fold,acc_XWFilterBankNet_5fold
+4,male,56,14,right,right,6,90,3,"Left frontal parietal cortex, Left centrum semiovale",52.0,74.6,80.0,68.5
+6,male,66,6,left,left,3,85,3,Right pons,45.5,63.5,62.5,69.0
+19,female,62,1,left,right,8,40,4,"Right paraventricular, Right basal ganglia",51.5,68.6,72.5,67.0
+24,female,55,3,right,right,1,60,4,Left paraventricular,51.5,66.6,80.0,71.5
+28,female,42,2,right,right,1,85,1,Left thalamus,50.0,69.5,57.5,73.0
+36,male,69,30,left,right,6,63,3,"Right paraventricular,right basal ganglia",57.0,70.1,70.0,73.0
+39,male,56,2,right,right,11,32,5,"Left cerebellar hemisphere, Left medulla oblongata",57.5,72.5,67.5,72.5
+44,male,59,1,left,right,1,80,1,"Right subfrontal cortex, Right basal ganglia, Right lateral ventricle, Right corona radiata",51.0,72.1,80.0,66.0
+47,male,40,4,left,right,7,55,4,Right medulla oblongata,57.0,69.3,75.0,69.5
+49,male,52,3,left,right,1,85,1,Right basal ganglia,42.5,64.9,62.5,67.0

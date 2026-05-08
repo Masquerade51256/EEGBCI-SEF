@@ -1,0 +1,73 @@
+# 5F Dataset with ADFCNN - Streaming LOSO Experiment
+#
+# Memory-efficient LOSO that loads only 1-2 subjects into RAM at a time.
+# Recommended when working with limited GPU memory or very large datasets.
+# For 5F (8 subjects, ~18k trials total), this is optional but useful
+# for testing the streaming pipeline.
+#
+# Features:
+#   - Subject buffer size controls memory cache
+#   - Gradient accumulation simulates larger batch sizes
+#   - Mixed precision (FP16) for speed and memory savings
+
+experiment:
+  name: "5F_ADFCNN_Streaming_LOSO"
+  seed: 42
+  description: "5F finger MI streaming LOSO: ADFCNN with memory-efficient loading"
+
+data:
+  dataset: "5F"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8]
+  info_path: "configs/dataset/5F.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 200
+  batch_size: 32
+  save_checkpoints: true
+  save_optimizer_state: false
+  use_fp16_compression: true
+  deterministic: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+  scheduler:
+    type: "cosine"
+
+  early_stopping:
+    enabled: true
+    patience: 30
+    min_delta: 0.001
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    # Number of subjects to keep in memory cache (1 = minimal memory)
+    subject_buffer_size: 2
+
+    # Gradient accumulation steps
+    # Effective batch size = batch_size * gradient_accumulation_steps
+    gradient_accumulation_steps: 4
+
+    # Mixed precision training
+    mixed_precision: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true
+  tensorboard: false
+
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: "png"

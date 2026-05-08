@@ -1,0 +1,14 @@
+{
+  "task_a_lr": {
+    "mean": 46.8,
+    "std": 5.49636243346452
+  },
+  "task_b_affected": {
+    "mean": 52.500000000000014,
+    "std": 4.018706259482023
+  },
+  "difference": 5.700000000000017,
+  "relative_improvement_pct": 12.179487179487216,
+  "improved_subjects": 7,
+  "total_subjects": 10
+}

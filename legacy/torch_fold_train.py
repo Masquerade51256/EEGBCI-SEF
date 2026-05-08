@@ -208,9 +208,9 @@ def train_model(model, dataset, train_config, subject_id=None):
         train_subset = Subset(dataset, train_indices)
         val_subset = Subset(dataset, val_indices)
         train_loader = DataLoader(train_subset, batch_size=batch_size, shuffle=True,
-                                   generator=torch.Generator(device=train_device))
+                                   generator=torch.Generator(device='cpu'))
         val_loader = DataLoader(val_subset, batch_size=batch_size, shuffle=False,
-                                 generator=torch.Generator(device=train_device))
+                                 generator=torch.Generator(device='cpu'))
 
         # Re-initialize model and optimizer for each fold
         info_path = os.path.join(constant_value.dataInfo_path,f"_{constant_value.DATASETS[config['dataset_id']]}.yaml")

@@ -313,6 +313,146 @@ class StreamingLOSOTrainer(BaseTrainer):
         
         return final_results
     
+    def _build_cached_train_loader(self, train_subject_ids: List[int],
+                                    dataset_cls, dataset_info: Dict):
+        """
+        Preload all training subjects into memory and build an efficient DataLoader.
+        
+        This eliminates the massive redundant preprocessing (loadmat -> resample -> 
+        filter bank -> windowing) that occurs on every epoch when streaming.
+        """
+        import time
+        start = time.time()
+        
+        all_data = []
+        all_labels = []
+        augmentor = None
+        
+        for i, subject_id in enumerate(train_subject_ids):
+            ds = dataset_cls(subject_id=subject_id, dataset_info=dataset_info)
+            all_data.append(ds.data)
+            all_labels.append(ds.labels)
+            # Capture augmentor from first subject (same config for all)
+            if i == 0 and hasattr(ds, 'augmentor'):
+                augmentor = ds.augmentor
+        
+        all_data = np.concatenate(all_data, axis=0)
+        all_labels = np.concatenate(all_labels, axis=0)
+        
+        # Inner class to keep augmentation support while being in-memory
+        class _InMemoryDataset(Dataset):
+            def __init__(self, data, labels, augmentor=None):
+                self.data = data
+                self.labels = labels
+                self.augmentor = augmentor
+            
+            def __len__(self):
+                return len(self.data)
+            
+            def __getitem__(self, idx):
+                data = self.data[idx]
+                label = self.labels[idx]
+                if self.augmentor is not None:
+                    data = self.augmentor.process(data)
+                return torch.from_numpy(data).float(), torch.tensor(label).long()
+        
+        train_dataset = _InMemoryDataset(all_data, all_labels, augmentor)
+        
+        loader_kwargs = {
+            'batch_size': self.batch_size,
+            'shuffle': True,
+            'drop_last': False,
+        }
+        
+        # Enable GPU-optimized data loading when CUDA is available
+        if self.device.type == 'cuda':
+            loader_kwargs['pin_memory'] = self.config.get('training.pin_memory', True)
+            num_workers = self.config.get('training.num_workers', 0)
+            if num_workers > 0:
+                loader_kwargs['num_workers'] = num_workers
+                loader_kwargs['persistent_workers'] = True
+                loader_kwargs['prefetch_factor'] = self.config.get('training.prefetch_factor', 2)
+        
+        train_loader = DataLoader(train_dataset, **loader_kwargs)
+        
+        elapsed = time.time() - start
+        self._log(f"  Preloaded {len(train_subject_ids)} subjects ({len(train_dataset)} samples) in {elapsed:.1f}s")
+        
+        return train_loader
+    
+    def _train_epoch_cached(self, model: nn.Module, optimizer: torch.optim.Optimizer,
+                            train_loader: DataLoader) -> Tuple[float, float]:
+        """
+        Train one epoch using a cached in-memory DataLoader.
+        """
+        model.train()
+        
+        total_loss = 0.0
+        correct = 0
+        total = 0
+        
+        accumulation_counter = 0
+        use_acc = self.gradient_accumulation_steps > 1
+        
+        for inputs, labels in train_loader:
+            # non_blocking transfer for faster GPU loading with pin_memory
+            inputs = inputs.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
+            
+            # Forward
+            if self.scaler:
+                with torch.cuda.amp.autocast():
+                    outputs = model(inputs)
+                    loss = self.criterion(outputs, labels)
+                    if use_acc:
+                        loss = loss / self.gradient_accumulation_steps
+                
+                self.scaler.scale(loss).backward()
+            else:
+                outputs = model(inputs)
+                loss = self.criterion(outputs, labels)
+                if use_acc:
+                    loss = loss / self.gradient_accumulation_steps
+                loss.backward()
+            
+            # Gradient accumulation
+            if use_acc:
+                accumulation_counter += 1
+                if accumulation_counter % self.gradient_accumulation_steps == 0:
+                    if self.scaler:
+                        self.scaler.step(optimizer)
+                        self.scaler.update()
+                    else:
+                        optimizer.step()
+                    optimizer.zero_grad()
+            else:
+                if self.scaler:
+                    self.scaler.step(optimizer)
+                    self.scaler.update()
+                else:
+                    optimizer.step()
+                optimizer.zero_grad()
+            
+            # Statistics (undo accumulation division for logging)
+            total_loss += loss.item() * inputs.size(0) * (self.gradient_accumulation_steps if use_acc else 1)
+            _, predicted = torch.max(outputs, 1)
+            correct += (predicted == labels).sum().item()
+            total += labels.size(0)
+        
+        # Handle remaining gradients
+        if use_acc and accumulation_counter % self.gradient_accumulation_steps != 0:
+            if self.scaler:
+                self.scaler.step(optimizer)
+                self.scaler.update()
+            else:
+                optimizer.step()
+            optimizer.zero_grad()
+        
+        avg_loss = total_loss / total if total > 0 else 0.0
+        accuracy = correct / total if total > 0 else 0.0
+        
+        return avg_loss, accuracy
+    
     def _train_loso_round_streaming(self, test_subject_id: int,
                                     train_subject_ids: List[int],
                                     dataset_cls, dataset_info: Dict) -> Tuple[Dict, Dict]:
@@ -341,6 +481,11 @@ class StreamingLOSOTrainer(BaseTrainer):
         best_test_acc = 0.0
         best_epoch = 0
         
+        # Preload all training data into memory for fast epoch iteration
+        train_loader = self._build_cached_train_loader(
+            train_subject_ids, dataset_cls, dataset_info
+        )
+        
         # Progress bar
         epoch_bar = tqdm(range(self.epochs), desc=f'Sub{test_subject_id}', 
                         bar_format='{desc} |{bar:20}| {n_fmt}/{total_fmt} {postfix}')
@@ -353,10 +498,8 @@ class StreamingLOSOTrainer(BaseTrainer):
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
             
-            # Train with streaming
-            train_loss, train_acc = self._train_epoch_streaming(
-                model, optimizer, train_subject_ids, dataset_cls, dataset_info
-            )
+            # Train with cached in-memory data
+            train_loss, train_acc = self._train_epoch_cached(model, optimizer, train_loader)
             
             # Evaluate
             test_loss, test_acc = self._validate(model, test_loader)

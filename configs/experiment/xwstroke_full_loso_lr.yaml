@@ -20,9 +20,12 @@ model:
 training:
   device: "cuda"
   epochs: 100
-  batch_size: 32
+  batch_size: 512
   save_checkpoints: true
   use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
   
   optimizer:
     type: "Adam"
@@ -32,8 +35,8 @@ training:
 trainer:
   type: "StreamingLOSOTrainer"
   args:
-    subject_buffer_size: 1
-    gradient_accumulation_steps: 4
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
     mixed_precision: true
 
 paths:

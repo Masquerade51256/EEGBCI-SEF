@@ -1,0 +1,17 @@
+{
+  "task_a_lr": {
+    "mean": 49.63,
+    "std": 5.76871736177116,
+    "n": 50
+  },
+  "task_b_affected": {
+    "mean": 50.29,
+    "std": 4.089119709668575,
+    "n": 50
+  },
+  "difference": 0.6599999999999966,
+  "relative_improvement_pct": 1.3298408220834104,
+  "improved_count": 26,
+  "total_count": 50,
+  "timestamp": "2026-05-12T22:24:24.418353"
+}

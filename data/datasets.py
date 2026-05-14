@@ -13,6 +13,53 @@ import scipy.io as sio
 from core.base.base_dataset import BaseDataset
 
 
+# XWStroke standard 32-channel left-right flip order.
+# Maps each left channel to its right counterpart and vice versa.
+# Midline channels (Fz, FCz, Cz, CPz, Pz, Oz) remain in place.
+# Order follows DEFAULT_XWSTROKE_CH_NAMES:
+#   [Fp1, Fp2, Fz, F3, F4, F7, F8, FCz, FC3, FC4,
+#    FT7, FT8, Cz, C3, C4, T3, T4, CPz, CP3, CP4,
+#    TP7, TP8, Pz, P3, P4, T5, T6, Oz, O1, O2,
+#    HEOL, HEOR]
+XWSTROKE_FLIP_ORDER = [
+    1, 0, 2, 4, 3, 6, 5, 7, 9, 8,
+    11, 10, 12, 14, 13, 16, 15, 17, 19, 18,
+    21, 20, 22, 24, 23, 26, 25, 27, 29, 28,
+    31, 30
+]
+
+
+def _flip_xwstroke_channels(data: np.ndarray) -> np.ndarray:
+    """
+    Spatially flip XWStroke EEG channels along the left-right axis.
+
+    Args:
+        data: Array of shape (n_trials, n_channels, n_times) or
+              (n_trials, n_bands, n_channels, n_times).
+              Expected n_channels >= 30 (EEG) or 32 (EEG+EOG).
+
+    Returns:
+        Flipped array with the same shape.
+    """
+    n_ch = data.shape[-2]
+    if n_ch < len(XWSTROKE_FLIP_ORDER):
+        # If fewer than 32 channels (e.g., after some upstream selection),
+        # skip flipping to avoid misalignment.
+        return data
+
+    # Use only the first n_ch entries of the flip order
+    flip_order = XWSTROKE_FLIP_ORDER[:n_ch]
+
+    if data.ndim == 3:
+        # (trials, channels, times)
+        return data[:, flip_order, :]
+    elif data.ndim == 4:
+        # (trials, bands, channels, times)
+        return data[:, :, flip_order, :]
+    else:
+        raise ValueError(f"Unexpected data ndim for channel flip: {data.ndim}")
+
+
 def _load_paralysis_side(subject_id: int, dataset_info: dict) -> str:
     """
     Load paralysis side for a given subject from participants.tsv.
@@ -194,6 +241,15 @@ class XWStrokeDataset(BaseDataset):
                 if data_var_name in mat_data:
                     data = mat_data[data_var_name]
                     labels = mat_data[labels_var_name].flatten()
+                    
+                    # Hemisphere alignment for 4s data path
+                    label_mapping = self.dataset_info.get('dataset', {}).get('label_mapping', 'lr')
+                    hemisphere_alignment = self.dataset_info.get('dataset', {}).get('hemisphere_alignment', False)
+                    if label_mapping != 'lr' and hemisphere_alignment:
+                        paralysis_side = _load_paralysis_side(self.subject_id, self.dataset_info)
+                        if paralysis_side == 'right':
+                            data = _flip_xwstroke_channels(data)
+                    
                     return data, labels
             # Fall through to original file if 4s data not available
         
@@ -234,6 +290,15 @@ class XWStrokeDataset(BaseDataset):
         if data.shape[1] < data.shape[2]:
             # Likely (n_trials, n_timepoints, n_channels), need to transpose
             data = np.transpose(data, (0, 2, 1))
+        
+        # Hemisphere alignment: spatially flip channels for right-paralysis patients
+        # so that affected-side activation maps to the same hemisphere across subjects.
+        label_mapping = self.dataset_info.get('dataset', {}).get('label_mapping', 'lr')
+        hemisphere_alignment = self.dataset_info.get('dataset', {}).get('hemisphere_alignment', False)
+        if label_mapping != 'lr' and hemisphere_alignment:
+            paralysis_side = _load_paralysis_side(self.subject_id, self.dataset_info)
+            if paralysis_side == 'right':
+                data = _flip_xwstroke_channels(data)
         
         return data, labels
     
@@ -372,6 +437,14 @@ class XWStrokeEDFDataset(BaseDataset):
             reorder_idx = [ch_names.index(ch) for ch in standard_order if ch in ch_names]
             if len(reorder_idx) == data.shape[1]:
                 data = data[:, reorder_idx, :]
+        
+        # Hemisphere alignment: spatially flip channels for right-paralysis patients
+        label_mapping = self.dataset_info.get('dataset', {}).get('label_mapping', 'lr')
+        hemisphere_alignment = self.dataset_info.get('dataset', {}).get('hemisphere_alignment', False)
+        if label_mapping != 'lr' and hemisphere_alignment:
+            paralysis_side = _load_paralysis_side(self.subject_id, self.dataset_info)
+            if paralysis_side == 'right':
+                data = _flip_xwstroke_channels(data)
         
         print(f"[Subject {self.subject_id}] Loaded EDF: {data.shape}, sfreq={sfreq}Hz, labels={labels[:5]}...")
         return data, labels

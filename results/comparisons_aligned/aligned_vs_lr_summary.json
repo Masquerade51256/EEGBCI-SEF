@@ -1,0 +1,17 @@
+{
+  "task_a_lr": {
+    "mean": 49.63,
+    "std": 5.76871736177116,
+    "n": 50
+  },
+  "task_c_aligned": {
+    "mean": 51.46000000000001,
+    "std": 5.227657219060944,
+    "n": 50
+  },
+  "difference": 1.8300000000000054,
+  "relative_improvement_pct": 3.6872859157767586,
+  "improved_count": 28,
+  "total_count": 50,
+  "timestamp": "2026-05-14T03:49:03.370011"
+}

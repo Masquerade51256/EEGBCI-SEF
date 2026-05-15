@@ -3,8 +3,6 @@
 # ========================================
 
 # Research Papers
-docs/papers/*.pdf
-docs/papers/*.txt
 
 # Datasets (large files, should not be in Git)
 src/datasets/*

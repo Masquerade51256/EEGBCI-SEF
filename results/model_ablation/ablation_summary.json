@@ -1,0 +1,29 @@
+{
+  "experiments": {
+    "BCICIV2a_ADFCNN_StreamingLOSO": {
+      "mean": 47.010030864197525,
+      "std": 14.497833620534164
+    },
+    "XWStroke_Full50_EEGNet_LOSO_LR": {
+      "mean": 50.35000000000001,
+      "std": 4.415031143718015
+    },
+    "XWStroke_Full50_EEGNet_LOSO_Affected_Aligned": {
+      "mean": 50.21,
+      "std": 4.956904275856051
+    },
+    "XWStroke_Full50_LR": {
+      "mean": 49.63,
+      "std": 5.76871736177116
+    },
+    "XWStroke_Full50_Affected": {
+      "mean": 50.29,
+      "std": 4.089119709668575
+    },
+    "XWStroke_Full50_LOSO_Affected_Aligned": {
+      "mean": 51.46000000000001,
+      "std": 5.227657219060944
+    }
+  },
+  "timestamp": "2026-05-15T00:13:19.882504"
+}

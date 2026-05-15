@@ -1,0 +1,50 @@
+# BCICIV2a LOSO with ADFCNN + StreamingLOSOTrainer
+# Purpose: Model attribution baseline - verify ADFCNN's cross-subject capability
+# on a healthy-population benchmark (BCICIV2a).
+#
+# Expected: Literature LOSO on BCICIV2a with deep models is typically 60-75%
+# for 4-class MI. If ADFCNN reaches this range, model itself is not the bottleneck
+# for XWStroke's poor performance (~51%).
+
+experiment:
+  name: "BCICIV2a_ADFCNN_StreamingLOSO"
+  seed: 42
+  description: "BCICIV2a 9-subject Streaming LOSO with ADFCNN (4-class MI)"
+
+data:
+  dataset: "BCICIV2a"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  info_path: "configs/dataset/BCICIV2a.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 256
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 8
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

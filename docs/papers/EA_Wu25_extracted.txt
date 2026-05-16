@@ -1,0 +1,1584 @@
+
+--- Page 1 ---
+arXiv:2502.09203v2  [cs.HC]  3 May 20251
+Revisiting Euclidean Alignment for Transfer
+Learning in EEG-Based Brain-Computer Interfaces
+Dongrui Wu
+Abstract —Due to large intra-subject and inter-subject variabil-
+ities of electroencephalogram (EEG) signals, EEG-based br ain-
+computer interfaces (BCIs) usually need subject-speciﬁc c alibra-
+tion to tailor the decoding algorithm for each new subject, w hich
+is time-consuming and user-unfriendly, hindering their re al-
+world applications. Transfer learning (TL) has been extens ively
+used to expedite the calibration, by making use of EEG data fr om
+other subjects/sessions. An important consideration in TL for
+EEG-based BCIs is to reduce the data distribution discrepan cies
+among different subjects/sessions, to avoid negative tran sfer.
+Euclidean alignment (EA) was proposed in 2020 to address
+this challenge. Numerous experiments from 13 different BCI
+paradigms demonstrated its effectiveness and efﬁciency. T his
+paper revisits EA, explaining its procedure and correct usa ge,
+introducing its applications and extensions, and pointing out
+potential new research directions. It should be very helpfu l to
+BCI researchers, especially those who are working on EEG sig nal
+decoding.
+Index Terms —Brain-computer interface, EEG, Euclidean
+alignment, label alignment, transfer learning
+I. I NTRODUCTION
+Brain-computer interfaces (BCIs) enable direct communica -
+tion between the brain and external devices, which can be use d
+in text input [1], device control [2], neuro-rehabilitatio n [3],
+emotion recognition and regularization [4], speech decodi ng
+[5], restoring walking abilities [6], etc. It is an importan t
+component of Brain Initiatives/Projects all over the world ,
+particularly China [7] and the IEEE1. It was selected by Nature
+as one of seven technologies to watch in 2024 [8], and again
+one of eight technology events to watch for in 2025 [9], and
+also selected by IEEE Computer Society in 2025 as one of
+“22 breakthrough technologies set to redeﬁne industries and
+shape the future of our world for decades to come ” [10].
+According to the input signals, BCIs can be broadly classi-
+ﬁed into invasive ones and non-invasive ones. The former use
+surgery to implant electrodes into the brain, which are main ly
+used for patients. Non-invasive BCIs do not need surgery, an d
+hence are more convenient and preferred by able-bodied user s.
+Electroencephalogram (EEG) is the most frequently used inp ut
+signal for non-invasive BCIs.
+EEG signals exhibit both intra-subject variability (non-
+stationarity), e.g., the same subject may have different EE G
+responses to the same stimulus in different sessions, and
+inter-subject variability (individual differences), i.e ., different
+D. Wu is with the Ministry of Education Key Laboratory of Imag e
+Processing and Intelligent Control, Huazhong University o f Science and
+Technology, Wuhan, 430074 China. He is also with Zhongguanc un Academy,
+Beijing, 100084 China. Email: drwu09@gmail.com.
+1https://brain.ieee.org/subjects may have signiﬁcantly different EEG responses to
+the same stimulus. As a result, it is very challenging, if not
+impossible, to design an EEG-based non-invasive BCI system
+that is plug-and-play and ﬁts all subjects. Usually, for eac h new
+subject, we need to collect some subject-speciﬁc calibrati on
+data to tailor the parameters of the decoding algorithm, whi ch
+is time-consuming and user-unfriendly.
+Transfer learning (TL), which utilizes data/knowledge fro m
+other subjects (sessions) to facilitate the calibration fo r a
+new subject (session), has been extensively used in EEG-
+based BCIs to expedite the calibration [11]. An important
+consideration in TL is how to reduce the EEG data distributio n
+discrepancies among different subjects (sessions) to avoi d
+negative transfer [12].
+Euclidean Alignment (EA) [13] was proposed in 2020 to
+address this challenge. It uses two simple, efﬁcient and clo sed-
+form formulas to align the raw EEG trials from different
+subjects/sessions, greatly facilitating TL [14]. It also i nspires
+some other EEG data alignment approaches, e.g., label align -
+ment (LA) [15]. The EA paper has been cited 283 times in
+WoS and 405 times in Google Scholar (as of May 3, 2025),
+ranking 2/344 of all papers published in IEEE Transactions o n
+Biomedical Engineering2(TMBE) in 2020, and 3/1872 of all
+papers published in IEEE TBME3between 2020 and 2025. It
+was one of the only two Highly Cited Papers of IEEE TBME
+in 2020. It was also the number one contributor to the 2022
+impact factor (4.6) of IEEE TBME4, among all 695 citable
+items published in 2020 and 2021.
+After ﬁve years of the publication of the EA paper, we now
+have deeper and more comprehensive understanding on how
+to properly use EA. Its applicable BCI paradigms have also
+been greatly expanded. This paper revisits the EA approach,
+explaining its procedure and correct usage, introducing it s
+applications and extension, and pointing out potential new re-
+search directions. It should be very helpful to BCI research ers,
+especially those who are working on EEG signal decoding.
+The remainder of this paper is organized as follows: Sec-
+tion II introduces the procedure, correct usage, and appli-
+cations of EA. Section III introduces an extension of EA,
+and some related EEG data alignment approaches. Section IV
+points out potential future research directions. Finally, Sec-
+tion V draws conclusions.
+2https://webofscience.clarivate.cn/wos/alldb/summary /fd21b6a6-bdf1-4dcd-
+bae6-45d4041b195f-014738bfd9/times-cited-descending /1
+3https://webofscience.clarivate.cn/wos/alldb/summary /5e219ca8-1532-
+4637-a27d-6c70f9cbbca2-014738a148/times-cited-desce nding/1
+4https://jcr.clarivate.com/jcr-jp/journal-proﬁle?jou rnal=IEEE%20T%20BIO-
+MED%20ENG&year=2022&fromPage=%2Fjcr%2Fhome
+
+--- Page 2 ---
+2
+II. E UCLIDEAN ALIGNMENT (EA)
+This section introduces the EA approach [13]. It was
+inspired by Riemannian alignment [16] proposed in 2018 in
+IEEE TBME, which has been cited 272 times in WoS5and 386
+times in Google Scholar (as of may 3, 2025) and is one of the
+ﬁve Highly Cited Papers of IEEE TBME in 2018. Riemannian
+alignment has demonstrated promising performance in seven
+different BCI paradigms, as shown in Table I.
+A. The EA Algorithm
+The goal of EA is to make the marginal distributions of
+EEG data from different subjects/sessions more similar, i. e.,
+to reduce the inter-subject/session EEG data discrepancie s,
+facilitating TL. In fact, after EA, often the EEG data from
+auxiliary subjects/sessions (called source domains in TL) can
+be combined directly with the limited amount of calibration
+data from the new subject/session (called target domain in T L)
+to train a classiﬁer; the performance is usually quite good e ven
+without incorporating any other sophisticated TL techniqu es.
+Figure 1 illustrates the ﬂowchart of EA, using only one
+source domain. Most materials in this subsection are adapte d
+from [13].
+Fig. 1. Illustration of Euclidean alignment and label align ment. Euclidean
+alignment aligns the marginal probability distributions o f the source and target
+domains, whereas label alignment aligns the class conditio nal probability
+distributions of different domains.
+Assume a domain (either source or target; different domains
+are processed individually and identically) has NEEG trials
+{Xn}N
+n=1, whereXn∈Rc×t, in which cis the number of
+EEG channels, and tthe number of time-domain sampling
+points. EA ﬁrst computes the symmetric and semi positive-
+deﬁnite reference matrix ¯R∈Rc×cas
+¯R=1
+NN/summationdisplay
+n=1XnX⊤
+n, (1)
+i.e.,¯Ris the arithmetic mean of all Ncovariance matrices
+from that domain. It then performs the alignment by
+˜Xn=¯R−1/2Xn, n= 1,...,N. (2)
+Here¯R−1/2is called the transformation matrix.
+5https://webofscience.clarivate.cn/wos/alldb/summary /bbb3db2d-ab56-
+4291-8b2e-884a88511745-015ed46b9e/times-cited-desce nding/1After EA, the mean covariance matrix of all Naligned
+trials,{˜Xn}N
+n=1, becomes:
+1
+NN/summationdisplay
+n=1˜Xn˜X⊤
+n=1
+NN/summationdisplay
+n=1¯R−1/2XnX⊤
+n¯R−1/2
+=¯R−1/2/parenleftBigg
+1
+NN/summationdisplay
+n=1XnX⊤
+n/parenrightBigg
+¯R−1/2
+=¯R−1/2¯R¯R−1/2=I, (3)
+i.e., the mean covariance matrix of each domain equals the
+identity matrix after EA, and hence the EEG data distributio ns
+from different domains become more consistent.
+EA has the following desirable characteristics [13]:
+1)Flexible : It transforms and aligns the EEG trials in the
+Euclidean space, so any Euclidean space signal process-
+ing, feature extraction and machine learning algorithms
+(most algorithms in the literature belong to the Euclidean
+space) can then be subsequently applied to them.
+2)Efﬁcient : It includes only two simple closed-form for-
+mulas, which can be computed very fast.
+3)Unsupervised : It does not need any label information
+from any domain, so it has much broader applications
+than supervised algorithms.
+B. Where to Place EA in the Traditional BCI TL Pipeline
+As proposed in our previous research [14] and illustrated
+in Figure 2, when traditional machine learning classiﬁers w ith
+manually extracted features are used, EA should be placed
+between the temporal ﬁltering block and the spatial ﬁlterin g
+block. This subsection performs experiments to demonstrat e
+that this placement indeed leads to better performance.
+Fig. 2. The optimal location to perform Euclidean alignment in the traditional
+BCI transfer learning pipeline (between temporal ﬁltering and spatial ﬁltering).
+We used the motor imagery Dataset 1 from BCI Competi-
+tion IV6in our experiment, which was also extensively used
+in our previous research [13], [15], [14]. It was recorded fr om
+seven healthy subjects using 59 EEG channels at 1000 Hz,
+and later downsampled to 100 Hz. Each subject performed
+two classes of motor imagery tasks (100 trials per class) in
+the calibration session, selected from three options: left hand,
+right hand, and both feet. Only data from Subjects 2, 3, 4,
+5 and 7 were used, as their imagined classes were consistent
+(they all imagined the movements of left hand and right hand,
+whereas Subjects 1 and 6 imagined the movements of left hand
+6http://www.bbci.de/competition/iv/desc 1.html.
+
+--- Page 3 ---
+3
+TABLE I
+CLASSIFICATION ACCURACY IMPROVED BY RIEMANNIAN ALIGNMENT IN 7DIFFERENT BCI PARADIGMS . NOTE THAT DIFFERENT PUBLICATIONS
+GENERALLY USED DIFFERENT DATASETS .
+No.BCI
+ParadigmClassiﬁerAccuracy (%)
+Reference
+w/o RA w/ RA Improvement
+1Motor
+ImageryMDM 38.84 63.76 24.92Zanini et al., IEEE TBME 2018 [16]GM-4 41.58 64.18 22.60
+MDM 50.14 66.21 16.07 He and Wu, IEEE SMC 2019[17]
+MDM 64.81 66.82 2.01Kumar et al., BCI 2019 [18]FgMDM 68.94 71.10 2.16
+MDM 57.18 70.91 13.73 He and Wu, IEEE TBME 2020 [13]
+FBCSP-LDA 69.00 70.00 1.00
+Xu et al., FHN 2020 [19] ShallowNet 71.00 72.00 1.00
+EEGNet 70.00 72.00 2.00
+EEGNet 69.70 71.40 1.70Xu et al., JNE 2021 [20]EEGNetv4 67.40 70.30 2.90
+MDM 57.02 72.45 15.43 Zhang et al., CMPB 2021 [21]
+MDM 57.18 70.91 13.73 Liang et al., IEEE IROS 2021 [22]
+MDM 56.00 70.00 14.00 Li et al., IEEE Access 2021 [23]
+MDM 57.18 70.91 13.73 Liang et al., ICIEA 2022 [24]
+EEGNet 53.45 57.93 4.48 Zoumpourlis and Patras, BCI 2022 [25]
+MDM 32.75 50.93 18.18 Xia et al., IEEE TBME 2022 [26]
+MDM 75.70 76.73 1.03 Pan et al., JNE 2023 [27]
+MDM 57.18 70.91 13.73 Liang et al., BSPC 2024 [28]
+BaseNet 57.38 63.64 6.26 Wimpff et al., BCI 2024 [29]
+EEGNet 72.18 76.42 4.24
+Junqueira et al., JNE 2024 [30] DeepNet 69.27 76.92 7.65
+ShallowNet 69.99 74.23 4.24
+MDM 57.18 70.91 13.73 Chu et al., JNE 2024 [31]
+MDM 54.36 73.57 19.21
+Jiang et al., ICASSP 2024 [32]LDA 52.07 70.64 18.57
+CSP-MDM 61.78 87.93 26.15
+CSP-LDA 65.71 83.64 17.93
+JF-MDM 82.36 94.3 11.94
+JF-LDA 80.21 94.36 14.15
+2Event Related
+PotentialMDM 51.43 87.48 36.05Zanini et al., IEEE TBME 2018[16]GM-4 45.99 86.18 40.19
+3 Mental ImageryMDM 58.33 69.71 11.38Kumar et al., BCI 2019 [18]FgMDM 58.50 70.35 11.85
+4Steady-State
+Visual Evoked
+PotentialMDM 69.30 73.00 3.70 Rodrigues et al., IEEE TBME 2019 [33]
+5Motor+Speech
+ImageryMDM 51.32 54.82 3.50 Zhan et al., CBM 2022 [34]
+6Mindfulness
+MeditationEEGNet 54.88 69.93 15.05 Karaiskou et al., MetroXRAINE 2023[35]
+7Natural Hand
+Movement
+DecodingMDM 53.33 62.99 9.66 Xue et al., Measurement 2025 [36]
+and both feet). As in [13], each trial consisted of EEG data
+between[0.5,3.5]seconds after the cue appearance, i.e., each
+trial was a matrix with dimensionality 59×300.
+We performed leave-one-subject-out cross-validation in T L:
+each time, we picked one subject as the test subject (target
+domain), and combined all trials from the remaining four
+subjects as the auxiliary data (source domain). The goal was
+to facilitate the classiﬁer training for the target subject using
+the source data. The number of labeled calibration trials in the
+target domain, M, increased from 0 to 20, with a step size of 4.
+TheMtrials were randomly selected in a continuous block, to
+avoid the block-design pitfall in BCIs [37]. The performanc e
+of different approaches was evaluated using the classiﬁcat ion
+accuracy on the remaining 100−Mtarget domain samples.We compared three different EA placements, using the best-
+performing TL pipeline in [14]:
+1) No EA, as shown in Figure 3(a).
+More speciﬁcally, we performed [8,30] Hz band-pass
+temporal ﬁltering (TF) for each subject’s EEGs, epoched
+them into 3-second trials, combined the (unaligned)
+trials from all four source subjects as a single source
+domain, performed regularized common spatial pattern
+(RCSP) ﬁltering [38], extracted the corresponding log-
+variance features, and ﬁnally used weighted adaptation
+regularization (wAR) [39] for classiﬁcation. This ap-
+proach is denoted as TF-RCSP-wAR in our analysis.
+The above TL pipeline does not re-reference the EEG
+channels. We also investigated if performing common
+
+--- Page 4 ---
+4
+(a)
+(b)
+Fig. 3. Different conﬁgurations of the transfer learning pi peline for motor
+imagery based BCIs. (a) No Euclidian alignment; (b) perform ing Euclidean
+alignment after both temporal ﬁltering and spatial ﬁlterin g.
+average referencing (CAR) after temporal ﬁltering can
+further improve the TL performance. This approach is
+denoted as TF-CAR-RCSP-wAR.
+2) The recommended placement, between temporal ﬁlter-
+ing and spatial ﬁltering, as shown in Figure 2.
+More speciﬁcally, we performed [8,30] Hz band-pass
+temporal ﬁltering for each subject’s EEGs, epoched them
+into 3-second trials, performed EA for each subject
+individually, combined aligned trials from all four source
+subjects as a single source domain, performed RCSP
+ﬁltering [38], extracted the corresponding log-variance
+features, and ﬁnally used wAR [39] for classiﬁcation.
+This approach is denoted as TF-EA-RCSP-wAR in our
+analysis.
+The above TL pipeline did not re-reference the EEG
+channels. We also evaluated another slightly modiﬁed
+pipeline that performed CAR immediately after temporal
+ﬁltering, which is denoted as TF-CAR-EA-RCSP-wAR.
+3) Placing EA after both temporal ﬁltering and spatial
+ﬁltering, as shown in Figure 3(b).
+More speciﬁcally, we performed [8,30] Hz band-pass
+temporal ﬁltering for each subject’s EEGs, epoched them
+into 3-second trials, combined (unaligned) trials from
+all four source subjects as a single source domain,
+performed RCSP ﬁltering [38], performed EA for each
+subject individually, extracted the log-variance feature s,
+and ﬁnally used wAR [39] for classiﬁcation. This ap-
+proach is denoted as TF-RCSP-EA-wAR in our analysis.
+Again, the above TL pipeline did not re-reference the
+EEG channels. We also evaluated another slightly mod-
+iﬁed pipeline that performed CAR immediately after
+temporal ﬁltering, which is denoted as TF-CAR-RCSP-
+EA-wAR.
+Figure 4 shows the TL performance of the six pipelines,averaged over 30 repeated runs to accommodate randomness.
+The last subﬁgure shows the overall TL performance, further
+averaged across the ﬁve subjects. We can observe that:
+Fig. 4. The motor imagery classiﬁcation performance of six d ifferent transfer
+learning pipelines. TF: Temporal ﬁltering; RCSP: Regulari zed common spatial
+pattern; wAR: weighted adaptation regularization; CAR: Co mmon average
+referencing; EA: Euclidean alignment.
+1) Performing EA, no matter whether it was between
+temporal ﬁltering and spatial ﬁltering, or after both
+temporal ﬁltering and spatial ﬁltering, always improved
+the TL performance, i.e., TF-EA-RCSP-wAR and TF-
+RCSP-EA-wAR always outperformed TF-RCSP-wAR,
+and TF-CAR-EA-RCSP-wAR and TF-CAR-RCSP-EA-
+wAR always outperformed TF-CAR-RCSP-wAR. This
+is because EA always reduces the marginal EEG data
+distribution discrepancies among the subjects, no matter
+where it is placed, and reducing these discrepancies
+always beneﬁts TL.
+2) Performing EA between temporal ﬁltering and spatial
+ﬁltering almost always achieved better performance than
+performing EA after both temporal ﬁltering and spatial
+ﬁltering, i.e., on average TF-EA-RCSP-wAR outper-
+formed TF-RCSP-EA-wAR, and TF-CAR-EA-RCSP-
+wAR outperformed TF-CAR-RCSP-EA-wAR.
+EA should be placed after temporal ﬁltering, because
+temporal ﬁltering improves the EEG signal quality by
+smoothing it; particularly, it suppresses large EEG signal
+values, which may be outliers. This in turn improves
+the quality of the covariance matrices, and subsequently
+the EA reference matrix ¯Rand transformation matrix
+¯R−1/2.
+EA should be placed before spatial ﬁltering, because
+RCSP utilizes EEG trials from both source and target
+subjects; EA reduces the marginal distribution discrep-
+ancies of EEG trials from different subjects, so that
+RCSP can identify spatial ﬁlters that work well for all
+subjects.
+3) Performing CAR often led to performance improve-
+ment, i.e., TF-CAR-RCSP-wAR signiﬁcantly outper-
+formed TF-RCSP-wAR for four of the ﬁve subjects and
+
+--- Page 5 ---
+5
+on average, TF-CAR-EA-RCSP-wAR slightly outper-
+formed TF-EA-RCSP-wAR on average, and TF-CAR-
+RCSP-EA-wAR always signiﬁcantly outperformed TF-
+RCSP-EA-wAR. This is because CAR helps reduce the
+magnitude differences between EEG trials from different
+subjects.
+4) For the best performing TF-CAR-EA-RCSP-wAR, the
+average binary classiﬁcation accuracy between left hand
+and right hand for the ﬁve subjects, without any la-
+beled target-speciﬁc calibration data (i.e., M= 0 ),
+was 81.60%, and the classiﬁcation accuracy increased
+very slowly with M(e.g., the accuracy was 83.96%
+whenM= 20 ). These suggest that EA exploits rich
+information from the source subjects, and enables plug-
+and-play motor imagery classiﬁcation for a new subject.
+In summary, we conﬁrmed through experiments that EA
+should be placed between temporal ﬁltering and spatial ﬁlte r-
+ing in traditional TL pipeline for motor imagery based BCIs, as
+in Figure 2; and, performing CAR immediately after temporal
+ﬁltering could further improve the performance.
+C. Where to Place EA in the BCI Deep TL Pipeline
+When end-to-end deep learning approaches, e.g., EEGNet
+[40], are used, EA should also be placed between the temporal
+ﬁltering block and the deep learning module, as illustrated in
+Figure 5. This subsection performs experiments to demonstr ate
+that this placement indeed leads to better performance.
+Fig. 5. The optimal location to perform Euclidean alignment in the BCI deep
+transfer learning pipeline (after temporal ﬁltering).
+The dataset in the previous subsection was used again. We
+chose the popular EEGNet [40] as the deep learning model,
+and compared three different conﬁgurations:
+1) EEGNet-only, in which no band-pass temporal ﬁltering
+and no EA were performed, i.e., the raw EEG signals
+were epoched into 3-second trials, and trials from all
+subjects were combined and fed directly into EEGNet.
+2) EA-EEGNet, in which EA was performed without tem-
+poral ﬁltering, i.e., the raw EEG signals from each
+subject were epoched into 3-second trials and aligned
+by EA, and then trials from all subjects were combined
+and fed directly into EEGNet.
+3) TF-EA-EEGNet, as shown in Figure 5, in which the raw
+EEG signals from each subject were [8,30] Hz band-pass
+ﬁltered, epoched into 3-second trials, aligned by EA, and
+then trials from all subjects were combined and fed into
+EEGNet.
+Due to much higher computational cost of EEGNet than
+traditional machine learning approaches, we performed onl yplug-and-play cross-subject validations, i.e., the targe t sub-
+ject had no labeled calibration trials at all ( M= 0). The
+experiments for each subject were repeated three times to
+accommodate randomness, and the average results are report ed
+in Table II. Both EEGNet-only and EA-EEGNet had near-
+random binary classiﬁcation accuracies, but TF-EA-EEGNet
+performed much better, suggesting the necessity to apply
+temporal ﬁltering explicitly before EA in deep TL.
+D. Consistency of the EA Transformation Matrix Among Dif-
+ferent Subjects
+The original EEG trials from different subjects have con-
+sistent channel conﬁgurations before alignment, because t hey
+use the same EEG headset. For example, for the MI trials in
+our experiments, the ﬁrst channel was always AF3, the second
+channel was AF4, and the 59th channel was O2. It’s important
+to maintain this channel consistency after EA, as channel
+location shifting may impact the subsequent classiﬁcation
+performance.
+Figure 6 uses heatmap to visualize the elements of the EA
+transformation matrix ¯R−1/2∈R59×59for the ﬁve subjects.
+There is a clear diagonal pattern, indicating that the origi nal
+i-th channel in Xncontributes the most to the transformed
+i-th channel in ˜Xn. Hence, the channel consistency among
+different subjects is maintained after EA, although their t rans-
+formation matrices are computed individually. This is anot her
+reason why EA achieves promising performance.
+Subject 1
+-0.1-0.0500.050.10.150.2Subject 2
+-0.0200.020.040.06Subject 3
+-0.0500.050.10.150.2
+Subject 4
+-0.0500.050.10.150.20.250.3Subject 5
+-0.0500.050.10.15
+Fig. 6. Visualization of the EA transformation matrix ¯R−1/2.
+E. Applications of EA
+In the original paper [13], the effectiveness of EA was only
+demonstrated in two classic BCI paradigms, motor imagery
+and P300 visual evoked potentials, using traditional class iﬁers.
+In the past ﬁve years, researchers from all over the world
+have applied it to 10 additional BCI paradigms, including
+mental imagery, rapid series visual presentation (RSVP), e rror-
+related negativity, sleep stage classiﬁcation, motor+spe ech
+imagery, stress detection, emotion recognition, steady-s tate
+visual evoked potential (SSVEP), motor execution, and seiz ure
+detection, using both traditional classiﬁers and deep neur al
+networks, all achieving promising performance improvemen ts,
+as summarized in Table III. These 13 BCI paradigms cover
+
+--- Page 6 ---
+6
+TABLE II
+CLASSIFICATION ACCURACIES (%) OF THE THREE DEEP TRANSFER LEARNING CONFIGURATIONS .
+Subject 1 2 3 4 5 Average
+EEGNet-only 49.83 50.00 48.00 49.00 49.83 49.33
+EA-EEGNet 52.67 46.83 43.17 46.83 50.50 48.00
+TF-EA-EEGNet 70.17 59.83 59.50 91.50 66.33 66.33
+almost all non-invasive BCI applications, i.e., EA has very
+broad applicability.
+EA was also given very high evaluations in the literature.
+For example, Kostas and Rudzicz [41] from the University
+of Toronto integrated EA, mixup data augmentation with thei r
+proposed TIDNet for EEG-based motor imagery classiﬁcation ,
+and found that “ while TIDNet alone or with only mixup shows
+mixed results, once alignment is included there is a nearly
+universal performance beneﬁt to the deeper network (TIDNet ),
+this improvement is much more consistent when both mixup
+and EA are used, with only a single (statistically insigniﬁc ant)
+case showing very mildly worse performance. ... Focusing
+on the largest increase in performance, we ﬁnd a signiﬁcant
+8.91% increase in 4-way classiﬁcation performance using EA ,
+jumping from 61.53% to 70.44%. ... in terms of both trend and
+peak performance, EA seems consistently beneﬁcial to EEGNe t
+as well as TIDNet. ... Our empirical results are clear that us ing
+both (EA and mixup) consistently increases performance but ,
+in terms of magnitude of increase, EA alone is many times
+better performing. ”
+Junqueira et al. [30] performed comprehensive experiments
+and comparisons on using EA in deep learning based motor
+imagery classiﬁcation in their Journal of Neural Engineeri ng
+publication entitled “A systematic evaluation of Euclidea n
+alignment with deep learning for EEG decoding.” They found
+that “ EA improved the mean accuracy for all cross-subject
+models and datasets evaluated and led to a 70% acceleration
+in convergence in the shared models. Consequently, we be-
+lieve that EA should be a standard pre-processing step when
+training cross-subject models. ”
+EA has also achieved remarkable performance in BCI
+competitions.
+By integrating it into our TL algorithms, the author’s team
+won nine National Championships in China BCI Competition
+(the most prestigious BCI competition in China, organized
+jointly by the National Natural Science Foundation of China ,
+Chinese Institute of Electronics, and Tsinghua University )
+between 2019 and 2024.
+In the Benchmarks for EEG Transfer Learning7(BEETL)
+competition organized at NeurIPS 2021, the champion team’s
+approach [72] “ for improving subject-independence is to align
+the latent feature distributions of the deep learning model s
+between different subjects and sessions. This is similar to the
+Euclidean Alignment method, which performs spatial whiten -
+ing with the average covariance matrix per subject, althoug h
+the methods are not constrained to be applied on the model
+input. ” In the runner-up’s approach [72], “ Euclidean Alignment
+is used to close the gap between subjects in source domains
+7https://beetl.ai/challengeand target domain. All trials of each subject are aligned suc h
+that the mean covariance matrices of all subjects are equal
+to the identity matrix after alignment. After alignment, da ta
+set distribution in both source domains and target domain ar e
+more similar. ”
+III. E XTENSION /COUNTERPARTS OF EA
+This section introduces LA, an extension of the unsuper-
+vised EA to supervised EEG data alignment, and several other
+EEG data alignment approaches.
+A. Label Alignment
+LA [15] was also proposed by the author’s group in
+2020, primarily for heterogeneous EEG-based motor imagery
+classiﬁcation, i.e., the motor imagery classes for differe nt
+subjects are partially or completely different. LA assumes all
+source domain samples are labeled, and the target domain
+also has a small number of labeled calibration samples. The
+label information could be properly used for better EEG tria l
+alignment.
+The idea of LA is shown in Figure 1. It essentially performs
+class-wise EA to reduce the class conditional EEG data distr i-
+bution discrepancies between the source and target domains .
+As an example, assume the source subject imagines the
+movement of left hand or right hand, whereas the target subje ct
+imagines the movement of left hand or both feet. Then, we pair
+the source subject left hand motor imagery movement with the
+target subject left hand movement, and the source subject ri ght
+hand movement with the target subject both feet movement.
+For a given class-pair, assume the source domain has Ns
+labeled EEG trials {(Xs
+n,ys
+n)}Ns
+n=1, and the target domain has
+Ntlabeled EEG trials {(Xt
+n,yt
+n)}Nt
+n=1.
+LA ﬁrst computes class-wise mean covariance matrices ¯Rs
+and¯Rt:
+¯Rs=1
+NsNs/summationdisplay
+n=1Xs
+n(Xs
+n)⊤, (4)
+¯Rt=1
+NtNt/summationdisplay
+n=1Xt
+n(Xt
+n)⊤. (5)
+Note that both ¯Rsand¯Rtare symmetric and semi-positive
+deﬁnite.
+LA then performs the alignment only to the source domain
+EEG trials:
+˜Xs
+n=¯R1/2
+t¯R−1/2
+sXs
+n, n= 1,...,Ns. (6)
+Here¯R1/2
+t¯R−1/2
+s is called the transformation matrix in LA.
+
+--- Page 7 ---
+7
+TABLE III
+CLASSIFICATION ACCURACY IMPROVED BY EUCLIDEAN ALIGNMENT IN 13DIFFERENT BCI PARADIGMS . NOTE THAT DIFFERENT PUBLICATIONS
+GENERALLY USED DIFFERENT DATASETS .
+No. BCI Paradigm ClassiﬁerAccuracy (%)
+Reference
+w/o EA w/ EA Improvement
+1 Motor ImageryCSP-LDA 59.71 79.79 20.08 He and Wu, IEEE TBME 2020 [13]
+CSP-LDA 51.10 64.01 12.91 He and Wu, IEEE TNSRE 2020 [15]
+TS-SVM 56.65 64.32 7.67 He and Wu, IEEE TNSRE 2020 [15]
+TIDNet 61.53 70.44 8.91 Kostas and Rudzicz, JNE 2020 [41]
+CSP-LDA 63.73 76.66 12.93 Zhang and Wu, IEEE TNSRE 2020 [42]
+EEGInception 63.72 72.44 8.72 Bakas et al., NeurIPS 2021 [43]
+CSP-LDA 67.59 73.77 6.18 Zhang et al., CMPB 2021 [21]
+CSP-LDA 67.75 73.53 5.78 Liang et al., IROS 2021 [22]
+CSP-SVM 71.08 75.17 4.09 Togha et al., BSPC 2021 [44]
+AdaBN 66.40 73.80 7.40 Xu et al., JNE 2021 [20]
+CSP-SVM 65.78 75.56 9.78 Demsy et al., IEEE SMC 2021 [45]
+TCA-W 68.39 74.89 6.50 Demsy, et al., IEEE SMC 2021 [45]
+CSP-LDA 68.40 73.60 5.20 Peterson et al., IEEE TBME 2021 [46]
+EEGNet 63.20 69.61 6.41 Wu et al., NN 2022 [11]
+ShallowCNN 65.90 74.50 8.60 Wu et al., NN 2022 [11]
+CSP-LDA 63.73 76.66 12.93 Cai et al., JNM 2022 [47]
+CSP-LDA 63.00 70.00 7.00 Chen et al., JNUNS 2022 [48]
+NeuCube 69.98 75.36 5.38 Wu et al., NeuroComp. 2023 [49]
+EA-IISCSP 79.75 81.93 2.18 Wei and Ding, IEEE TNSRE 2023 [50]
+RA VE 79.20 82.90 3.70 Pan et al., JNE 2023 [27]
+CSP-LDA 42.09 52.55 10.46 Zhu et al., IEEE TIM 2023 [51]
+DSTL 67.50 80.00 12.50 Gao et al., IEEE TNSRE 2023 [52]
+MEIS 59.11 66.91 7.80 Liang et al., BSPC 2024 [28]
+TLA-ACTL 65.68 73.53 7.85 Xu et al., BSPC 2024 [28]
+TSL-SRT 64.57 74.43 9.86 Gao et al., CN 2024 [53]
+CSP-LDA 75.36 81.54 6.18 Wang et al., KBS 2025 [54]
+EEGNet 43.80 48.90 5.10 Bakas et al., JNE 2025 [55]
+FBCSP 52.62 79.98 27.36 Amorim et al., BRACIS 2024 [56]
+EEGNet 59.70 65.20 5.50 Li et al., ArXiv 2025 [57]
+TSMNet 60.00 65.30 5.30 Li et al., ArXiv 2025 [57]
+TCNet 74.38 77.70 3.32 Wang et al., IEEE TBME 2025 [58]
+EEGNet 69.70 72.10 2.40 Wang et al., IEEE JBHI 2025 [59]
+CSP-LDA 54.31 65.75 11.44 Zhang et al., IEEE TIM 2024 [60]
+FRCN 57.64 70.41 12.77 Xu et al., IEEE TIM 2024 [61]
+CSP-LDA 57.55 67.06 9.51 Zhu et al., RSI 2024 [62]
+CSP-LDA 64.39 75.92 11.53 Gao et al., NeuroComp. 2024 [63]
+CSP-LDA 67.45 71.44 3.99 Jin et al., JNE 2024 [64]
+SSCL-CSD 64.15 67.32 3.17 Li et al., JNE 2024 [65]
+BaseNet 57.90 71.00 13.20 Wimpff et al., arXiv [66]
+2 Mental Imagery MDM 56.02 66.08 10.06 Kumar et al., BCI 2019 [18]
+3 Event-Related Potential xDAWN-SVM 64.60 68.80 4.20 He and Wu, IEEE TBME 2020 [13]
+4 RSVP CSP-LDA 65.36 69.07 3.71Zhang and Wu, IEEE TNSRE 2020 [42]5 Error-Related Negativity CSP-LDA 61.87 64.63 2.76
+6 Sleep Stage Classiﬁcation EEGInception 56.87 67.70 10.83 Bakas et al., NeurIPS 2021 [43]
+7 Motor+Speech ImageryDS-CSP 63.62 67.09 3.47Zhan et al., CBM 2022 [34]DS-TSM 66.12 68.42 2.30
+8 Stress Detection SDCAN 45.69 48.17 2.48 Fu et al., IEEE TNSRE 2022 [67]
+9 Emotion Recognition AM-MSFFN 88.00 93.51 5.51 Jiang et al., IEEE SJ 2023 [68]
+10 SSVEP SUTL 72.28 74.04 1.76 Li et al., ESWA 2024 [69]
+11 Motor Execution EEGNet 52.10 62.50 10.40 Bakas et al., JNE 2025 [55]
+12 Seizure Detection EEGNet 68.43 75.86 7.43 Wang et al., NSR 2025 [70]
+13Traumatic Brain
+Injury ClassiﬁcationCNN 61.00 89.00 28.00 Vishwanath et al., BSPC 2025 [71]
+
+--- Page 8 ---
+8
+After LA, the class-wise mean covariance matrix of all Ns
+aligned source domain trials {˜Xs
+n}Ns
+n=1equals the paired class-
+wise mean covariance matrix of the Nttarget domain trials
+{˜Xt
+n}Nt
+n=1:
+1
+NsNs/summationdisplay
+n=1˜Xs
+n(˜Xs
+n)⊤=1
+NsNs/summationdisplay
+n=1¯R1/2
+t¯R−1/2
+sXs
+n(Xs
+n)⊤¯R−1/2
+s¯R1/2
+t
+=¯R1/2
+t¯R−1/2
+s¯Rs¯R−1/2
+s¯R1/2
+t
+=¯R1/2
+t¯R1/2
+t
+=¯Rt
+=1
+NtNt/summationdisplay
+n=1Xt
+n(Xt
+n)⊤(7)
+i.e., for each paired class, the mean covariance matrices of both
+domain are equal, and hence the class conditional EEG data
+distributions from different domains become more consiste nt.
+LA performs the above alignment for each paired class
+in the source domain separately. Note that it transforms the
+source domain trials to match the target domain trials. Unli ke
+in EA that all EEG trials in the same domain share the same
+transformation matrix, in LA different classes in the same
+domain use different transformation matrices. When LA is
+used in testing, we do not know the class label (this is to
+be predicted) for an incoming target domain EEG trial, so
+we cannot determine which transformation matrix to use. By
+transforming the known source domain trials only, we can
+avoid this problem.
+We [15] showed that LA can also be used when the source
+and target domains have completely different label spaces.
+For example, when the source domain has two classes of left
+hand and right hand, and the target domain has two classes
+of feet and tongue, we can align the source domain left hand
+class with the target domain feet class, and the source domai n
+right hand class with the target domain tongue class, still
+achieving effective TL. Of course, EA could also be used in
+this challenging scenario, as it does not distinguish among the
+classes at all.
+LA has demonstrated promising performance in multiple
+BCI paradigms, particularly in heterogeneous TL, includ-
+ing motor imagery classiﬁcation [15], [72], [73], [74], mo-
+tor+speech imagery classiﬁcation [34], traumatic brain in jury
+classiﬁcation [75], emotion recognition [76], [77], [78], and
+mental workload classiﬁcation [79].
+LA may outperform EA when the source and target domains
+have different label spaces. For example, we [15] demonstra ted
+that when the source subject imagines the movements of right
+hands or both feet, whereas the target subject imagines the
+movements of left hand or tongue, the baseline CSP-LDA
+(linear discriminant analysis) classiﬁcation accuracy wi thout
+any alignment was 51.10%, the classiﬁcation accuracy of EA-
+CSP-LDA was 64.01%, and the classiﬁcation accuracy of LA-
+CSP-LDA was 69.95%.
+However, when the source and target domains have the
+same label space, EA may outperform LA. For example,
+Figure 7 shows the performance comparison of TF-CAR-EA-
+RCSP-wAR (the best-performer in Figure 4) and TF-CAR-
+LA-RCSP-wAR, which replaces EA by LA. LA performedmuch worse than EA, because given a small number of labeled
+target domain samples, it is difﬁcult to accurately estimat e
+¯R1/2
+tin the target domain, and hence the transformation matrix
+¯R1/2
+t¯R−1/2
+s . He and Wu [15] used k-medoids clustering to
+selectkmost representative unlabeled EEG trials to label,
+making the estimation of ¯R1/2
+tmore reliable than random
+selection, improving the performance of LA.
+In summary, when the source and target domains have the
+same label space, EA is preferred over LA; otherwise, LA is
+preferred over EA.
+Fig. 7. The motor imagery classiﬁcation performance of six d ifferent transfer
+learning pipelines. TF: Temporal ﬁltering; RCSP: Regulari zed common spatial
+pattern; wAR: weighted adaptation regularization; CAR: Co mmon average
+referencing; EA: Euclidean alignment; LA: Label alignment .
+B. Comparison of EEG Data Alignment Approaches
+In addition to Riemannian alignment, EA and LA, there are
+several other EEG data alignment approaches proposed in the
+literature, which can be categorized into two classes:
+1) Alignments of the EEG trials by transformation matri-
+ces, and the aligned EEG trials can then be used in both
+traditional machine learning and deep learning. Rep-
+resentative approaches include Riemannian Alignment
+[16], Parallel Transport [80], Riemannian Procrustes
+Analysis [33], EA [13], Centroid Alignment [42], and
+LA [15].
+2) Alignments of the mini-batches in deep learning, which
+are speciﬁc to deep learning. Representative approaches
+include Adaptive Batch Normalization (adaBN) [81],
+[82] and Latent Alignment [55].
+Table I in our previous publication [11] gives a comprehen-
+sive comparison of the ﬁrst category of EEG data alignment
+approaches. For the completeness of this paper, we collect
+and update its results, and add adaBN and latent alignment,
+as shown in Table V.
+In application domains other than BCIs, many classic data
+alignment approaches for TL have also been proposed [83],
+e.g., transfer component analysis (TCA) [84] and CORrelati on
+ALignment (CORAL) [85].
+TCA assumes that both marginal and conditional probability
+distributions of the source domain Xsand target domain Xt
+
+--- Page 9 ---
+9
+TABLE IV
+CLASSIFICATION ACCURACY IMPROVED BY LABEL ALIGNMENT IN 5DIFFERENT BCI PARADIGMS . NOTE THAT DIFFERENT PUBLICATIONS GENERALLY
+USED DIFFERENT DATASETS .
+No. BCI Paradigm ClassiﬁerAccuracy (%)
+Reference
+w/o LA w/ LA Improvement
+1Motor
+ImageryCSP-LDA 51.10 69.95 18.85He and Wu, IEEE TNSRE 2020 [15]TS-SVM 56.65 71.75 15.10
+2Motor+Speech
+ImageryDS-CSP 63.62 66.64 3.02Zhan et al., CBM 2022 [34]DS-TSM 66.12 71.12 5.00
+3Traumatic
+Brain Injury
+ClassiﬁcationDT 62.24 65.78 3.54
+Vishwanath et al., IEEE EMBC 2022 [75]RF 67.93 70.18 2.25
+kNN 71.31 74.42 3.11
+MLP 73.66 78.73 5.07
+SVM 74.46 74.86 0.40
+XGB 66.89 69.41 2.52
+4Emotion
+RecognitionTCA 46.72 68.08 21.36 Peng et al., IEEE TII 2023 [76]
+kNN 48.14 66.46 18.32 Ren et al., KBS 2024 [77]
+GFK 42.80 68.10 25.30 Zhang et al., IEEE JBHI 2024 [78]
+5Mental
+Workload
+ClassiﬁcationLDA 56.63 82.53 25.90 Wang et al., IEEE JBHI 2024 [79]
+TABLE V
+COMPARISON OF DIFFERENT EEG DATA ALIGNMENT APPROACHES [11].
+CriterionRiemannian
+Alignment
+[16]Parallel
+Transport
+[80]Riemannian
+Procrustes
+Analysis [33]Euclidean
+Alignment
+[13]Centroid
+Alignment
+[42]Label
+Alignment
+[15]adaBN
+[81], [82]Latent
+Alignment
+[55]
+Applicable
+Paradigms7 different
+paradigms
+(Table I)MI [80]MI [33],
+ERP [33],
+SSVEP [33]13 different
+paradigms
+(Table III)MI [42],
+ERP [42],
+Emotion
+recognition
+[76], [77], [78]5 different
+paradigms
+(Table IV)MI [82],
+Cognitive load
+recognition
+[81]MI [55],
+ERP [55],
+Sleep stage
+classiﬁca-
+tion [55]
+Online or
+OfﬂineBoth Both Both Both Both Ofﬂine Both Both
+Need
+Labeled Target
+Domain TrialsNo for MI,
+Yes for othersNo Yes No No Yes No No
+What to
+AlignRiemannian
+space
+covariance
+matricesRiemannian
+Tangent
+space
+featuresRiemannian
+space
+covariance
+matricesEuclidean
+space
+EEG
+trialsRiemannian
+space
+covariance
+matricesEuclidean
+space
+EEG
+trialsEuclidean
+space EEG
+features
+in a
+mini-batchEuclidean
+space EEG
+features
+in a
+mini-batch
+Reference
+Matrix
+CalculationRiemannian
+mean of
+resting or
+non-target
+trial
+covariance
+matrices in
+each domainRiemannian
+mean of all
+covariance
+matrices in
+each domainRiemannian
+mean of all
+labeled
+covariance
+matrices in
+each domainEuclidean
+mean of all
+covariance
+matrices in
+each domainRiemannian,
+Euclidean, or
+Log-Euclidean
+mean of all
+covariance
+matrices in
+each domainLog-Euclidean
+mean of
+labeled
+covariance
+matrices
+in each class
+of each domainUnneeded Unneeded
+ClassiﬁerRiemannian
+space onlyEuclidean
+space onlyRiemannian
+space onlyRiemannian or
+Euclidean spaceRiemannian or
+Euclidean spaceRiemannian or
+Euclidean spaceEuclidean
+space onlyEuclidean
+space only
+Handle Class
+Mismatch
+between
+DomainsNo No No No No Yes No No
+Computational
+CostHigh High High Low Low Low Low Low
+
+--- Page 10 ---
+10
+are different, and tries to ﬁnd a transformation matrix W
+to make them approximately identical. More speciﬁcally, W
+needs to satisfy two constraints [84]: 1) the distance betwe en
+the marginal distributions of WXsandWXtis small; and, 2)
+WXsandWXtpreserve important properties of XsandXt.
+Compared with TCA, EA only considers the ﬁrst constraint
+but not the second, which could be a direction for further
+improvement.
+CORAL minimizes the domain shift by aligning the second-
+order statistics of their distributions. Assume a d-dimensional
+feature vector has been extracted for each sample in each
+domain. CORAL ﬁrst computes the feature covariance ma-
+tricesCs∈Rd×dandCt∈Rd×din the source domain
+and target domain, and then ﬁnds a transformation matrix
+W∈Rd×dfor the source domain such that the Frobenius
+norm of the difference between the covariance matrices,
+||W⊤CsW−Ct||2
+F, is minimized. As pointed out in [13],
+[15], the main difference between CORAL and EA/LA is
+that: “ CORAL uses 1D features, and each domain has only
+one feature covariance matrix, which measures the covari-
+ances between different pairs of individual features. EA/L A
+uses 2D features (EEG trials), and each EEG trial has a
+covariance matrix, which measures the covariances between
+different pairs of EEG channels. So, the covariance matrice s
+in CORAL and EA/LA have different meanings. ” Meanwhile,
+CORAL may also be used to align the log-variance features
+in TF-CAR-EA-RCSP-wAR before they are fed into wAR for
+classiﬁcation.
+IV. N EWRESEARCH DIRECTIONS
+This section introduces some potential new research direc-
+tions based on EA.
+A. Applicability of EA to Other Multi-Channel Physiologica l
+Signals
+The original EA was proposed for aligning multi-channel
+EEG signals from different subjects/sessions. It may also b e
+used in aligning other multi-channel physiological signal s.
+For example, Wang et al. [70] used EA as a standard prepro-
+cessing step on two intracranial EEG datasets (eight humans
+and four canines in the Kaggle UPenn and Mayo Clinic’s
+Seizure Detection Challenge [86], and 21 human patients in
+the Freiburg dataset [87]), to address the heterogeneities in
+electrode placements across subjects, and hence to enable
+cross-species and cross-modality epileptic seizure detec tion.
+Since many other physiological signals, e.g., Magnetoen-
+cephalography (MEG), Electrocardiography (ECG) and stere o-
+Electroencephalography (sEEG), also have multiple channe ls
+and large individual differences, it is interesting to stud y if
+EA can also be applied to them to reduce the data distribution
+discrepancies among subjects.
+B. Large Models for EEG Decoding
+As large models have achieved great successes in natural
+language processing and computer vision, they have also
+started to ﬁnd applications in EEG-based BCIs [88], [89].For example, Jiang et al. [88] showed that their large brain
+model, pre-trained on about 2,500 hours of various types
+of EEG signals from around 20 datasets, outperformed all
+compared SOTA in EEG-based abnormal detection, event type
+classiﬁcation, emotion recognition, and gait prediction.
+However, Jiang et al. [88] also pointed out that one chal-
+lenge in training large models for EEG decoding is the lack of
+sufﬁcient EEG data. This could be alleviated by making use of
+relevant data from other species and/or modalities, as our r e-
+cent work [70] has shown that canines’s scalp/intracranial EEG
+data could be used to facilitate scalp/intracranial EEG bas ed
+seizure classiﬁcation for humans, and vice versa. However,
+as mentioned in the previous subsection, this was impossibl e
+without using EA to align the trials.
+Another important consideration in training large models f or
+EEG-based BCIs is the efﬁciency. Without speaking, the fast er
+the better. Junqueira et al. [30] pointed out in their evalua tion
+of EA with deep learning for EEG decoding that “ when using
+single shared models with training data from all individual s,
+using EA allowed us to achieve the same level of accuracy as
+the models without EA using 70% fewer iterations and a ﬁnal
+level of accuracy 4.33% higher when using the same number of
+iterations. ” Since large models are also deep neural network
+based, EA could be used as a pre-processing step to align
+EEG data from different subjects/sessions/species/modal ities
+to accelerate the training.
+C. Extension from Classiﬁcation to Regression
+So far, the applications of EA exclusively focused on BCI
+classiﬁcation problems, such as motor imagery, event relat ed
+potential, seizure classiﬁcation, etc., as shown in Table I II.
+However, there are also many important regression problems
+in BCIs [11], such as primitive emotion estimation [4], driv er
+drowsiness estimation [90], user reaction time estimation [91],
+etc. As in BCI classiﬁcation problems, EEG signal stationar ity
+and large individual differences also exist in BCI regressi on
+problems. So, TL could also be used to facilitate the calibra tion
+[92].
+Our previous research has extended some blocks in the
+TL pipeline for motor imagery classiﬁcation (Figure 2), e.g .,
+common spatial pattern ﬁltering [93] and wAR classiﬁer [92] ,
+to BCI regression problems, using fuzzy sets. It is interest ing
+to study if EA/LA could be extended from classiﬁcation to
+regression, also using fuzzy sets.
+D. Accurate and Robust EEG Decoding
+Most BCI decoding research so far only focused on accurate
+decoding of the brain signals. However, studies have shown
+that the decoding algorithms may suffer from adversarial
+attacks [94], [95], [96], [97], [98], [99], [100], i.e., a sm all
+perturbation, which may be too small to be detected by human
+eyes or computer algorithms, can be added to the benign EEG
+signal to mislead the decoding algorithm.
+Various adversarial attack approaches have been proposed
+for motor imagery classiﬁcation [94], [98], [99], [100],
+P300 event related potential classiﬁcation [94], [98], [99 ],
+[100], feedback error-related negativity classiﬁcation [ 98],
+
+--- Page 11 ---
+11
+[99], [100], steady-state visual evoked potential classiﬁ cation
+[97], [101], and also regression problems [95]. They could
+cause various forms of damage. For example, attacking a BCI
+speller could mis-interpret the user’s opinion, and attack ing a
+motor imagery BCI controlled wheelchair could intentional ly
+drive the user into danger. More seriously, as pointed out in
+[102], “ adversary hacking into BCI devices that inﬂuence the
+motor cortex of human operators could theoretically send fa lse
+directions or elicit unintended actions, such as friendly ﬁ re.”
+Thus, it is urgent to consider how to defend against ad-
+versarial attacks to BCIs. As demonstrated in our benchmark
+studies [103], a promising approach is adversarial trainin g,
+i.e., to add adversarial samples into the training dataset s o
+that the decoding algorithm is less vulnerable to them in tes t-
+ing. However, while increasing the robustness on adversari al
+samples, adversarial training usually deteriorates the de coding
+performance on the benign samples, as the training dataset i s
+polluted. It is desirable to increase the decoding performa nce
+on both benign and adversarial EEG trials, i.e., to achieve
+simultaneously accurate and robust decoding.
+Our recently proposed alignment based adversarial trainin g
+(ABAT) algorithm [104] solved this challenging problem. It s
+ﬂowchart is shown in Figure 8. Essentially, it ﬁrst uses EA
+to reduce the data distribution discrepancies among differ ent
+domains, and hence to improve the classiﬁcation accuracy on
+benign EEG trials; it then performs adversarial training to
+improve the robustness on adversarial samples.
+Fig. 8. Alignment based adversarial training (ABAT) to simu ltaneously
+increase the decoding accuracy and adversarial robustness .
+More recently, we [105] showed that simultaneously inte-
+grating EA, data augmentation and adversarial training can
+further improve both the accuracy and robustness of EEG-
+based BCIs.
+In summary, EA is essential in adversarial training to
+simultaneously improve the decoding accuracy and adversar ial
+robustness of EEG-based BCIs. It is expected that more
+sophisticated and comprehensive TL pipeline, like the one
+shown in Figure 2, can be integrated with adversarial traini ng
+to achieve better performance.
+E. Accurate, Robust, and Privacy-Preserving EEG Decoding
+In addition to adversarial security, privacy protection is an-
+other important ethic consideration in BCIs. Our survey [10 6]
+shows that many types of private information, e.g., persona l
+identify, age, emotions, brain-related diseases, etc., co uld be
+mined from EEG signals. Multiple laws and regularization
+all over the world, particularly the General Data Protectio n
+Regularization (GDPR) [107] of the European Union, and
+the Personal Information Protection Law of China, imposestrict privacy protection requirements. Ideally, for priv acy-
+preserving TL, there should be no sharing of authentic EEG
+data among the source domains, and also between the source
+domains and the target domain.
+Various approaches, including security multiparty compu-
+tation [108], synthetic data generation [109], [110], homo -
+morphic encryption [111], source-free TL [26], [112], [113 ],
+[114], federated learning [115], machine unlearning [116] , and
+data perturbation [117], [118], have been proposed for priv acy-
+preserving BCIs.
+A very challenging problem is how to simultaneously
+achieve accurate decoding, adversarial robustness and pri vacy-
+protection in EEG-based BCIs. To our knowledge, aligned and
+augmented adversarial ensemble (A3E) [119] was the only
+solution so far, where EA also plays a very important role.
+The ﬂowchart of using A3E in EEG-based motor imagery
+classiﬁcation is shown in Figure 9. Each source domain uses
+EA to align their EEG trials ﬁrst. Since EA uses information
+from its own domain only, there is no privacy issues. Three
+privacy protection scenarios are then considered:
+Fig. 9. The aligned and augmented adversarial ensemble (A3E ) approach
+for simultaneously accurate decoding, adversarial robust ness and privacy-
+protection in motor imagery BCIs.
+1)Centralized source-free TL , in which the source domains
+trust each other, so they can combine their EEG data
+together to train a single source model.
+2)Federated source-free TL , in which the source domains
+do not trust each other, so federated learning is used to
+isolate data from different source domains but still trains
+a single source model.
+3)Source data perturbation , in which a domain-speciﬁc
+perturbation is added to each domain to hide its private
+information (e.g., user identity), without hurting the
+motor imagery classiﬁcation performance.
+The source model in the ﬁrst two scenarios, or the perturbed
+and privacy protected source data in the last scenario, can
+then be provided to the target domain for TL. In this way,
+the source domain data privacy is protected. During TL, the
+A3E algorithm performs ﬁrst EA and data augmentation in
+the target domain to increase the decoding accuracy on the
+benign samples, and then adversarial training to increase t he
+robustness on the adversarial samples.
+In this way, we can simultaneously achieve accurate de-
+coding, adversarial robustness and privacy-protection in EEG-
+
+--- Page 12 ---
+12
+based BCIs. We expect EA will also play an important role in
+future such approaches.
+V. C ONCLUSIONS
+Due to the non-stationarity and large individual differenc es
+of EEG signals, EEG-based BCIs usually need subject-speciﬁ c
+calibration to tailor the decoding algorithm for each new su b-
+ject, which is time-consuming and user-unfriendly, hinder ing
+their real-world applications. TL has been extensively use d to
+expedite the calibration, by making use of EEG data from othe r
+subjects/sessions. An important consideration in TL for EE G-
+based BCIs is to reduce the data distribution discrepancies
+among different subjects/session, to avoid negative trans fer.
+EA was proposed in 2020 to address this challenge. Numerous
+experiments from 13 different BCI paradigms demonstrated
+its effectiveness and efﬁciency. This paper has revisited E A,
+explaining its procedure and correct usage, introducing it s
+applications and extensions, and pointing out potential ne w re-
+search directions. It should be very helpful to BCI research ers,
+especially those who are working on EEG signal decoding.
+Due to its effectiveness and efﬁciency, as suggested by
+Junqueira et al. [30], “ EA should be a standard pre-processing
+step when training cross-subject models. ”
+REFERENCES
+[1] M. Nakanishi, Y .-T. Wang, C.-S. Wei, K.-J. Chiang, and T. -P. Jung,
+“Facilitating calibration in high-speed BCI spellers via l everaging
+cross-device shared latent responses,” IEEE Trans. on Biomedical
+Engineering , vol. 67, no. 4, pp. 1105–1113, 2020.
+[2] R. Leeb, D. Friedman, G. R. M¨ uller-Putz, R. Scherer, M. S later,
+and G. Pfurtscheller, “Self-paced (asynchronous) BCI cont rol of a
+wheelchair in virtual environments: a case study with a tetr aplegic,”
+Computational Intelligence and Neuroscience , vol. 2007, no. 1, p.
+079642, 2007.
+[3] R. Mane, T. Chouhan, and C. Guan, “BCI for stroke rehabili tation:
+motor and beyond,” Journal of Neural Engineering , vol. 17, no. 4, p.
+041001, 2020.
+[4] D. Wu, B.-L. Lu, B. Hu, and Z. Zeng, “Affective brain-comp uter
+interfaces (aBCIs): A tutorial,” Proc. of the IEEE , vol. 11, no. 10,
+pp. 1314–1332, 2023.
+[5] D. A. Moses, S. L. Metzger, J. R. Liu, G. K. Anumanchipalli , J. G.
+Makin, P. F. Sun, J. Chartier, M. E. Dougherty, P. M. Liu, G. M.
+Abrams et al. , “Neuroprosthesis for decoding speech in a paralyzed
+person with anarthria,” New England Journal of Medicine , vol. 385,
+no. 3, pp. 217–227, 2021.
+[6] H. Lorach, A. Galvez, V . Spagnolo, F. Martel, S. Karakas, N. Intering,
+M. Vat, O. Faivre, C. Harte, S. Komi et al. , “Walking naturally after
+spinal cord injury using a brain-spine interface,” Nature , vol. 618, no.
+7963, pp. 126–133, 2023.
+[7] X. Liu, T. Gao, T. Lu, G. Schumann, and L. Lu, “China brain p roject:
+from bench to bedside,” Science Bulletin , vol. 68, no. 5, pp. 444–447,
+2023.
+[8] M. Eisenstein, “Seven technologies to watch in 2024,” Nature , vol.
+625, no. 7996, pp. 844–848, 2024.
+[9] M. Naddaf, “Science in 2025: the events to watch for in the coming
+year,” Nature , vol. 637, no. 8044, pp. 9–11, 2025.
+[10] D. Milojicic, “Technology predictions 2025,” Computer , vol. 58, no. 1,
+pp. 88–90, 2025.
+[11] D. Wu, Y . Xu, and B.-L. Lu, “Transfer learning for EEG-ba sed brain-
+computer interfaces: A review of progress made since 2016,” IEEE
+Trans. on Cognitive and Developmental Systems , vol. 14, no. 1, pp.
+4–19, 2022.
+[12] W. Zhang, L. Deng, L. Zhang, and D. Wu, “A survey on negati ve
+transfer,” IEEE/CAA Journal of Automatica Sinica , vol. 10, no. 2, pp.
+305–329, 2023.
+[13] H. He and D. Wu, “Transfer learning for brain-computer i nterfaces: A
+Euclidean space data alignment approach,” IEEE Trans. on Biomedical
+Engineering , vol. 67, no. 2, pp. 399–410, 2020.[14] D. Wu, X. Jiang, and R. Peng, “Transfer learning for moto r imagery
+based brain-computer interfaces: A tutorial,” Neural Networks , vol.
+153, pp. 235–253, 2022.
+[15] H. He and D. Wu, “Different set domain adaptation for bra in-computer
+interfaces: A label alignment approach,” IEEE Trans. on Neural Sys-
+tems and Rehabilitation Engineering , vol. 28, no. 5, pp. 1091–1108,
+2020.
+[16] P. Zanini, M. Congedo, C. Jutten, S. Said, and Y . Berthou mieu, “Trans-
+fer learning: a Riemannian geometry framework with applica tions to
+brain-computer interfaces,” IEEE Trans. on Biomedical Engineering ,
+vol. 65, no. 5, pp. 1107–1116, 2018.
+[17] H. He and D. Wu, “Channel and trial selection for reducin g covariate
+shift in EEG-based brain-computer interfaces,” in Proc. IEEE Int’l
+Conf. on Systems, Man and Cybernetics , Bari, Italy, Oct. 2019.
+[18] S. Kumar, F. Yger, and F. Lotte, “Towards adaptive class iﬁcation using
+Riemannian geometry approaches in brain-computer interfa ces,” in
+Int’l Winter Conference on Brain-Computer Interface , Gangwon, South
+Korea, Feb. 2019, pp. 1–6.
+[19] L. Xu, M. Xu, Y . Ke, X. An, S. Liu, and D. Ming, “Cross-data set
+variability problem in EEG decoding with deep learning,” Frontiers in
+Human Neuroscience , vol. 14, p. 103, 2020.
+[20] L. Xu, M. Xu, Z. Ma, K. Wang, T.-P. Jung, and D. Ming, “Enha ncing
+transfer performance across datasets for brain-computer i nterfaces
+using a combination of alignment strategies and adaptive ba tch nor-
+malization,” Journal of Neural Engineering , vol. 18, no. 4, p. 0460e5,
+2021.
+[21] X. Zhang, Q. She, Y . Chen, W. Kong, and C. Mei, “Sub-band
+target alignment common spatial pattern in brain-computer interface,”
+Computer Methods and Programs in Biomedicine , vol. 207, p. 106150,
+2021.
+[22] Z. Liang, Z. Zheng, W. Chen, J. Wang, J. Zhang, J. Chen, an d Z. Chen,
+“Manifold trial selection to reduce negative transfer in mo tor imagery-
+based brain–computer interface,” in IEEE/RSJ Int’l Conf. on Intelligent
+Robots and Systems , Prague, Czech Republic, Sep. 2021, pp. 4144–
+4149.
+[23] Y . Li, Q. Wei, Y . Chen, and X. Zhou, “Transfer learning ba sed on
+hybrid Riemannian and Euclidean space data alignment and su bject
+selection in brain-computer interfaces,” IEEE Access , vol. 9, pp. 6201–
+6212, 2021.
+[24] Z. Liang, Z. Zheng, W. Chen, J. Wang, J. Zhang, J. Chen, an d H. Shi,
+“Cross-subject trials reweighting for enhancing motor ima gery-based
+brain-computer interface,” in IEEE Conf. on Industrial Electronics and
+Applications , 2022, pp. 943–948.
+[25] G. Zoumpourlis and I. Patras, “CovMix: Covariance mixi ng regulariza-
+tion for motor imagery decoding,” in 2022 10th International Winter
+Conference on Brain-Computer Interface , Gangwon, South Korea,
+2022, pp. 1–7.
+[26] K. Xia, L. Deng, W. Duch, and D. Wu, “Privacy-preserving domain
+adaptation for motor imagery-based brain-computer interf aces,” IEEE
+Trans. on Biomedical Engineering , vol. 69, no. 11, pp. 3365–3376,
+2022.
+[27] L. Pan, K. Wang, L. Xu, X. Sun, W. Yi, M. Xu, and D. Ming,
+“Riemannian geometric and ensemble learning for decoding c ross-
+session motor imagery electroencephalography signals,” Journal of
+Neural Engineering , vol. 20, no. 6, p. 066011, 2023.
+[28] Z. Liang, Z. Zheng, W. Chen, Z. Pei, J. Wang, and J. Chen, “ Manifold
+embedded instance selection to suppress negative transfer in motor
+imagery-based brain–computer interface,” Biomedical Signal Process-
+ing and Control , vol. 88, p. 105556, 2024.
+[29] M. Wimpff, M. D¨ obler, and B. Yang, “Calibration-free o nline test-
+time adaptation for Electroencephalography motor imagery decoding,”
+inInt’l Winter Conf. on Brain-Computer Interface , Gangwon, Korea,
+Feb. 2024, pp. 1–6.
+[30] B. Junqueira, B. Aristimunha, S. Chevallier, and R. Y . d e Camargo,
+“A systematic evaluation of euclidean alignment with deep l earning
+for EEG decoding,” Journal of Neural Engineering , vol. 21, no. 3, p.
+036038, 2024.
+[31] C. Chu, L. Zhu, A. Huang, P. Xu, N. Ying, and J. Zhang, “Tra nsfer
+learning with data alignment and optimal transport for EEG b ased
+motor imagery classiﬁcation,” Journal of Neural Engineering , vol. 21,
+no. 1, p. 016015, 2024.
+[32] A. Jiang, S. Hou, Y . Tang, and Y . Zhu, “Joint Spatio-Temp oral Filtering
+of Motion Imagery EEG Signals for Data Alignment in Transfer
+Learning,” in Proc. IEEE Int’l Conf. on Acoustics, Speech and Signal
+Processing , Seoul, South Korea, Apr. 2024, pp. 2235–2239.
+
+--- Page 13 ---
+13
+[33] P. L. C. Rodrigues, C. Jutten, and M. Congedo, “Riemanni an procrustes
+analysis: Transfer learning for brain–computer interface s,”IEEE Trans.
+on Biomedical Engineering , vol. 66, no. 8, pp. 2390–2401, 2019.
+[34] Q. Zhan, L. Wang, L. Ren, and X. Huang, “A novel heterogen eous
+transfer learning method based on data stitching for the seq uential
+coding brain computer interface,” Computers in Biology and Medicine ,
+vol. 151, p. 106220, 2022.
+[35] A.-I. Karaiskou, C. Varon, K. Alaerts, and M. De V os, “Cr oss-
+subject mindfulness meditation EEG decoding,” in IEEE Int’l Conf.
+on Metrology for eXtended Reality, Artiﬁcial Intelligence and Neural
+Engineering , Milan, Italy, October 2023, pp. 781–786.
+[36] M. Xue, B. Xu, L. Li, J. Ping, M. Miao, H. Li, and A. Song, “M ean-
+based geodesic distance alignment transfer for decoding na tural hand
+movement from MRCPs,” Measurement , vol. 247, p. 116836, 2025.
+[37] R. Li, J. S. Johansen, H. Ahmed, T. V . Ilyevsky, R. B. Wilb ur, H. M.
+Bharadwaj, and J. M. Siskind, “The perils and pitfalls of blo ck design
+for EEG classiﬁcation experiments,” IEEE Trans. on Pattern Analysis
+and Machine Intelligence , vol. 43, no. 1, pp. 316–333, 2021.
+[38] H. Lu, H.-L. Eng, C. Guan, K. N. Plataniotis, and A. N. Ven etsanopou-
+los, “Regularized common spatial pattern with aggregation for EEG
+classiﬁcation in small-sample setting,” IEEE Trans. on Biomedical
+Engineering , vol. 57, no. 12, pp. 2936–2946, 2010.
+[39] D. Wu, “Online and ofﬂine domain adaptation for reducin g BCI
+calibration effort,” IEEE Trans. on Human-Machine Systems , vol. 47,
+no. 4, pp. 550–563, 2017.
+[40] V . J. Lawhern, A. J. Solon, N. R. Waytowich, S. M. Gordon, C. P. Hung,
+and B. J. Lance, “EEGNet: a compact convolutional neural net work for
+EEG-based brain-computer interfaces,” Journal of Neural Engineering ,
+vol. 15, no. 5, p. 056013, 2018.
+[41] D. Kostas and F. Rudzicz, “Thinker invariance: enablin g deep neural
+networks for BCI across more people,” Journal of Neural Engineering ,
+vol. 17, no. 5, p. 056008, 2020.
+[42] W. Zhang and D. Wu, “Manifold embedded knowledge transf er for
+brain-computer interfaces,” IEEE Trans. on Neural Systems and Reha-
+bilitation Engineering , vol. 28, no. 5, pp. 1117–1127, 2020.
+[43] S. Bakas, S. Ludwig, K. Barmpas, M. Bahri, Y . Panagakis, N. Laskaris,
+D. A. Adamos, and S. Zafeiriou, “Team cogitat at neurips 2021 :
+Benchmarks for EEG transfer learning competition,” arXiv preprint
+arXiv:2202.03267 , 2022.
+[44] M. M. Togha, M. R. Salehi, and E. Abiri, “An improved vers ion of
+local activities estimation to enhance motor imagery class iﬁcation,”
+Biomedical Signal Processing and Control , vol. 66, p. 102485, 2021.
+[45] O. Demsy, D. Achanccaray, and M. Hayashibe, “Inter-sub ject transfer
+learning using Euclidean alignment and transfer component analysis for
+motor imagery-based BCI,” in IEEE Int’l Conference on Systems, Man,
+and Cybernetics , Melbourne, Australia, Oct. 2021, pp. 3176–3176.
+[46] V . Peterson, N. Nieto, D. Wyser, O. Lambercy, R. Gassert , D. H.
+Milone, and R. D. Spies, “Transfer learning based on optimal transport
+for motor imagery brain-computer interfaces,” IEEE Trans. on Biomed-
+ical Engineering , vol. 69, no. 2, pp. 807–817, 2021.
+[47] Y . Cai, Q. She, J. Ji, Y . Ma, J. Zhang, and Y . Zhang, “Motor imagery
+EEG decoding using manifold embedded transfer learning,” Journal of
+Neuroscience Methods , vol. 370, p. 109489, 2022.
+[48] L. Chen, A. Gong, P. Ding, and et al., “EEG signal decodin g of motor
+imagination based on euclidean space-weighted logistic re gression
+transfer learning,” Journal of Nanjing University , vol. 58, no. 2, pp.
+264–274, 2022.
+[49] X. Wu, Y . Feng, S. Lou, H. Zheng, B. Hu, Z. Hong, and J. Tan,
+“Improving NeuCube spiking neural network for EEG-based pa ttern
+recognition using transfer learning,” Neurocomputing , vol. 529, pp.
+222–235, 2023.
+[50] Q. Wei and X. Ding, “Intra-and inter-subject common spa tial pattern for
+reducing calibration effort in MI-based BCI,” IEEE Trans. on Neural
+Systems and Rehabilitation Engineering , vol. 31, pp. 904–916, 2023.
+[51] J. Zhu, G. Xu, Q. Hu, B. Wang, T. Zhou, and J. Qin, “Dual con trastive
+training and transferability aware adaptation for multi-s ource privacy-
+preserving motor imagery classiﬁcation,” IEEE Trans. on Instrumenta-
+tion and Measurement , 2023.
+[52] Y . Gao, M. Li, Y . Peng, F. Fang, and Y . Zhang, “Double stag e
+transfer learning for brain–computer interfaces,” IEEE Trans. on Neural
+Systems and Rehabilitation Engineering , vol. 31, pp. 1128–1136, 2023.
+[53] Y . Gao, C. Zhang, J. Huang, and M. Meng, “EEG multi-domai n feature
+transfer based on sparse regularized Tucker decomposition ,”Cognitive
+Neurodynamics , vol. 18, no. 1, pp. 185–197, 2024.
+[54] Z. Wang, S. Li, X. Chen, and D. Wu, “Time-frequency trans form based
+cross-subject EEG data augmentation,” Knowledge Based Systems , vol.
+311, p. 113074, 2025.[55] S. Bakas, S. Ludwig, D. A. Adamos, N. Laskaris, Y . Panaga kis, and
+S. Zafeiriou, “Latent alignment in deep learning models for EEG
+decoding,” Journal of Neural Engineering , vol. 22, p. 016047, 2025.
+[56] M. M. Amorim, L. Prata, J. S. Maur´ ıcio, A. Borges, H. Ber nardino,
+and G. de Souza, “Euclidean alignment for transfer learning in multi-
+band common spatial pattern,” in Brazilian Conf. on Intelligent Systems ,
+Bel´ em do Par´ a, Brazil, Dec. 2024, pp. 430–443.
+[57] S. Li, M. Kawanabe, and R. J. Kobler, “SPDIM: Source-fre e unsuper-
+vised conditional and label shifts adaptation in EEG,” arXiv preprint
+arXiv:2411.07249 , 2024.
+[58] Y . Wang, J. Wang, W. Wang, J. Su, C. Bunterngchit, and Z.- G.
+Hou, “TFTL: A task-free transfer learning strategy for EEG- based
+cross-subject & cross-dataset motor imagery BCI,” IEEE Trans. on
+Biomedical Engineering , vol. 72, pp. 810–821, 2024.
+[59] H. Wang, H. Han, J. Q. Gan, and H. Wang, “Lightweight sour ce-
+free domain adaptation based on adaptive Euclidean alignme nt for
+brain-computer interfaces,” IEEE Journal of Biomedical and Health
+Informatics , vol. 29, pp. 909–922, 2024.
+[60] J. Zhang, J. Fang, S. Liu, D. Liu, H. Wu, and J. Long, “Towa rds
+cross-brain computer interface: A prototype-supervised a dversarial
+transfer learning approach with multiple sources,” IEEE Trans. on
+Instrumentation and Measurement , vol. 73, p. 2528113, 2024.
+[61] J. Xu, D. Li, P. Zhou, Y . Zhang, Z. Wang, and D. Ma, “A relat ion
+feature comparison network for cross-domain recognition o f motion
+intention,” IEEE Trans. on Instrumentation and Measurement , vol. 73,
+p. 4008513, 2024.
+[62] F. Zhu, J. Cai, H. Zheng, Z. Liang, and Y . Zhang, “Suppres sion of
+negative transfer in motor imagery brain–computer interfa ce based
+on mutual information and Pearson correlation coefﬁcient, ”Review of
+Scientiﬁc Instruments , vol. 95, no. 7, 2024.
+[63] Y . Gao, Y . Liu, M. Meng, F. Fang, M. Houston, and Y . Zhang, “A
+novel multi-morphological representation approach for mu lti-source
+EEG signals,” Neurocomputing , vol. 617, p. 129010, 2025.
+[64] J. Jin, G. Bai, R. Xu, K. Qin, H. Sun, X. Wang, and A. Cichoc ki,
+“A cross-dataset adaptive domain selection transfer learn ing framework
+for motor imagery-based brain-computer interfaces,” Journal of Neural
+Engineering , vol. 21, no. 3, p. 036057, 2024.
+[65] W. Li, H. Li, X. Sun, H. Kang, S. An, G. Wang, and Z. Gao, “Se lf-
+supervised contrastive learning for EEG-based cross-subj ect motor
+imagery recognition,” Journal of Neural Engineering , vol. 21, no. 2,
+p. 026038, 2024.
+[66] M. Wimpff, B. Aristimunha, S. Chevallier, and B. Yang, “ Fine-
+tuning strategies for continual online EEG motor imagery de cod-
+ing: Insights from a large-scale longitudinal study,” arXiv preprint
+arXiv:2502.06828 , 2025.
+[67] R. Fu, Y .-F. Chen, Y . Huang, S. Chen, F. Duan, J. Li, J. Wu,
+D. Jiang, J. Gao, J. Gu et al. , “Symmetric convolutional and adversarial
+neural network enables improved mental stress classiﬁcati on from
+EEG,” IEEE Trans. on Neural Systems and Rehabilitation Engineeri ng,
+vol. 30, pp. 1384–1400, 2022.
+[68] Y . Jiang, S. Xie, X. Xie, Y . Cui, and H. Tang, “Emotion rec ognition
+via multiscale feature fusion network and attention mechan ism,” IEEE
+Sensors Journal , vol. 23, no. 10, pp. 10 790–10 800, 2023.
+[69] J. Li, Y . Zhou, T. Liu, T.-P. Jung, X. Wan, D. Duan, D. Li, H . Yu,
+H. Song, X. Dong et al. , “A radial basis deformable residual con-
+volutional neural model embedded with local multi-modal fe ature
+knowledge and its application in cross-subject classiﬁcat ion,” Expert
+Systems with Applications , vol. 257, p. 125089, 2024.
+[70] Z. Wang, S. Li, and D. Wu, “Canine EEG helps human: Cross-
+species and cross-modality epileptic seizure detection vi a multi-space
+alignment,” National Science Review , vol. 12, p. nwaf086, 2025.
+[71] M. Vishwanath, S. Cao, N. Dutt, A. M. Rahmani, M. M. Lim,
+and H. Cao, “Reducing interdataset covariate shift in sleep EEG of
+traumatic brain injured humans and mice using transfer Eucl idean
+alignment,” Biomedical Signal Processing and Control , vol. 108, p.
+107948, 2025.
+[72] X. Wei, A. A. Faisal, M. Grosse-Wentrup, A. Gramfort, S. Chevallier,
+V . Jayaram, C. Jeunet, S. Bakas, S. Ludwig, K. Barmpas et al. ,
+“2021 BEETL competition: Advancing transfer learning for s ubject
+independence and heterogenous EEG data sets,” in NeurIPS 2021
+Competitions and Demonstrations Track , 2022, pp. 205–219.
+[73] D.-Q. Xu, Y .-J. Sun, and M.-A. Li, “An adaptive cross-cl ass transfer
+learning framework with two-level alignment,” Biomedical Signal
+Processing and Control , vol. 86, p. 105155, 2023.
+[74] S. Ma and D. Zhang, “A cross-attention-based class alig nment network
+for cross-subject EEG classiﬁcation in a heterogeneous spa ce,”Sensors ,
+vol. 24, no. 21, p. 7080, 2024.
+
+--- Page 14 ---
+14
+[75] M. Vishwanath, N. Dutt, A. M. Rahmani, M. M. Lim, and H. Ca o,
+“Label alignment improves EEG-based machine learning-bas ed classi-
+ﬁcation of traumatic brain injury,” in Proc. 44th Annual Int’l Conf.
+of the IEEE Engineering in Medicine & Biology Society (EMBC) ,
+Glasgow, UK, Jul. 2022, pp. 3546–3549.
+[76] Y . Peng, H. Liu, W. Kong, F. Nie, B.-L. Lu, and A. Cichocki ,
+“Joint EEG feature transfer and semisupervised cross-subj ect emotion
+recognition,” IEEE Trans. on Industrial Informatics , vol. 19, no. 7, pp.
+8104–8115, 2023.
+[77] C. Ren, J. Chen, R. Li, W. Zheng, Y . Chen, Y . Yang, X. Zhang ,
+and B. Hu, “Semi-supervised pairwise transfer learning bas ed on
+multi-source domain adaptation: A case study on EEG-based e motion
+recognition,” Knowledge-Based Systems , vol. 305, p. 112669, 2024.
+[78] H. Zhang, T. Zuo, Z. Chen, X. Wang, and P. Z. Sun, “Evoluti onary
+ensemble learning for EEG-based cross-subject emotion rec ognition,”
+IEEE Journal of Biomedical and Health Informatics , vol. 28, no. 7,
+pp. 3872–3881, 2024.
+[79] T. Wang, Y . Ke, Y . Huang, F. He, W. Zhong, S. Liu, and D. Min g,
+“Using semi-supervised domain adaptation to enhance EEG-b ased
+cross-task mental workload classiﬁcation performance,” IEEE Journal
+of Biomedical and Health Informatics , vol. 28, no. 12, pp. 7032–7039,
+2024.
+[80] O. Yair, M. Ben-Chen, and R. Talmon, “Parallel transpor t on the cone
+manifold of SPD matrices for domain adaptation,” IEEE Trans. on
+Signal Processing , vol. 67, no. 7, pp. 1797–1811, 2019.
+[81] M. Jim´ enez-Guarneros and P. G´ omez-Gil, “Custom doma in adaptation:
+A new method for cross-subject, EEG-based cognitive load re cogni-
+tion,” IEEE Signal Processing Letters , vol. 27, pp. 750–754, 2020.
+[82] L. Xu, Z. Ma, J. Meng, M. Xu, T.-P. Jung, and D. Ming, “Impr oving
+transfer performance of deep learning with adaptive batch n ormaliza-
+tion for brain-computer interfaces,” in Proc. 43rd Annual Int’l Conf. of
+the IEEE Engineering in Medicine & Biology Society (EMBC) , Virtual,
+Nov. 2021, pp. 5800–5803.
+[83] F. Zhuang, Z. Qi, K. Duan, D. Xi, Y . Zhu, H. Zhu, H. Xiong, a nd
+Q. He, “A comprehensive survey on transfer learning,” Proc. of the
+IEEE , vol. 109, no. 1, pp. 43–76, 2021.
+[84] S. J. Pan, I. W. Tsang, J. T. Kwok, and Q. Yang, “Domain ada ptation
+via transfer component analysis,” IEEE Trans. on Neural Networks ,
+vol. 22, no. 2, pp. 199–210, 2011.
+[85] B. Sun, J. Feng, and K. Saenko, “Return of frustratingly easy domain
+adaptation,” in Proc. 30th AAAI Conf. on Artiﬁcial Intelligence , vol. 6,
+no. 7, Phoenix, AZ, Feb. 2016, pp. 2058–2065.
+[86] S. N. Baldassano, B. H. Brinkmann, H. Ung, T. Blevins, E. C. Conrad,
+K. Leyde, M. J. Cook, A. N. Khambhati, J. B. Wagenaar, G. A. Wor rell
+et al. , “Crowdsourcing seizure detection: Algorithm developmen t and
+validation on human implanted device recordings,” Brain , vol. 140,
+no. 6, pp. 1680–1691, 2017.
+[87] M. Ihle, H. Feldwisch-Drentrup, C. A. Teixeira, A. Wito n, B. Schel-
+ter, J. Timmer, and A. Schulze-Bonhage, “EPILEPSIAE–A Euro pean
+epilepsy database,” Computer Methods and Programs in Biomedicine ,
+vol. 106, no. 3, pp. 127–138, 2012.
+[88] W.-B. Jiang, L.-M. Zhao, and B.-L. Lu, “Large brain mode l for learning
+generic representations with tremendous EEG data in BCI,” i nProc.
+Int’l Conf. on Learning Representations , Vienna, Austria, May 2024.
+[89] Y . Zhang, Q. Li, S. Nahata, T. Jamal, S.-K. Cheng, G. Cauw enberghs,
+and T.-P. Jung, “Integrating large language model, EEG, and eye-
+tracking for word-level neural state classiﬁcation in read ing comprehen-
+sion,” IEEE Trans. on Neural Systems and Rehabilitation Engineeri ng,
+vol. 32, pp. 3465–3475, 2024.
+[90] Y . Cui, Y . Xu, and D. Wu, “EEG-based driver drowsiness es timation
+using feature weighted episodic training,” IEEE Trans. on Neural
+Systems and Rehabilitation Engineering , vol. 27, no. 11, pp. 2263–
+2273, 2019.
+[91] D. Wu, V . J. Lawhern, B. J. Lance, S. Gordon, T.-P. Jung, a nd C.-
+T. Lin, “EEG-based user reaction time estimation using Riem annian
+geometry features,” IEEE Trans. on Neural Systems and Rehabilitation
+Engineering , vol. 25, no. 11, pp. 2157–2168, 2017.
+[92] D. Wu, V . J. Lawhern, S. Gordon, B. J. Lance, and C.-T. Lin ,
+“Driver drowsiness estimation from EEG signals using onlin e weighted
+adaptation regularization for regression (OwARR),” IEEE Trans. on
+Fuzzy Systems , vol. 25, no. 6, pp. 1522–1535, 2017.
+[93] D. Wu, J.-T. King, C.-H. Chuang, C.-T. Lin, and T.-P. Jun g, “Spatial ﬁl-
+tering for EEG-based regression problems in brain-compute r interface
+(BCI),” IEEE Trans. on Fuzzy Systems , vol. 26, no. 2, pp. 771–781,
+2018.[94] X. Zhang and D. Wu, “On the vulnerability of CNN classiﬁe rs in
+EEG-based BCIs,” IEEE Trans. on Neural Systems and Rehabilitation
+Engineering , vol. 27, no. 5, pp. 814–825, 2019.
+[95] L. Meng, C.-T. Lin, T.-P. Jung, and D. Wu, “White-box tar get attack for
+EEG-based BCI regression problems,” in Proc. Int’l Conf. on Neural
+Information Processing , Sydney, Australia, Dec. 2019.
+[96] D. Wu, J. Xu, W. Fang, Y . Zhang, L. Yang, H. Luo, X. Xu, and
+X. Yu, “Adversarial attacks and defenses in physiological c omputing: A
+systematic review,” National Science Open , vol. 2, no. 1, p. 20220023,
+2023.
+[97] R. Bian, L. Meng, and D. Wu, “SSVEP-based brain-compute r inter-
+faces are vulnerable to square wave attacks,” Science China Information
+Sciences , vol. 65, no. 4, p. 140406, 2022.
+[98] X. Jiang, L. Meng, S. Li, and D. Wu, “Active poisoning: ef ﬁcient
+backdoor attacks on transfer learning-based brain-comput er interfaces,”
+Science China Information Sciences , vol. 66, p. 182402, 2023.
+[99] L. Meng, J. Huang, Z. Zeng, X. Jiang, S. Yu, T.-P. Jung, C. -T. Lin,
+R. Chavarriaga, and D. Wu, “EEG-based brain-computer inter faces are
+vulnerable to backdoor attacks,” IEEE Trans. on Neural Systems and
+Rehabilitation Engineering , vol. 31, pp. 2224–2234, 2023. [Online].
+Available: https://www.researchsquare.com/article/rs -108085/v1
+[100] L. Meng, X. Jiang, X. Chen, W. Liu, H. Luo, and D. Wu, “Adv ersarial
+ﬁltering based evasion and backdoor attacks to EEG-based br ain-
+computer interfaces,” Information Fusion , vol. 107, p. 102316, 2024.
+[101] X. Zhang, D. Wu, L. Ding, H. Luo, C.-T. Lin, T.-P. Jung, a nd
+R. Chavarriaga, “Tiny noise, big mistakes: Adversarial per turbations
+induce errors in brain-computer interface spellers,” National Science
+Review , vol. 8, no. 4, p. nwaa233, 2021.
+[102] A. Binnendijk, T. Marler, and E. M. Bartels, Brain-Computer Inter-
+faces: U.S. Military Applications and Implications, An Ini tial Assess-
+ment . Santa Monica, CA: RAND Corporation, 2020.
+[103] L. Meng, X. Jiang, and D. Wu, “Adversarial robustness b enchmark for
+EEG-based brain-computer interfaces,” Future Generation Computer
+Systems , vol. 143, pp. 231–247, 2023.
+[104] X. Chen, Z. Wang, and D. Wu, “Alignment-based adversar ial training
+(ABAT) for improving the robustness and accuracy of EEG-bas ed
+BCIs,” IEEE Trans. on Neural Systems and Rehabilitation Engineeri ng,
+vol. 32, pp. 1703–1714, 2024.
+[105] X. Chen, T. Jia, and D. Wu, “Data alignment based advers arial defense
+benchmark for EEG-based BCIs,” Neural Networks , 2025, in press.
+[106] K. Xia, W. Duch, Y . Sun, K. Xu, W. Fang, H. Luo, Y . Zhang, D . Sang,
+X. Xu, F.-Y . Wang, and D. Wu, “Privacy-preserving brain-com puter
+interfaces: A systematic review,” IEEE Trans. on Computational Social
+Systems , vol. 10, no. 5, pp. 2312–2324, 2023.
+[107] General Data Protection Regulation, “Regulation (EU ) 2016/679 of
+the European parliament and of the council of 27 April 2016 on the
+protection of natural persons with regard to the processing of personal
+data and on the free movement of such data, and repealing dire ctive
+95/46,” Ofﬁcial Journal of the European Union , vol. 59, no. 1-88, p.
+294, 2016.
+[108] A. Agarwal, R. Dowsley, N. D. McKinney, D. Wu, C.-T. Lin ,
+M. De Cock, and A. C. A. Nascimento, “Protecting privacy of us ers in
+brain-computer interface applications,” IEEE Trans. on Neural Systems
+and Rehabilitation Engineering , vol. 27, no. 8, pp. 1546–1555, 2019.
+[109] E. Debie, N. Moustafa, and M. T. Whitty, “A privacy-pre serving
+generative adversarial network method for securing EEG bra in signals,”
+inProc. Int’l Joint Conf. on Neural Networks , Glasgow, UK, Jul. 2020,
+pp. 1–8.
+[110] D. Pascual, A. Amirshahi, A. Aminifar, D. Atienza, P. R yvlin, and
+R. Wattenhofer, “EpilepsyGAN: Synthetic epileptic brain a ctivities with
+privacy preservation,” IEEE Trans. on Biomedical Engineering , vol. 68,
+no. 8, pp. 2435–2446, 2021.
+[111] A. B. Popescu, L. A. Taca, C. I. Nita, A. Vizitiu, R. Deme ter, C. Suciu,
+and L. M. Itu, “Privacy preserving classiﬁcation of EEG data using
+machine learning and homomorphic encryption,” Applied Sciences ,
+vol. 11, no. 16, p. 7360, 2021.
+[112] W. Zhang, Z. Wang, and D. Wu, “Multi-source decentrali zed transfer
+for privacy-preserving BCIs,” IEEE Trans. on Neural Systems and
+Rehabilitation Engineering , vol. 30, pp. 2710–2720, 2022.
+[113] C. Zhao, R. Peng, and D. Wu, “Source-free domain adapta tion (SFDA)
+for privacy-preserving seizure subtype classiﬁcation,” IEEE Trans. on
+Neural Systems and Rehabilitation Engineering , vol. 31, pp. 2315–
+2325, 2023.
+[114] W. Zhang and D. Wu, “Lightweight source free transfer f or privacy-
+preserving unsupervised motor imagery classiﬁcation,” IEEE Trans. on
+Cognitive and Developmental Systems , vol. 15, no. 2, pp. 938–949,
+2023.
+
+--- Page 15 ---
+15
+[115] T. Jia, L. Meng, S. Li, J. Liu, and D. Wu, “Federated moto r imagery
+classiﬁcation for privacy-preserving brain-computer int erfaces,” IEEE
+Trans. on Neural Systems and Rehabilitation Engineering , vol. 32, pp.
+3442–3451, 2024.
+[116] C. Shao, C. Li, R. Song, X. Liu, R. Qian, and X. Chen, “Mac hine
+unlearning for seizure prediction,” IEEE Trans. on Cognitive and
+Developmental Systems , vol. 16, no. 6, pp. 1969–1981, 2024.
+[117] L. Meng, X. Jiang, T. Jia, and D. Wu, “Protecting multip le types of
+privacy simultaneously in EEG-based brain-computer inter faces,” in
+Proc. IEEE Int’l Conf. on Systems, Man and Cybernetics , Kuching,
+Malaysia, Oct. 2024.
+[118] X. Chen, S. Li, Y . Tu, Z. Wang, and D. Wu, “User-wise pert urbations
+for user identity protection in EEG-based BCIs,” Jouranl of Neural
+Engineering , vol. 22, no. 1, p. 016040, 2025.
+[119] X. Chen, T. Jia, and D. Wu, “A3E: Aligned and augmented a dversarial
+ensemble for accurate, robust and privacy-preserving EEG d ecoding,”
+https://doi.org/10.48550/arXiv.2412.11390 , 2024.

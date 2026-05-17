@@ -458,10 +458,39 @@ class StreamingLOSOTrainer(BaseTrainer):
                                     dataset_cls, dataset_info: Dict) -> Tuple[Dict, Dict]:
         """
         Train one LOSO round with streaming data loading.
+        
+        Implements validation-subject early stopping for rigorous cross-subject evaluation:
+        - Test subject: completely held out, never seen during training or model selection
+        - Validation subject: randomly selected from train subjects, used for early stopping
+        - Train subjects: remaining N-2 subjects used for actual training
         """
+        # Early stopping config
+        es_patience = self.config.get('trainer.args.early_stopping_patience', 15)
+        use_val_es = self.config.get('trainer.args.use_validation_early_stopping', False)
+        
+        # Split train subjects into train/val if enabled and feasible
+        val_subject_id = None
+        train_subject_ids_inner = train_subject_ids.copy()
+        val_loader = None
+        
+        if use_val_es and len(train_subject_ids) >= 2:
+            # Deterministic random selection based on test_subject_id + seed
+            import random
+            seed = self.config.get('experiment.seed', 42)
+            rng = random.Random(test_subject_id + seed)
+            val_subject_id = rng.choice(train_subject_ids)
+            train_subject_ids_inner = [s for s in train_subject_ids if s != val_subject_id]
+            
+            # Build validation loader
+            val_dataset = dataset_cls(subject_id=val_subject_id, dataset_info=dataset_info)
+            val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
+            
+            self._log(f"  Val subject: {val_subject_id} (ES patience={es_patience})")
+        else:
+            self._log(f"  No val split (train={len(train_subject_ids)} subjects)")
+        
         # Create model
-        # Infer model parameters from a sample subject
-        sample_ds = dataset_cls(subject_id=train_subject_ids[0], dataset_info=dataset_info)
+        sample_ds = dataset_cls(subject_id=train_subject_ids_inner[0], dataset_info=dataset_info)
         model = self._create_model(sample_ds)
         del sample_ds
         
@@ -477,17 +506,29 @@ class StreamingLOSOTrainer(BaseTrainer):
         )
         
         # Training history
-        history = {'train_loss': [], 'train_acc': [], 'test_loss': [], 'test_acc': []}
-        best_test_acc = 0.0
-        best_epoch = 0
+        history = {
+            'train_loss': [], 'train_acc': [],
+            'val_loss': [], 'val_acc': [],
+            'test_loss': [], 'test_acc': []
+        }
         
-        # Preload all training data into memory for fast epoch iteration
+        # Best tracking (val-based for model selection, test for reporting only)
+        best_val_acc = -1.0
+        best_val_epoch = 0
+        best_val_state = None
+        epochs_no_improve = 0
+        stopped_early = False
+        
+        # Preload training data
         train_loader = self._build_cached_train_loader(
-            train_subject_ids, dataset_cls, dataset_info
+            train_subject_ids_inner, dataset_cls, dataset_info
         )
         
         # Progress bar
-        epoch_bar = tqdm(range(self.epochs), desc=f'Sub{test_subject_id}', 
+        desc = f'Sub{test_subject_id}'
+        if val_subject_id:
+            desc += f'(Val{val_subject_id})'
+        epoch_bar = tqdm(range(self.epochs), desc=desc,
                         bar_format='{desc} |{bar:20}| {n_fmt}/{total_fmt} {postfix}')
         
         for epoch in epoch_bar:
@@ -498,41 +539,81 @@ class StreamingLOSOTrainer(BaseTrainer):
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr
             
-            # Train with cached in-memory data
+            # Train
             train_loss, train_acc = self._train_epoch_cached(model, optimizer, train_loader)
-            
-            # Evaluate
-            test_loss, test_acc = self._validate(model, test_loader)
-            
-            # Record
             history['train_loss'].append(train_loss)
             history['train_acc'].append(train_acc)
+            
+            # Validation (for early stopping & model selection)
+            if val_loader is not None:
+                val_loss, val_acc = self._validate(model, val_loader)
+                history['val_loss'].append(val_loss)
+                history['val_acc'].append(val_acc)
+            else:
+                val_loss, val_acc = float('nan'), float('nan')
+                history['val_loss'].append(val_loss)
+                history['val_acc'].append(val_acc)
+            
+            # Test (for monitoring only, NEVER used for model selection)
+            test_loss, test_acc = self._validate(model, test_loader)
             history['test_loss'].append(test_loss)
             history['test_acc'].append(test_acc)
             
-            epoch_bar.set_postfix_str(
-                f"LR:{lr:.1e} Tr:{train_loss:.3f}/{train_acc:.3f} Te:{test_loss:.3f}/{test_acc:.3f}"
-            )
+            # Postfix
+            postfix = f"LR:{lr:.1e} Tr:{train_loss:.3f}/{train_acc:.3f}"
+            if val_loader:
+                postfix += f" Va:{val_loss:.3f}/{val_acc:.3f}"
+            postfix += f" Te:{test_loss:.3f}/{test_acc:.3f}"
+            epoch_bar.set_postfix_str(postfix)
             
-            if test_acc > best_test_acc:
-                best_test_acc = test_acc
-                best_epoch = epoch
-                if self.save_checkpoints:
-                    self._save_checkpoint(model, test_subject_id, epoch, test_acc)
+            # Model selection based on VALIDATION accuracy
+            if val_loader is not None:
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    best_val_epoch = epoch
+                    epochs_no_improve = 0
+                    # Save best model state in memory
+                    best_val_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
+                else:
+                    epochs_no_improve += 1
+                
+                # Early stopping check
+                if epochs_no_improve >= es_patience:
+                    self._log(f"  Early stopping @ epoch {epoch} (best val @ {best_val_epoch})")
+                    stopped_early = True
+                    break
+            else:
+                # Fallback: no val, no early stopping
+                pass
             
             self.global_step += 1
         
         epoch_bar.close()
         
+        # Final evaluation: load best val model and evaluate on test
+        if val_loader is not None and best_val_state is not None:
+            model.load_state_dict(best_val_state)
+            self._log(f"  Loaded best val model (epoch {best_val_epoch}, val_acc={best_val_acc:.4f})")
+        
         final_loss, final_acc = self._validate(model, test_loader)
+        
+        # Also compute final metrics on val for reporting
+        final_val_loss, final_val_acc = float('nan'), float('nan')
+        if val_loader is not None:
+            final_val_loss, final_val_acc = self._validate(model, val_loader)
         
         return {
             'test_subject_id': test_subject_id,
-            'test_acc': final_acc,
+            'test_acc': final_acc,           # ← best-val-model on TEST (rigorous)
             'test_loss': final_loss,
-            'best_acc': best_test_acc,
-            'best_epoch': best_epoch,
-            'train_subjects': len(train_subject_ids),
+            'val_acc': final_val_acc,        # ← best-val-model on VAL
+            'val_loss': final_val_loss,
+            'best_val_acc': best_val_acc,    # ← peak val acc during training
+            'best_val_epoch': best_val_epoch,
+            'stopped_early': stopped_early,
+            'actual_epochs': epoch + 1 if stopped_early else self.epochs,
+            'train_subjects': len(train_subject_ids_inner),
+            'val_subject': val_subject_id,
             'test_samples': len(test_dataset)
         }, history
     

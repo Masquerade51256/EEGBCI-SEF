@@ -1,0 +1,53 @@
+# Scheme B: Tightened (Strict Prior)
+# Criteria: Scheme A + Chronic(>3mo) + LI>0
+# N=7, Expected Diff=+3.9%, Expected LOSO≈54%
+#
+# This is the purest "theoretically optimal" subgroup based solely on prior
+# clinical and neurophysiological features. However, N=7 is too small for
+# reliable cross-subject generalization, so this scheme serves mainly as a
+# reference/sensitivity analysis rather than the primary result.
+
+experiment:
+  name: "XWStroke_SchemeB_Tightened_LOSO"
+  seed: 42
+  description: "LOSO on 7-subject pure prior subgroup (chronic + preserved lateralization)"
+
+data:
+  dataset: "XWStroke"
+  subjects: [6, 8, 27, 29, 30, 33, 40]
+  info_path: "configs/dataset/XWStroke_affected_aligned.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    # use_validation_early_stopping: true
+    # early_stopping_patience: 15
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

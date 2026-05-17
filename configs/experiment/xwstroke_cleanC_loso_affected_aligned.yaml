@@ -1,0 +1,55 @@
+# Clean-C: Artifact-free + Subcortical + NIHSS<=7
+# Two-step screening based on original paper quality notes + clinical criteria
+#
+# Step 1: Exclude subjects with motion artifacts explicitly noted in the original paper:
+#   sub-04, 05, 13, 14, 18, 24, 28, 33, 42, 43, 47, 48, 49 (N=13)
+#   Reference: Liu et al. Sci Data (2024) 11:131, Usage Notes section
+#
+# Step 2: Apply clinical filters on the remaining 37 subjects:
+#   - StrokeLocation = Subcortical
+#   - NIHSS <= 7
+#
+# Result: N=14, high-quality homogeneous cohort for transfer learning baseline
+
+experiment:
+  name: "XWStroke_CleanC_ArtifactFree_Subcortical_NIHSS7_LOSO"
+  seed: 42
+  description: "LOSO on 14-subject artifact-free subcortical cohort (NIHSS<=7) for transfer learning"
+
+data:
+  dataset: "XWStroke"
+  subjects: [8, 9, 11, 16, 17, 23, 25, 26, 27, 29, 30, 31, 36, 37]
+  info_path: "configs/dataset/XWStroke_affected_aligned.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: false
+  use_fp16_compression: true
+  num_workers: 0
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: false
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

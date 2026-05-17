@@ -1,0 +1,52 @@
+# Scheme A: Damage Exclusion
+# Criteria: NOT(Cortical/Mixed) AND NIHSS<8 AND TaskA<=55%
+# N=30, Expected Diff=+4.1%, Expected LOSO≈53-54%
+#
+# This is the most defensible "broad exclusion" strategy: we remove subgroups
+# that are systematically harmed by Aff+Align (Cortical lesions, severe NIHSS,
+# and high baseline performers), keeping a moderate-sized homogeneous cohort.
+
+experiment:
+  name: "XWStroke_SchemeA_DamageExclusion_LOSO"
+  seed: 42
+  description: "LOSO on 30-subject cohort excluding Cortical/Mixed, severe NIHSS, and high baseline performers"
+
+data:
+  dataset: "XWStroke"
+  subjects: [5, 6, 7, 8, 9, 11, 12, 16, 17, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 36, 37, 38, 40, 41, 42, 47, 49, 50]
+  info_path: "configs/dataset/XWStroke_affected_aligned.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    # use_validation_early_stopping: true
+    # early_stopping_patience: 15
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

@@ -90,15 +90,28 @@ def summarize(results):
     print("ATTRIBUTION INTERPRETATION")
     print(f"{'='*70}")
 
-    bcic = results.get('BCICIV2a_ADFCNN_StreamingLOSO')
+    bcic_adf = results.get('BCICIV2a_ADFCNN_StreamingLOSO')
+    bcic_eeg = results.get('BCICIV2a_EEGNet_StreamingLOSO')
     xw_adf_lr = results.get('XWStroke_Full50_LR')
     xw_eeg_lr = results.get('XWStroke_Full50_EEGNet_LOSO_LR')
     xw_eeg_aff = results.get('XWStroke_Full50_EEGNet_LOSO_Affected_Aligned')
 
-    if bcic:
-        bcic_mean = bcic['overall_mean'] * 100
-        print(f"\n1. ADFCNN on BCICIV2a (healthy): {bcic_mean:.1f}%")
-        if bcic_mean >= 60:
+    # Framework sanity check
+    if bcic_eeg:
+        bcic_eeg_mean = bcic_eeg['overall_mean'] * 100
+        print(f"\n0. FRAMEWORK SANITY CHECK: EEGNet on BCICIV2a (healthy): {bcic_eeg_mean:.1f}%")
+        if bcic_eeg_mean >= 55:
+            print("   ✅ Framework (StreamingLOSOTrainer + preprocessing) is CAPABLE.")
+            print("   → The pipeline itself can achieve reasonable cross-subject performance.")
+        else:
+            print("   ⚠️  Framework SUSPECT: Even EEGNet on healthy data is poor.")
+            print("   → Training hyperparameters, data loading, or preprocessing may be broken.")
+            print("   → ALL prior results should be re-evaluated after fixing the pipeline.")
+
+    if bcic_adf:
+        bcic_adf_mean = bcic_adf['overall_mean'] * 100
+        print(f"\n1. ADFCNN on BCICIV2a (healthy): {bcic_adf_mean:.1f}%")
+        if bcic_adf_mean >= 60:
             print("   → ADFCNN itself CAN do cross-subject generalization.")
             print("   → XWStroke's ~50% is NOT primarily a model problem.")
         else:
@@ -153,8 +166,9 @@ def main():
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("\nExperiments to run:")
     print("  1. ADFCNN + BCICIV2a Streaming LOSO   (~30-60 min)")
-    print("  2. EEGNet  + XWStroke LOSO (LR)       (~4-6 hours)")
-    print("  3. EEGNet  + XWStroke LOSO (Affected+Aligned) (~4-6 hours)")
+    print("  2. EEGNet  + BCICIV2a Streaming LOSO  (~30-60 min)  [Framework sanity check]")
+    print("  3. EEGNet  + XWStroke LOSO (LR)       (~4-6 hours)")
+    print("  4. EEGNet  + XWStroke LOSO (Affected+Aligned) (~4-6 hours)")
     print("\nPress Ctrl+C within 5 seconds to cancel...")
 
     try:
@@ -172,13 +186,19 @@ def main():
         "BCICIV2a_ADFCNN_StreamingLOSO"
     )
 
-    # Experiment 2: EEGNet on XWStroke LR
+    # Experiment 2: EEGNet on BCICIV2a (framework sanity check)
+    results['BCICIV2a_EEGNet_StreamingLOSO'] = run_exp(
+        "configs/experiment/bciciv2a_eegnet_streaming_loso.yaml",
+        "BCICIV2a_EEGNet_StreamingLOSO"
+    )
+
+    # Experiment 3: EEGNet on XWStroke LR
     results['XWStroke_Full50_EEGNet_LOSO_LR'] = run_exp(
         "configs/experiment/xwstroke_eegnet_full_loso_lr.yaml",
         "XWStroke_Full50_EEGNet_LOSO_LR"
     )
 
-    # Experiment 3: EEGNet on XWStroke Affected + Aligned
+    # Experiment 4: EEGNet on XWStroke Affected + Aligned
     results['XWStroke_Full50_EEGNet_LOSO_Affected_Aligned'] = run_exp(
         "configs/experiment/xwstroke_eegnet_full_loso_affected.yaml",
         "XWStroke_Full50_EEGNet_LOSO_Affected_Aligned"

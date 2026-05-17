@@ -1,0 +1,50 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_affected_aligned.yaml
+  subjects:
+  - 8
+  - 9
+  - 11
+  - 16
+  - 17
+  - 23
+  - 25
+  - 26
+  - 27
+  - 29
+  - 30
+  - 31
+  - 36
+  - 37
+experiment:
+  description: LOSO on 14-subject artifact-free subcortical cohort (NIHSS<=7) for
+    transfer learning
+  name: XWStroke_CleanC_ArtifactFree_Subcortical_NIHSS7_LOSO
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args: {}
+  type: ADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    gradient_accumulation_steps: 1
+    mixed_precision: false
+    subject_buffer_size: 49
+  type: StreamingLOSOTrainer
+training:
+  batch_size: 512
+  device: cuda
+  epochs: 100
+  num_workers: 0
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: true
+  prefetch_factor: 2
+  save_checkpoints: false
+  use_fp16_compression: true

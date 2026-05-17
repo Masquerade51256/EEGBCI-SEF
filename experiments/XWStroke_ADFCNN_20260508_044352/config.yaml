@@ -1,0 +1,41 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_subset10.yaml
+  subjects:
+  - 4
+  - 6
+  - 19
+  - 24
+  - 28
+  - 36
+  - 39
+  - 44
+  - 47
+  - 49
+experiment:
+  description: Quick LOSO validation on 10-subject subset with left/right labels
+  name: XWStroke_Subset10_LOSO_LR
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args: {}
+  type: ADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    balance_classes: false
+    inner_k_folds: 0
+  type: LOSOTrainer
+training:
+  batch_size: 64
+  device: cuda
+  epochs: 100
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  save_checkpoints: true
+  use_fp16_compression: true

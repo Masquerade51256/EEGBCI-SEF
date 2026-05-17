@@ -7,7 +7,7 @@
 # Datasets (large files, should not be in Git)
 src/datasets/*
 !src/datasets/.gitkeep
-# But keep Python scripts in datasets (data loading utilities)
+# But keep Python scripts in datasets (data loadinazg utilities)
 !src/datasets/**/*.py
 
 # Model checkpoints (large binary files)

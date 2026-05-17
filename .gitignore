@@ -19,6 +19,8 @@ src/checkpoints/*
 # Experiment results (should use experiment tracking tools instead)
 # Ignore all experiment outputs but keep Python scripts and docs
 experiments/*
+!experiments/*.json
+!experiments/*.log
 !experiments/*.py
 !experiments/*.md
 experiments/__pycache__/

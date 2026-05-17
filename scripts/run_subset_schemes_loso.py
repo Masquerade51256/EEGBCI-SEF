@@ -69,6 +69,13 @@ SCHEMES = {
         "n_subjects": 14,
         "criteria": "Artifact-free + Subcortical + NIHSS≤7",
     },
+    "CleanCLR": {
+        "name": "Clean-C LR Control",
+        "config": "configs/experiment/xwstroke_cleanC_loso_lr.yaml",
+        "exp_name": "XWStroke_CleanC_LR_Control_LOSO",
+        "n_subjects": 14,
+        "criteria": "Clean-C subjects with Left/Right labels (no alignment)",
+    },
 }
 
 FULL50_RESULT = {

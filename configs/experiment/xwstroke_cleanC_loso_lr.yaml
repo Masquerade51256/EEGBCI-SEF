@@ -1,0 +1,45 @@
+# Clean-C LR Control: Left/Right labels, NO hemisphere alignment
+# Same 14 subjects as Clean-C Aff+Align, for direct pairwise comparison
+
+experiment:
+  name: "XWStroke_CleanC_LR_Control_LOSO"
+  seed: 42
+  description: "LOSO on Clean-C subset with left/right labels (control for Aff+Align)"
+
+data:
+  dataset: "XWStroke"
+  subjects: [8, 9, 11, 16, 17, 23, 25, 26, 27, 29, 30, 31, 36, 37]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: false
+  use_fp16_compression: true
+  num_workers: 0
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: false
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

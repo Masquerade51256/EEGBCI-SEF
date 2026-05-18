@@ -5,6 +5,7 @@ from .transfer_learning_trainer import TransferLearningTrainer
 from .loso_trainer import LOSOTrainer
 from .streaming_loso_trainer import StreamingLOSOTrainer
 from .logo_trainer import LOGOTrainer
+from .dann_trainer import DANNStreamingLOSOTrainer
 from core.registry import TRAINERS
 
 # Register the trainers
@@ -13,6 +14,7 @@ TRAINERS.register('TransferLearningTrainer')(TransferLearningTrainer)
 TRAINERS.register('LOSOTrainer')(LOSOTrainer)
 TRAINERS.register('StreamingLOSOTrainer')(StreamingLOSOTrainer)
 TRAINERS.register('LOGOTrainer')(LOGOTrainer)
+TRAINERS.register('DANNStreamingLOSOTrainer')(DANNStreamingLOSOTrainer)
 
-__all__ = ['SupervisedTrainer', 'TransferLearningTrainer', 'LOSOTrainer', 
-           'StreamingLOSOTrainer', 'LOGOTrainer']
+__all__ = ['SupervisedTrainer', 'TransferLearningTrainer', 'LOSOTrainer',
+           'StreamingLOSOTrainer', 'LOGOTrainer', 'DANNStreamingLOSOTrainer']

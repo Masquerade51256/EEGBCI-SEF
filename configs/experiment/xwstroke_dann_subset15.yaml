@@ -1,0 +1,58 @@
+# DANN Domain-Adversarial LOSO: Subset 15 (Representative Stratified Sample)
+#
+# Quick-validation experiment on the 15-subject stratified subset.
+# Uses the same DANN configuration as the full 50-subject experiment.
+
+experiment:
+  name: "XWStroke_DANN_Subset15_LOSO"
+  seed: 42
+  description: "Subset-15 DANN LOSO for rapid validation"
+
+data:
+  dataset: "XWStroke"
+  subjects: [5, 7, 8, 9, 10, 12, 15, 16, 19, 30, 31, 32, 40, 43, 49]
+  info_path: "configs/dataset/XWStroke_subset15_affected_aligned.yaml"
+
+model:
+  type: "DANNADFCNN"
+  args:
+    num_domains: 4
+    domain_hidden_dims: [256, 128]
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 64
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 0
+  pin_memory: false
+  early_stopping:
+    enabled: true
+    patience: 20
+    monitor: "val_loss"
+    mode: "min"
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "DANNStreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 14
+    gradient_accumulation_steps: 1
+    mixed_precision: false
+    domain_grouping: "stroke_location_2class"
+    grl_gamma: 10.0
+    domain_loss_weight: 0.3
+    use_validation_early_stopping: true
+    early_stopping_patience: 20
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

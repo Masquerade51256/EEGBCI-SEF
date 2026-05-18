@@ -70,12 +70,14 @@ All figures are in `docs/figures/` with 300 DPI, white background, English text.
 | 11 | Route B Proposal | None (schematic/diagram) | — |
 | 12 | Defensive Q&A | None (text) | — |
 | 13 | **Action Plan** | `fig_action_timeline.png` | — |
-| 14 | Risk Assessment | None (table) | — |
-| 15 | Conclusion | None (text) | — |
+| 14 | **External Validation Roadmap** | `fig_external_validation_roadmap.png` | — |
+| 15 | Risk Assessment | None (table) | — |
+| 16 | Conclusion | None (text) | — |
 | App. A | Detailed Stats | None (table) | — |
 | App. B | DANN Diagnostics | `gridsearch_heatmap.png` | Per-subject loss curves |
 | App. C | Literature Audit | None (table) | — |
-| App. D | LI Analysis | `fig_li_distribution.png` | `fig_li_vs_accuracy.png` |
+| App. D | External Validation | None (table) | Dataset ecosystem details |
+| App. E | LI Analysis | `fig_li_distribution.png` | `fig_li_vs_accuracy.png` |
 
 ---
 

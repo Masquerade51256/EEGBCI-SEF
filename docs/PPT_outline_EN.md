@@ -161,11 +161,27 @@
 - ✅ DANN diagnostics (**abandoned**)
 - 🔄 Subset-20 baseline validation
 - ⏳ **Route B: Clinical adaptive framework (Priority #1)**
-- ⏳ Cross-dataset validation (LowerStroke)
+- ⏳ **External validation — Tier 1 (Public):** Thi25 → Liu25 → Cho21
+- ⏳ External validation — Tier 2 (Collaboration): Man22, Seb20b, Fro17b
 
 ---
 
-## Slide 14: Risk Assessment
+## Slide 14: External Validation Roadmap *(NEW)*
+
+**Context:** Public stroke MI-EEG datasets for external validation are scarce.
+
+| Tier | Dataset | N | Stage | Key Strength | Validation Purpose |
+|:---|:---|:---|:---|:---|:---|
+| **Tier 1a** | **Thi25** | 30 | Post-acute | Rich clinical JSON (NIHSS, lesion, mRS, Oxford) | **Clinical-stratification generalizes?** |
+| **Tier 1b** | **Liu25** | 27 | Recovery (1–12 mo) | Closest to Liu24 in structure (Figshare, BIDS) | Cross-task / cross-timepoint robustness |
+| **Tier 1c** | **Cho21** | 10 | ~11 mo | Designed as cross-subject benchmark | Cross-subject transfer validity |
+| **Tier 2** | Man22 / Seb20b / Fro17b | 74–136 | Various | Large cohorts, rich clinical scales | Collaboration targets for robustness |
+
+**Bottom line:** Even **one Tier-1 validation** (especially Thi25) would make our work unique — no prior Liu24 paper has reported cross-dataset validation.
+
+---
+
+## Slide 15: Risk Assessment
 
 | Risk | Prob. | Impact | Mitigation |
 |:---|:---|:---|:---|
@@ -173,10 +189,11 @@
 | Route B marginal gains | Medium | Contribution weak | Emphasize clinical insight as core contribution |
 | Time shortage | Low | Incomplete comparisons | Subset-20 for fast validation |
 | Reviewer miscompares with Bun25 | Medium | Misunderstanding | Defense slide (Slide 12) prepared |
+| External datasets unavailable | Medium | Cannot claim cross-dataset generalization | Tier-1 are all public; Tier-2 requires early outreach |
 
 ---
 
-## Slide 15: Conclusion & Paper Positioning
+## Slide 16: Conclusion & Paper Positioning
 
 **Core Conclusions:**
 1. Cross-subject LOSO baseline in acute stroke is genuinely low (~50%) — this reflects **real clinical heterogeneity**
@@ -195,7 +212,8 @@
 - **Appendix A:** Detailed statistical tables (Full-50, CleanC, Subset-10, Subset-20)
 - **Appendix B:** DANN training loss curves (diagnostic)
 - **Appendix C:** Literature audit raw records (7 papers with protocol analysis)
-- **Appendix D:** Lateralization Index distribution and correlation plots
+- **Appendix D:** External validation dataset ecosystem (Liu25, Thi25, Cho21, Tier-2 targets)
+- **Appendix E:** Lateralization Index distribution and correlation plots
 
 ---
 

@@ -42,6 +42,20 @@ The current literature on Liu24 is dominated by **classification-score chasing**
 2. **Fair Baseline:** Wan26h uses strict cross-subject adaptation and reports **66.56%** on XWStroke. This is the closest fair benchmark to our protocol.
 3. **Value Proposition:** We do not pursue "higher scores under the same lenient protocol." We pursue **"interpretable gains under the strictest protocol + clinical insights."**
 
+### 2.5 Dataset Ecosystem: Public Resources Beyond Liu24
+
+A systematic dataset survey reveals that **genuinely public datasets** satisfying "stroke patients + MI task + available for external validation" are surprisingly scarce. Only three resources are immediately usable:
+
+| Dataset | N | Stage | Task | Clinical Info | Best For | Access |
+|:---|:---|:---|:---|:---|:---|:---|
+| **Liu25** (Liu et al., 2025) | 27 | Recovery (1–12 mo) | Lower-limb gait MI vs idle | Moderate (affected side, lesion area, stroke type, duration) | Cross-task / cross-timepoint generalization | Public (Figshare, BIDS) |
+| **Thi25** (Thi et al., 2025) | 30 | Post-acute | 4-class MI (all limbs) | **Strong** (NIHSS, lesion hemisphere, lesion location, mRS, Oxford scale) | Clinical-stratification external validation | Public (GitHub) |
+| **Cho21** (Chowdhury & Andreu-Perez, 2021) | 10 | ~11 mo post-stroke | L/R hand grasp attempt | Weak (affected side only) | Cross-subject transfer benchmark | Public (Challenge) |
+
+**Why this matters:** The scarcity of public resources means that even validation on **one external dataset** — especially Thi25 with its rich clinical JSON structure — would immediately distinguish our work. No prior Liu24-based paper has reported cross-dataset validation on any of these resources.
+
+**Tier-2 collaboration targets** (non-public but high value): Man22 (N=136, FMA-rich), Seb20b (lesion stratification + multiple clinical scales), Fro17b (multicenter RCT with FMMA/ARAT). These require proactive data access requests but would significantly strengthen clinical robustness claims.
+
 ---
 
 ## 3. Experimental Results
@@ -175,6 +189,7 @@ To enable fast iteration without artificially reducing heterogeneity, we designe
 | Route B yields only marginal gains | Medium | Paper contribution weak | Emphasize "clinical insight + mechanism analysis" as core contribution |
 | Time insufficient for full experiments | Low | Cannot complete all comparisons | Subset-20 as fast validation set; prioritize core experiments |
 | Reviewer insists on comparing with Bun25's 97.43% | Medium | Misunderstanding of protocol differences | Prepared defense slide (Section 7) |
+| External datasets unavailable | Medium | Cannot claim cross-dataset generalization | Tier-1 datasets (Thi25/Liu25/Cho21) are all publicly accessible — no barrier. Tier-2 requires early outreach. |
 
 ---
 
@@ -227,7 +242,8 @@ To enable fast iteration without artificially reducing heterogeneity, we designe
 | 4 | DANN diagnostic experiments | ✅ Complete | **Abandoned** (negative results) |
 | 5 | Subset-20 baseline validation | 🔄 Pending | Run configs |
 | 6 | **Route B: Clinical adaptive framework** | ⏳ Not started | **Priority #1** |
-| 7 | Cross-dataset validation (LowerStroke) | ⏳ Pending | Confirm data access |
+| 7a | **External validation — Tier 1 (Public)** | ⏳ Pending | Thi25 (strongest clinical info) → Liu25 (closest to Liu24) → Cho21 (cross-subject benchmark) |
+| 7b | **External validation — Tier 2 (Collaboration)** | ⏳ Pending | Man22 (N=136, apply for access), Seb20b (lesion stratification), Fro17b (clinical endpoints) |
 
 ---
 

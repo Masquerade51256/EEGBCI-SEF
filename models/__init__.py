@@ -132,6 +132,13 @@ def register_all_models():
     except ImportError as e:
         print(f"Warning: Could not register ThweCNNLSTM models: {e}")
 
+    # Domain-Adversarial ADFCNN
+    try:
+        from .DANNADFCNN import DANNADFCNN
+        MODELS.register('DANNADFCNN')(DANNADFCNN)
+    except ImportError as e:
+        print(f"Warning: Could not register DANNADFCNN: {e}")
+
 
 # Auto-register on import
 register_all_models()

@@ -1,0 +1,64 @@
+# DANN Domain-Adversarial LOSO: Full 50 Subjects
+#
+# Architecture: DANNADFCNN = ADFCNN backbone + Domain Discriminator + GRL
+# Domain labels: Stroke location category (Subcortical/Brainstem/Cortical/Mixed)
+# Task labels: Affected/Unaffected + Hemisphere Alignment
+#
+# Expected behavior:
+#   - The backbone learns features that are predictive of MI class
+#     BUT indistinguishable across stroke location domains.
+#   - This should improve generalization to held-out subjects with unseen
+#     lesion locations.
+
+experiment:
+  name: "XWStroke_DANN_Full50_LOSO"
+  seed: 42
+  description: "Full 50-subject DANN LOSO with stroke-location domain adaptation"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+  info_path: "configs/dataset/XWStroke_affected_aligned.yaml"
+
+model:
+  type: "DANNADFCNN"
+  args:
+    num_domains: 4
+    domain_hidden_dims: [256, 128]
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "DANNStreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    # DANN-specific
+    domain_grouping: "stroke_location_2class"
+    grl_gamma: 10.0
+    domain_loss_weight: 0.3
+    use_validation_early_stopping: true
+    early_stopping_patience: 20
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

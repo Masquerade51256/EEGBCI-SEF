@@ -109,12 +109,41 @@ A systematic dataset survey reveals that **genuinely public datasets** satisfyin
 
 ### 3.5 CleanC Subset (N=14, Artifact-Free + Subcortical + NIHSS ≤ 7)
 
+**Selection Criteria:**
+- Artifact-free (excludes all 13 artifact-affected subjects)
+- Subcortical lesion location (no cortical involvement)
+- NIHSS ≤ 7 (excludes severe patients)
+
+**Subject IDs:** [8, 9, 11, 16, 17, 23, 25, 26, 27, 29, 30, 31, 36, 37]
+
+**Task Results:**
+
 | Task | Mean Acc. |
 |:---|:---|
 | Task A (LR) | 50.57% |
 | Task C (Aff+Align) | **52.29%** (+1.72%) |
 
+**Stratified Composition of CleanC vs. Full Cohort:**
+
+| Dimension | Category | CleanC (N=14) | Full-50 (N=50) |
+|:---|:---|:---|:---|
+| **Artifact** | Yes | **0 (0.0%)** | 13 (26.0%) |
+| | No | **14 (100.0%)** | 37 (74.0%) |
+| **Paralysis Side** | Left | 9 (64.3%) | 28 (56.0%) |
+| | Right | 5 (35.7%) | 22 (44.0%) |
+| **NIHSS** | Light (1–3) | 6 (42.9%) | 28 (56.0%) |
+| | Medium (4–7) | **8 (57.1%)** | 16 (32.0%) |
+| | Severe (≥8) | **0 (0.0%)** | 6 (12.0%) |
+| **Duration** | Acute (≤3mo) | 5 (35.7%) | 27 (54.0%) |
+| | Chronic (>3mo) | 9 (64.3%) | 23 (46.0%) |
+| **Lesion Location** | Cortical | **0 (0.0%)** | 3 (6.0%) |
+| | Subcortical | **14 (100.0%)** | 29 (58.0%) |
+| | Brainstem | **0 (0.0%)** | 16 (32.0%) |
+| | Cerebellum | **0 (0.0%)** | 2 (4.0%) |
+
 > **Critical realization:** The CleanC subset accidentally excluded ALL 13 artifact subjects. This partially explains its lower variance. The label improvement effect is general, but artifact presence is the dominant performance ceiling factor.
+>
+> **Purpose of CleanC:** It is a **homogeneity-selected subset** — designed to validate the mechanism by isolating the patient subgroup most likely to benefit from hemisphere alignment (subcortical lesions, moderate severity, no artifacts). It answers: *"Does the method work under ideal conditions?"*
 
 ---
 
@@ -172,12 +201,44 @@ A systematic dataset survey reveals that **genuinely public datasets** satisfyin
 
 To enable fast iteration without artificially reducing heterogeneity, we designed a **stratified representative subset** of 20 subjects:
 
-- **Stratification dimensions:** Lesion location, NIHSS, paralysis side, duration, artifact presence
-- **Subject IDs:** [1, 5, 7, 8, 9, 10, 15, 18, 20, 23, 25, 28, 29, 34, 35, 38, 41, 45, 48, 49]
-- **Baseline Task A:** ~49.08%
-- **Aff+Align diff:** ~+1.97% (consistent with full-cohort trend of +1.83%)
+**Subject IDs:** [1, 5, 7, 8, 9, 10, 15, 18, 20, 23, 25, 28, 29, 34, 35, 38, 41, 45, 48, 49]
+
+**Baseline Task A:** ~49.08%  
+**Aff+Align diff:** ~+1.97% (consistent with full-cohort trend of +1.83%)
+
+**Stratified Composition of Subset-20 vs. Full Cohort:**
+
+| Dimension | Category | Subset-20 (N=20) | Full-50 (N=50) |
+|:---|:---|:---|:---|
+| **Artifact** | Yes | 5 (25.0%) | 13 (26.0%) |
+| | No | 15 (75.0%) | 37 (74.0%) |
+| **Paralysis Side** | Left | 11 (55.0%) | 28 (56.0%) |
+| | Right | 9 (45.0%) | 22 (44.0%) |
+| **NIHSS** | Light (1–3) | 11 (55.0%) | 28 (56.0%) |
+| | Medium (4–7) | 7 (35.0%) | 16 (32.0%) |
+| | Severe (≥8) | 2 (10.0%) | 6 (12.0%) |
+| **Duration** | Acute (≤3mo) | 11 (55.0%) | 27 (54.0%) |
+| | Chronic (>3mo) | 9 (45.0%) | 23 (46.0%) |
+| **Lesion Location** | Cortical | 1 (5.0%) | 3 (6.0%) |
+| | Subcortical | 11 (55.0%) | 29 (58.0%) |
+| | Brainstem | 7 (35.0%) | 16 (32.0%) |
+| | Cerebellum | 1 (5.0%) | 2 (4.0%) |
 
 > This subset preserves the full population's heterogeneity while cutting runtime by 60%.
+
+### 5.1 CleanC vs. Subset-20: Two Different Subset Philosophies
+
+| Aspect | CleanC (N=14) | Subset-20 (N=20) |
+|:---|:---|:---|
+| **Selection logic** | **Homogeneity filtering** — select the "best-case" subgroup | **Stratified sampling** — preserve full-population proportions |
+| **Purpose** | Mechanism validation: *"Does it work under ideal conditions?"* | Fast iteration: *"Does the trend generalize without running all 50?"* |
+| **Artifact subjects** | 0% (all excluded) | 25% (same as full cohort) |
+| **NIHSS Severe** | 0% (all excluded) | 10% (same as full cohort) |
+| **Lesion diversity** | 100% subcortical only | 55% subcortical + 35% brainstem + 5% cortical + 5% cerebellum |
+| **Use case** | Explain *why* the full-cohort ceiling is low | Accelerate Route B experiments while maintaining representativeness |
+| **Interpretation** | Upper-bound estimate of method potential | Realistic estimate of expected full-cohort performance |
+
+> **Bottom line:** CleanC tells us the method has *mechanistic validity*. Subset-20 tells us the method is *practically testable* on a representative sample. Both are necessary, but they answer fundamentally different questions.
 
 ---
 

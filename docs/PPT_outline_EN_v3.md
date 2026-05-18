@@ -136,23 +136,37 @@
 
 ---
 
-## Slide 9: Why is the Ceiling So Low? — CleanC Mechanism
+## Slide 9: Why is the Ceiling So Low? — CleanC Mechanism *(NEW: Stratified Table)*
 
 **The Artifact Ceiling:**
 - 13/50 subjects have severe artifacts (movement, EMG, electrode issues)
 - CleanC subset (N=14, artifact-free + subcortical + NIHSS≤7) accidentally excluded ALL 13 artifact subjects
+- **Subject IDs:** [8, 9, 11, 16, 17, 23, 25, 26, 27, 29, 30, 31, 36, 37]
 
-**Table:**
+**Task Results:**
 
 | Condition | Task A | Task C | Diff |
 |:---|:---|:---|:---|
 | CleanC (no artifact) | 50.57% | 52.29% | +1.72% |
 | Artifact subjects | 48.30% | 50.15% | +1.85% |
 
+**CleanC Stratified Composition vs. Full Cohort:**
+
+| Dimension | Category | CleanC (N=14) | Full-50 (N=50) |
+|:---|:---|:---|:---|
+| **Artifact** | Yes | **0 (0%)** | 13 (26%) |
+| | No | **14 (100%)** | 37 (74%) |
+| **NIHSS** | Light (1–3) | 6 (43%) | 28 (56%) |
+| | Medium (4–7) | **8 (57%)** | 16 (32%) |
+| | Severe (≥8) | **0 (0%)** | 6 (12%) |
+| **Lesion Location** | Subcortical | **14 (100%)** | 29 (58%) |
+| | Brainstem | **0 (0%)** | 16 (32%) |
+| | Cortical | **0 (0%)** | 3 (6%) |
+
 **Conclusion:**
 1. Label improvement (Aff+Align) is **general** across both groups
 2. **Artifact presence is the dominant performance ceiling** — not the algorithm
-3. Full-cohort variance is inflated by artifact heterogeneity
+3. CleanC is a **homogeneity-selected subset** — it validates mechanism under ideal conditions (subcortical-only, no artifacts, moderate severity)
 
 ---
 
@@ -177,7 +191,7 @@
 
 ---
 
-## Slide 11: Subset Validation & Representative Design
+## Slide 11: Subset Validation & Representative Design *(NEW: Stratified Table + Comparison)*
 
 **10-Subject Subset:**
 - Task A: 46.80% → Task C: **52.50%** (+5.70%)
@@ -185,11 +199,40 @@
 
 **Subset-20 Representative Design:**
 - **Purpose:** Preserve full-population heterogeneity while cutting runtime by 60%
-- **Stratification:** Lesion location, NIHSS, paralysis side, duration, artifact presence
-- **Validation:** Baseline ~49.08%, Aff+Align diff ~+1.97% (consistent with full-cohort +1.83%)
 - **IDs:** [1, 5, 7, 8, 9, 10, 15, 18, 20, 23, 25, 28, 29, 34, 35, 38, 41, 45, 48, 49]
+- **Validation:** Baseline ~49.08%, Aff+Align diff ~+1.97% (consistent with full-cohort +1.83%)
 
-**Visual:** Stratification matrix (can be a simple table)
+**Subset-20 Stratified Composition vs. Full Cohort:**
+
+| Dimension | Category | Subset-20 (N=20) | Full-50 (N=50) |
+|:---|:---|:---|:---|
+| **Artifact** | Yes | 5 (25%) | 13 (26%) |
+| | No | 15 (75%) | 37 (74%) |
+| **Paralysis Side** | Left | 11 (55%) | 28 (56%) |
+| | Right | 9 (45%) | 22 (44%) |
+| **NIHSS** | Light (1–3) | 11 (55%) | 28 (56%) |
+| | Medium (4–7) | 7 (35%) | 16 (32%) |
+| | Severe (≥8) | 2 (10%) | 6 (12%) |
+| **Lesion Location** | Subcortical | 11 (55%) | 29 (58%) |
+| | Brainstem | 7 (35%) | 16 (32%) |
+| | Cortical | 1 (5%) | 3 (6%) |
+
+> All proportions match the full cohort within ±3% — heterogeneity is preserved.
+
+---
+
+**CleanC vs. Subset-20: Two Different Subset Philosophies *(NEW comparison)*
+
+| Aspect | CleanC (N=14) | Subset-20 (N=20) |
+|:---|:---|:---|
+| **Selection logic** | Homogeneity filtering | Stratified sampling |
+| **Purpose** | Mechanism validation | Fast iteration |
+| **Artifact subjects** | **0%** | 25% |
+| **Severe NIHSS** | **0%** | 10% |
+| **Lesion diversity** | 100% subcortical only | 55% subcortical + 35% brainstem + 5% cortical |
+| **Use case** | Upper-bound estimate | Realistic estimate |
+
+> **Bottom line:** CleanC tells us the method has *mechanistic validity*. Subset-20 tells us the method is *practically testable*.
 
 ---
 

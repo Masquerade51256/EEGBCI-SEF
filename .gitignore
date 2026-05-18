@@ -16,20 +16,38 @@ src/checkpoints/*
 *.pth
 *.ckpt
 
+
 # Experiment results (should use experiment tracking tools instead)
-# Ignore all experiment outputs but keep Python scripts and docs
-experiments/*
-!experiments/*.json
-!experiments/*.log
+# 
+# CRITICAL FIX: Do NOT ignore experiment directories themselves.
+# Git cannot re-include files inside an excluded directory, so
+# `experiments/*` would make `!experiments/**/results/*` useless.
+# Instead, we only ignore specific heavy artifacts inside experiments.
+#
+# This ensures logs, JSON results, configs, and scripts are tracked.
+experiments/**/checkpoints/
+experiments/**/*.pt
+experiments/**/*.pth
+experiments/**/*.ckpt
+experiments/**/vis/
+experiments/**/__pycache__/
+experiments/**/*.png
+experiments/**/*.jpg
+experiments/**/*.jpeg
+experiments/**/*.gif
+
+# Keep experiment-level logs and scripts at root
+!experiments/**/*.log
+!experiments/**/*.json
 !experiments/*.py
 !experiments/*.md
-experiments/__pycache__/
 
 # Legacy experiment outputs
 src/results/*
 src/vis/*
 training.log
 *.log
+!experiments/**/*.log
 
 # IDE
 .vscode/

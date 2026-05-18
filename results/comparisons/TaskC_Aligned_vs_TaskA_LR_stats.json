@@ -1,0 +1,52 @@
+{
+  "comparison": "TaskC_Aligned vs TaskA_LR",
+  "csv_source": "results\\comparisons_aligned\\aligned_vs_lr_comparison.csv",
+  "descriptive": {
+    "n": 50,
+    "task_a_mean": 0.4963,
+    "task_a_std": 0.05827284521795653,
+    "task_b_mean": 0.5146000000000001,
+    "task_b_std": 0.05280731241881146,
+    "diff_mean": 0.018299999999999997,
+    "diff_std": 0.06769989298517451,
+    "diff_median": 0.017500000000000016,
+    "diff_min": -0.125,
+    "diff_max": 0.21999999999999997,
+    "improved_count": 28,
+    "worsened_count": 22,
+    "unchanged_count": 0
+  },
+  "paired_t_test": {
+    "n": 50,
+    "mean_diff": 0.018299999999999997,
+    "std_diff": 0.06769989298517451,
+    "se": 0.009574210683084094,
+    "df": 49,
+    "t_statistic": 1.9113847194038458,
+    "p_value": 0.06181324743037001,
+    "ci_95_low": -0.0009400966785078103,
+    "ci_95_high": 0.0375400966785078
+  },
+  "cohens_d": {
+    "value": 0.2703106193093612,
+    "abs_value": 0.2703106193093612,
+    "description": "small"
+  },
+  "wilcoxon_signed_rank": {
+    "statistic": 472.5,
+    "p_value": 0.11393994202132163
+  },
+  "proportion_test": {
+    "improved_count": 28,
+    "total": 50,
+    "proportion": 0.56,
+    "p_value_greater_than_half": 0.23994383084916393,
+    "ci_95_approx_low": 0.42140707088743673,
+    "ci_95_approx_high": 0.6985929291125634
+  },
+  "permutation_test": {
+    "observed_mean_diff": 0.018299999999999997,
+    "n_permutations": 10000,
+    "p_value_two_tailed": 0.0654
+  }
+}

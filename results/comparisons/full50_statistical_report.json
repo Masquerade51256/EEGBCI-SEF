@@ -1,0 +1,51 @@
+{
+  "descriptive": {
+    "n": 50,
+    "task_a_mean": 49.63,
+    "task_a_std": 5.827284521795653,
+    "task_b_mean": 50.29,
+    "task_b_std": 4.130634679700307,
+    "diff_mean": 0.66,
+    "diff_std": 7.387551581366248,
+    "diff_median": 0.75,
+    "diff_min": -13.0,
+    "diff_max": 25.5,
+    "improved_count": 26,
+    "worsened_count": 23,
+    "unchanged_count": 1
+  },
+  "paired_t_test": {
+    "n": 50,
+    "mean_diff": -0.66,
+    "std_diff": 7.387551581366248,
+    "se": 1.0447575639098952,
+    "df": 49,
+    "t_statistic": -0.631725505322038,
+    "p_value": 0.5305026276903745,
+    "ci_95_low": -2.759518926478602,
+    "ci_95_high": 1.439518926478602
+  },
+  "cohens_d": {
+    "value": 0.0893394777323423,
+    "abs_value": 0.0893394777323423,
+    "description": "negligible"
+  },
+  "wilcoxon_signed_rank": {
+    "statistic": 581.0,
+    "p_value": 0.753934158851459,
+    "n_used": 49
+  },
+  "proportion_test": {
+    "improved_count": 26,
+    "total": 50,
+    "proportion": 0.52,
+    "p_value_greater_than_half": 0.4438624136703915,
+    "ci_95_approx_low": 0.3814070708874367,
+    "ci_95_approx_high": 0.6585929291125634
+  },
+  "permutation_test": {
+    "observed_mean_diff": 0.66,
+    "n_permutations": 10000,
+    "p_value_two_tailed": 0.5373
+  }
+}

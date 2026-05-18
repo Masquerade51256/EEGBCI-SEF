@@ -1,0 +1,61 @@
+dataset:
+  name: "XWStroke"
+  type: "XWStrokeDataset"
+  data_dir: "src/datasets/21679035/sourcedata"
+  
+  # 分层代表性子集（N=20）—— Aff+Align 版本
+  # 与标准版使用同一被试列表，仅标签映射不同
+  subjects: [1, 5, 7, 8, 9, 10, 15, 18, 20, 23, 25, 28, 29, 34, 35, 38, 41, 45, 48, 49]
+  
+  # 健患侧标签映射（Task C）
+  label_mapping: "affected"
+  
+  # 半球空间对齐
+  hemisphere_alignment: true
+  
+  # BIDS参与者信息
+  participants_tsv: "src/datasets/21679035/participants.tsv"
+  
+  # 完整预处理参数（与标准配置一致）
+  preprocessing:
+    windowing:
+      window_length_sec: 2.0
+      window_stride_sec: 0.5
+
+    resample:
+      target_sr: 250
+
+    channel_selection:
+      channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29]
+
+    filter_bank:
+      filter_banks:
+        - [4, 40]
+      normalize: true
+
+    normalization:
+      method: "zscore"
+      axis: -1
+
+    augmentation:
+      - method: "add_noise"
+        snr_db: 20
+        probability: 0.3
+      - method: "channel_dropout"
+        dropout_rate: 0.1
+        probability: 0.3
+      - method: "time_warp"
+        sigma: 0.2
+        probability: 0.3
+
+  pipelines:
+    global_pipeline:
+      - name: "resample"
+      - name: "channel_selection"
+      - name: "filter_bank"
+    sample_pipeline:
+      - name: "temporal_standardization"
+    augmentation_pipeline:
+      - "gaussian_noise"
+      - "channel_dropout"
+      - "time_warp"

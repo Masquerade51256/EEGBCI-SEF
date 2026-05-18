@@ -1,0 +1,46 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_subset20_representative_affected_aligned.yaml
+experiment:
+  description: DANN diagnostic on representative subset with full history logging
+  name: XWStroke_Subset20_DANN_Diagnostic
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args:
+    domain_hidden_dims:
+    - 256
+    - 128
+    input_length: 500
+    num_bands: 1
+    num_channels: 30
+  type: DANNADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    domain_grouping: ParalysisSide
+    domain_loss_weight: 0.05
+    early_stopping_patience: 20
+    gradient_accumulation_steps: 1
+    grl_gamma: 10.0
+    mixed_precision: true
+    save_training_history: true
+    subject_buffer_size: 19
+    use_validation_early_stopping: true
+  type: DANNStreamingLOSOTrainer
+training:
+  batch_size: 512
+  device: cuda
+  epochs: 100
+  num_workers: 4
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: true
+  prefetch_factor: 2
+  save_checkpoints: false
+  use_fp16_compression: true

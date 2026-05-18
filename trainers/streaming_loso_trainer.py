@@ -306,6 +306,29 @@ class StreamingLOSOTrainer(BaseTrainer):
             }
         }
         
+        # Optionally save training histories for diagnostic analysis
+        save_hist = self.config.get("trainer.args.save_training_history", False)
+        if save_hist and all_histories:
+            try:
+                import json
+                hist_path = self.paths.logs_dir / "training_histories.json"
+                # Convert numpy types to Python native types
+                def _convert(obj):
+                    if isinstance(obj, np.ndarray):
+                        return obj.tolist()
+                    elif hasattr(obj, "item"):
+                        return obj.item()
+                    elif isinstance(obj, dict):
+                        return {k: _convert(v) for k, v in obj.items()}
+                    elif isinstance(obj, list):
+                        return [_convert(v) for v in obj]
+                    return obj
+                with open(hist_path, "w", encoding="utf-8") as f:
+                    json.dump(_convert(all_histories), f, indent=2)
+                self._log(f"Training histories saved to: {hist_path}")
+            except Exception as e:
+                self._log(f"Warning: Failed to save training histories: {e}", level="warning")
+        
         self._log("\n" + "=" * 60)
         self._log("Streaming LOSO Training Complete")
         self._log(f"Mean Accuracy: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")

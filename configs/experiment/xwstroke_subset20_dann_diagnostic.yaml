@@ -1,0 +1,65 @@
+# DANN Diagnostic Experiment on Subset-20 Representative Cohort
+# Purpose: Diagnose DANN failure with detailed epoch-level logging
+# Key features:
+#   - Saves training_histories.json with task_loss / domain_loss / grl_lambda per epoch
+#   - Uses Subset-20 for rapid turnaround (~3-4 hours)
+#   - Adjustable domain_grouping and domain_loss_weight via CLI override
+
+experiment:
+  name: "XWStroke_Subset20_DANN_Diagnostic"
+  seed: 42
+  description: "DANN diagnostic on representative subset with full history logging"
+
+data:
+  dataset: "XWStroke"
+  info_path: "configs/dataset/XWStroke_subset20_representative_affected_aligned.yaml"
+
+model:
+  type: "DANNADFCNN"
+  args:
+    num_channels: 30
+    num_bands: 1
+    input_length: 500
+    domain_hidden_dims: [256, 128]
+    # num_domains will be set automatically by domain_manager
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: false
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "DANNStreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 19
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    
+    # DANN-specific hyperparameters (adjustable)
+    domain_grouping: "ParalysisSide"      # Options: ParalysisSide, stroke_location_2class, stroke_location_4class, subject_id
+    grl_gamma: 10.0
+    domain_loss_weight: 0.05              # Start very low; increase if task loss remains stable
+    
+    # Early stopping
+    use_validation_early_stopping: true
+    early_stopping_patience: 20
+    
+    # CRITICAL: Enable history saving for diagnostic analysis
+    save_training_history: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

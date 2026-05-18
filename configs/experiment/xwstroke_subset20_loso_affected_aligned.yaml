@@ -1,0 +1,49 @@
+# Subset-20 Representative LOSO: Affected/Unaffected + Hemisphere Alignment (Task C)
+# Purpose: Rapid validation of Aff+Align on representative sub-cohort
+# Sampling: Same 20 subjects as baseline, only label mapping differs
+# Expected behavior: Aff+Align improvement should be ~+1.5% to +2.5% (consistent with full N=50)
+
+experiment:
+  name: "XWStroke_Subset20_LOSO_Affected_Aligned"
+  seed: 42
+  description: "Subset-20 representative LOSO with affected/unaffected labels + hemisphere alignment"
+
+data:
+  dataset: "XWStroke"
+  info_path: "configs/dataset/XWStroke_subset20_representative_affected_aligned.yaml"
+
+model:
+  type: "ADFCNN"
+  args:
+    num_channels: 30
+    num_bands: 1
+    input_length: 500
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 512
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+  
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 19
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

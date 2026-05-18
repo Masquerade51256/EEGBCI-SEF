@@ -1,0 +1,44 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_singleband_sasica_paper.yaml
+  subjects:
+  - 1
+experiment:
+  description: XWStroke with paper-faithful SASICA and ThweCNNLSTM (500Hz, full 4s
+    trial)
+  name: Thwe2026_SASICA_CNNLSTM_Paper
+  seed: 42
+logging:
+  console: true
+  level: INFO
+  tensorboard: false
+model:
+  args: {}
+  type: ThweCNNLSTM
+paths:
+  checkpoint_dir: ./src/checkpoints
+  data_dir: ./src/datasets
+  root_dir: ./experiments
+trainer:
+  args: {}
+  type: SupervisedTrainer
+training:
+  batch_size: 16
+  deterministic: false
+  device: cuda
+  early_stopping:
+    enabled: false
+    min_delta: 0.001
+    patience: 30
+  epochs: 2
+  k_folds: 1
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.0
+  scheduler:
+    type: none
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: png

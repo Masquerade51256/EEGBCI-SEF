@@ -1,0 +1,18 @@
+{
+  "subjects": [
+    {
+      "subject_id": 1,
+      "avg_val_acc": 0.675,
+      "std_val_acc": 0.1274754878398196,
+      "fold_accuracies": [
+        0.875,
+        0.75,
+        0.5,
+        0.625,
+        0.625
+      ]
+    }
+  ],
+  "overall_mean": 0.675,
+  "overall_std": 0.0
+}

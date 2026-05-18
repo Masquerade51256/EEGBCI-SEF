@@ -1,0 +1,43 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_singleband_emar.yaml
+  subjects:
+  - 1
+experiment:
+  description: XWStroke single-band with EMAR and ThweCNNLSTM
+  name: Thwe2026_EMAR_CNNLSTM
+  seed: 42
+logging:
+  console: true
+  level: INFO
+  tensorboard: false
+model:
+  args: {}
+  type: ThweCNN
+paths:
+  checkpoint_dir: ./src/checkpoints
+  data_dir: ./src/datasets
+  root_dir: ./experiments
+trainer:
+  args: {}
+  type: SupervisedTrainer
+training:
+  batch_size: 32
+  deterministic: false
+  device: cuda
+  early_stopping:
+    enabled: false
+    min_delta: 0.001
+    patience: 30
+  epochs: 1
+  k_folds: 5
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  scheduler:
+    type: cosine
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: png

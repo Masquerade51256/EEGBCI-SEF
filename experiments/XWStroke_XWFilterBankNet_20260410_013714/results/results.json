@@ -1,0 +1,126 @@
+{
+  "subjects": [
+    {
+      "subject_id": 1,
+      "avg_val_acc": 0.7336,
+      "std_val_acc": 0.0323,
+      "fold_accuracies": [
+        0.7586,
+        0.6586,
+        0.5836,
+        0.8836,
+        0.7836
+      ]
+    },
+    {
+      "subject_id": 2,
+      "avg_val_acc": 0.55,
+      "std_val_acc": 0.0501,
+      "fold_accuracies": [
+        0.54,
+        0.59,
+        0.59,
+        0.49,
+        0.54
+      ]
+    },
+    {
+      "subject_id": 3,
+      "avg_val_acc": 0.8018,
+      "std_val_acc": 0.0909,
+      "fold_accuracies": [
+        0.7418,
+        0.7418,
+        0.99,
+        0.6918,
+        0.8418
+      ]
+    },
+    {
+      "subject_id": 6,
+      "avg_val_acc": 0.8854,
+      "std_val_acc": 0.0378,
+      "fold_accuracies": [
+        0.9354,
+        0.8604,
+        0.9604,
+        0.7854,
+        0.8854
+      ]
+    },
+    {
+      "subject_id": 7,
+      "avg_val_acc": 0.7532,
+      "std_val_acc": 0.0327,
+      "fold_accuracies": [
+        0.8282,
+        0.7282,
+        0.7032,
+        0.8782,
+        0.6282
+      ]
+    },
+    {
+      "subject_id": 11,
+      "avg_val_acc": 0.8112,
+      "std_val_acc": 0.0755,
+      "fold_accuracies": [
+        0.8312,
+        0.7812,
+        0.7812,
+        0.8312,
+        0.8312
+      ]
+    },
+    {
+      "subject_id": 19,
+      "avg_val_acc": 0.3,
+      "std_val_acc": 0.0479,
+      "fold_accuracies": [
+        0.3,
+        0.366,
+        0.3,
+        0.3,
+        0.316
+      ]
+    },
+    {
+      "subject_id": 29,
+      "avg_val_acc": 0.715,
+      "std_val_acc": 0.079,
+      "fold_accuracies": [
+        0.64,
+        0.665,
+        0.815,
+        0.715,
+        0.74
+      ]
+    },
+    {
+      "subject_id": 40,
+      "avg_val_acc": 0.7172,
+      "std_val_acc": 0.083,
+      "fold_accuracies": [
+        0.7822,
+        0.6322,
+        0.6572,
+        0.7572,
+        0.7572
+      ]
+    },
+    {
+      "subject_id": 45,
+      "avg_val_acc": 0.99,
+      "std_val_acc": 0.0306,
+      "fold_accuracies": [
+        0.99,
+        0.99,
+        0.99,
+        0.99,
+        0.99
+      ]
+    }
+  ],
+  "overall_mean": 0.7257,
+  "overall_std": 0.1793
+}

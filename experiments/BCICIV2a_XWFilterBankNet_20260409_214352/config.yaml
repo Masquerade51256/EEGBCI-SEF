@@ -1,0 +1,48 @@
+data:
+  dataset: BCICIV2a
+  info_path: configs/dataset/BCICIV2a_multiband.yaml
+  subjects: all
+experiment:
+  description: BCICIV2a dataset classification using XWFilterBankNet with multi-band
+    filter bank
+  name: BCICIV2a_XWFilterBankNet
+  seed: 42
+logging:
+  console: true
+  level: INFO
+  tensorboard: false
+model:
+  args:
+    band_channels: 32
+    classifier_hidden: 0
+    dropout: 0.3
+    temporal_kernel: 64
+    use_attention: true
+  type: XWFilterBankNet
+paths:
+  checkpoint_dir: ./src/checkpoints
+  data_dir: ./src/datasets
+  root_dir: ./experiments
+trainer:
+  args: {}
+  type: SupervisedTrainer
+training:
+  batch_size: 64
+  deterministic: false
+  device: cuda
+  early_stopping:
+    enabled: false
+    min_delta: 0.001
+    patience: 30
+  epochs: 300
+  k_folds: 5
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.5
+  scheduler:
+    type: cosine
+visualization:
+  plot_history: true
+  plot_subject_comparison: true
+  save_format: png

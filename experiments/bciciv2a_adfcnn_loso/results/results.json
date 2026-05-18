@@ -1,0 +1,103 @@
+{
+  "subjects": [
+    {
+      "test_subject_id": 1,
+      "test_acc": 0.6875,
+      "test_loss": 0.7686384916305542,
+      "best_acc": 0.6944444444444444,
+      "best_epoch": 95,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 2,
+      "test_acc": 0.3524305555555556,
+      "test_loss": 1.760798043674893,
+      "best_acc": 0.3732638888888889,
+      "best_epoch": 99,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 3,
+      "test_acc": 0.6423611111111112,
+      "test_loss": 0.8730956580903795,
+      "best_acc": 0.7048611111111112,
+      "best_epoch": 12,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 4,
+      "test_acc": 0.390625,
+      "test_loss": 1.5325527588526409,
+      "best_acc": 0.4184027777777778,
+      "best_epoch": 80,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 5,
+      "test_acc": 0.3229166666666667,
+      "test_loss": 3.2968041367001004,
+      "best_acc": 0.3298611111111111,
+      "best_epoch": 140,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 6,
+      "test_acc": 0.3732638888888889,
+      "test_loss": 1.9346807665295072,
+      "best_acc": 0.4201388888888889,
+      "best_epoch": 69,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 7,
+      "test_acc": 0.4427083333333333,
+      "test_loss": 1.299841324488322,
+      "best_acc": 0.4791666666666667,
+      "best_epoch": 96,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 8,
+      "test_acc": 0.6822916666666666,
+      "test_loss": 0.7983560164769491,
+      "best_acc": 0.7048611111111112,
+      "best_epoch": 100,
+      "train_samples": 4608,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 9,
+      "test_acc": 0.6006944444444444,
+      "test_loss": 1.2005724509557087,
+      "best_acc": 0.6440972222222222,
+      "best_epoch": 41,
+      "train_samples": 4608,
+      "test_samples": 576
+    }
+  ],
+  "overall_mean": 0.49942129629629634,
+  "overall_std": 0.142685380464692,
+  "overall_min": 0.3229166666666667,
+  "overall_max": 0.6875,
+  "loso_config": {
+    "num_subjects": 9,
+    "subject_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  }
+}

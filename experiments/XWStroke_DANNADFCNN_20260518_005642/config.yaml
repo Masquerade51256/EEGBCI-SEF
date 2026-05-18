@@ -1,0 +1,56 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_subset15_affected_aligned.yaml
+  subjects:
+  - 5
+  - 7
+  - 8
+  - 9
+  - 10
+  - 12
+  - 15
+  - 16
+  - 19
+  - 30
+  - 31
+  - 32
+  - 40
+  - 43
+  - 49
+experiment:
+  description: Subset-15 DANN LOSO for rapid validation
+  name: XWStroke_DANN_Subset15_LOSO
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args:
+    domain_hidden_dims:
+    - 256
+    - 128
+    num_domains: 4
+  type: DANNADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    domain_grouping: stroke_location_4class
+    domain_loss_weight: 1.0
+    gradient_accumulation_steps: 1
+    grl_gamma: 10.0
+    mixed_precision: false
+    subject_buffer_size: 14
+  type: DANNStreamingLOSOTrainer
+training:
+  batch_size: 64
+  device: cuda
+  epochs: 100
+  num_workers: 0
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: false
+  save_checkpoints: true
+  use_fp16_compression: true

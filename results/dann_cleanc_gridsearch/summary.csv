@@ -1,0 +1,9 @@
+config,domain_loss_weight,grl_gamma,status,mean_acc,std_acc,elapsed_min
+DANN_CleanC_dlw0.1_g5,0.1,5,failed,,,0.1211217204729716
+DANN_CleanC_dlw0.1_g10,0.1,10,failed,,,0.2769829750061035
+DANN_CleanC_dlw0.3_g5,0.3,5,success,0.5014285714285714,0.02255379057692422,13.675944185256958
+DANN_CleanC_dlw0.3_g10,0.3,10,failed,,,0.2720154325167338
+DANN_CleanC_dlw0.5_g5,0.5,5,failed,,,11.194779968261718
+DANN_CleanC_dlw0.5_g10,0.5,10,failed,,,0.03015373150507609
+DANN_CleanC_dlw1.0_g5,1.0,5,success,0.4875,0.02690923898695656,11.375637177626292
+DANN_CleanC_dlw1.0_g10,1.0,10,failed,,,0.04101739724477132

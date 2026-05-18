@@ -1,0 +1,44 @@
+data:
+  dataset: BCICIV2a
+  info_path: configs/dataset/BCICIV2a.yaml
+  subjects:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+experiment:
+  description: BCICIV2a 9-subject Streaming LOSO with ADFCNN (4-class MI)
+  name: BCICIV2a_ADFCNN_StreamingLOSO
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args: {}
+  type: ADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    subject_buffer_size: 8
+  type: StreamingLOSOTrainer
+training:
+  batch_size: 256
+  device: cuda
+  epochs: 100
+  num_workers: 4
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: true
+  prefetch_factor: 2
+  save_checkpoints: true
+  use_fp16_compression: true

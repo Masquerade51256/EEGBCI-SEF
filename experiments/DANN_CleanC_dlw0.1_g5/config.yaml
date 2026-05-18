@@ -1,0 +1,57 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_affected_aligned.yaml
+  subjects:
+  - 8
+  - 9
+  - 11
+  - 16
+  - 17
+  - 23
+  - 25
+  - 26
+  - 27
+  - 29
+  - 30
+  - 31
+  - 36
+  - 37
+experiment:
+  description: 'Clean-C DANN: dlw=0.1, gamma=5'
+  name: DANN_CleanC_dlw0.1_g5
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args:
+    domain_hidden_dims:
+    - 256
+    - 128
+    num_domains: 2
+  type: DANNADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    domain_grouping: nihss_3class
+    domain_loss_weight: 0.1
+    early_stopping_patience: 15
+    gradient_accumulation_steps: 1
+    grl_gamma: 5
+    mixed_precision: false
+    subject_buffer_size: 13
+    use_validation_early_stopping: true
+  type: DANNStreamingLOSOTrainer
+training:
+  batch_size: 512
+  device: cuda
+  epochs: 50
+  num_workers: 0
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: false
+  save_checkpoints: false
+  use_fp16_compression: true

@@ -20,7 +20,7 @@ model:
 
 training:
   device: "cuda"
-  epochs: 100
+  epochs: 50
   batch_size: 512
   save_checkpoints: true
   use_fp16_compression: true

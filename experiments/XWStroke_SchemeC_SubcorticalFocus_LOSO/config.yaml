@@ -1,0 +1,53 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_affected_aligned.yaml
+  subjects:
+  - 8
+  - 9
+  - 11
+  - 16
+  - 17
+  - 23
+  - 24
+  - 25
+  - 26
+  - 27
+  - 28
+  - 29
+  - 30
+  - 31
+  - 36
+  - 37
+  - 49
+experiment:
+  description: LOSO on 17-subject subcortical-focused cohort (primary recommended
+    scheme)
+  name: XWStroke_SchemeC_SubcorticalFocus_LOSO
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args: {}
+  type: ADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    subject_buffer_size: 49
+  type: StreamingLOSOTrainer
+training:
+  batch_size: 512
+  device: cuda
+  epochs: 50
+  num_workers: 4
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: true
+  prefetch_factor: 2
+  save_checkpoints: true
+  use_fp16_compression: true

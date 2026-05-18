@@ -1,0 +1,95 @@
+{
+  "subjects": [
+    {
+      "test_subject_id": 1,
+      "test_acc": 0.6145833333333334,
+      "test_loss": 0.8504774040646024,
+      "best_acc": 0.6510416666666666,
+      "best_epoch": 22,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 2,
+      "test_acc": 0.34375,
+      "test_loss": 1.6546893119812012,
+      "best_acc": 0.3663194444444444,
+      "best_epoch": 17,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 3,
+      "test_acc": 0.6163194444444444,
+      "test_loss": 0.9117704828580221,
+      "best_acc": 0.7239583333333334,
+      "best_epoch": 26,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 4,
+      "test_acc": 0.359375,
+      "test_loss": 1.5728712876637776,
+      "best_acc": 0.4427083333333333,
+      "best_epoch": 8,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 5,
+      "test_acc": 0.2795138888888889,
+      "test_loss": 2.942759010526869,
+      "best_acc": 0.3142361111111111,
+      "best_epoch": 17,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 6,
+      "test_acc": 0.3420138888888889,
+      "test_loss": 1.9297986295488145,
+      "best_acc": 0.375,
+      "best_epoch": 25,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 7,
+      "test_acc": 0.390625,
+      "test_loss": 1.4280553393893771,
+      "best_acc": 0.4253472222222222,
+      "best_epoch": 20,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 8,
+      "test_acc": 0.6545138888888888,
+      "test_loss": 0.8600514796045091,
+      "best_acc": 0.6944444444444444,
+      "best_epoch": 29,
+      "train_subjects": 8,
+      "test_samples": 576
+    },
+    {
+      "test_subject_id": 9,
+      "test_acc": 0.6302083333333334,
+      "test_loss": 1.116935173670451,
+      "best_acc": 0.6527777777777778,
+      "best_epoch": 28,
+      "train_subjects": 8,
+      "test_samples": 576
+    }
+  ],
+  "overall_mean": 0.4701003086419753,
+  "overall_std": 0.14497833620534165,
+  "overall_min": 0.2795138888888889,
+  "overall_max": 0.6545138888888888,
+  "streaming_config": {
+    "num_subjects": 9,
+    "gradient_accumulation_steps": 1,
+    "subject_buffer_size": 8,
+    "mixed_precision": true
+  }
+}

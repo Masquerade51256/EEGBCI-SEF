@@ -1,0 +1,94 @@
+data:
+  dataset: XWStroke
+  info_path: configs/dataset/XWStroke_affected_aligned.yaml
+  subjects:
+  - 1
+  - 2
+  - 3
+  - 4
+  - 5
+  - 6
+  - 7
+  - 8
+  - 9
+  - 10
+  - 11
+  - 12
+  - 13
+  - 14
+  - 15
+  - 16
+  - 17
+  - 18
+  - 19
+  - 20
+  - 21
+  - 22
+  - 23
+  - 24
+  - 25
+  - 26
+  - 27
+  - 28
+  - 29
+  - 30
+  - 31
+  - 32
+  - 33
+  - 34
+  - 35
+  - 36
+  - 37
+  - 38
+  - 39
+  - 40
+  - 41
+  - 42
+  - 43
+  - 44
+  - 45
+  - 46
+  - 47
+  - 48
+  - 49
+  - 50
+experiment:
+  description: 'Full 50-subject DANN with conservative parameters: dlw=0.1, gamma=3,
+    2class domain'
+  name: DANN_Full50_Conservative
+  seed: 42
+logging:
+  console: true
+  level: INFO
+model:
+  args:
+    domain_hidden_dims:
+    - 128
+    - 64
+    num_domains: 2
+  type: DANNADFCNN
+paths:
+  root_dir: ./experiments
+trainer:
+  args:
+    domain_grouping: stroke_location_2class
+    domain_loss_weight: 0.1
+    early_stopping_patience: 15
+    gradient_accumulation_steps: 1
+    grl_gamma: 3.0
+    mixed_precision: false
+    subject_buffer_size: 49
+    use_validation_early_stopping: true
+  type: DANNStreamingLOSOTrainer
+training:
+  batch_size: 512
+  device: cuda
+  epochs: 50
+  num_workers: 0
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.01
+  pin_memory: false
+  save_checkpoints: false
+  use_fp16_compression: true

@@ -1,0 +1,56 @@
+# Stratified LOSO by ParalysisSide: Affected/Unaffected labels + Hemisphere Alignment + Early Stopping
+# Core experiment: test whether functional-side labeling + spatial alignment + stratification synergize
+#
+# Expected behavior:
+#   - Left-paralysis group: labels = affected(0)=left, unaffected(1)=right; NO channel flip
+#   - Right-paralysis group: labels = affected(0)=right, unaffected(1)=left; WITH channel flip
+#     (so affected-side MI activates the same pseudo-hemisphere for all subjects)
+
+experiment:
+  name: "XWStroke_Stratified_ParalysisSide_LOSO_AffAlign_ES"
+  seed: 42
+  description: "Stratified LOSO by ParalysisSide with Aff+Align labels and validation early stopping"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+  info_path: "configs/dataset/XWStroke_affected_aligned.yaml"
+  stratify_field: "ParalysisSide"
+
+model:
+  type: "ADFCNN"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 50
+  batch_size: 512
+  save_checkpoints: true
+  use_fp16_compression: true
+  num_workers: 4
+  pin_memory: true
+  prefetch_factor: 2
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "StreamingLOSOTrainer"
+  args:
+    subject_buffer_size: 49
+    gradient_accumulation_steps: 1
+    mixed_precision: true
+    use_validation_early_stopping: true
+    early_stopping_patience: 15
+    save_training_history: true
+
+paths:
+  root_dir: "./experiments"
+
+logging:
+  level: "INFO"
+  console: true

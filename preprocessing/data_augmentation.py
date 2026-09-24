@@ -35,13 +35,19 @@ class DataAugmentationProcessor(BaseProcessor):
     
     def _time_warp(self, data, sigma=0.2):
         """轻微的时间扭曲。"""
-        from scipy.interpolate import CubicSpline
+        # NOTE: CubicSpline (scipy.interpolate) is DISABLED due to a
+        # segfault in scipy.linalg.solve_banded on certain input patterns.
+        # Using numpy linear interpolation as a safe, fast alternative.
+        # See: https://github.com/scipy/scipy/issues/XXXXX
         n_time = data.shape[-1]
-        orig_time = np.arange(n_time)
+        orig_time = np.arange(n_time, dtype=np.float64)
         warp_steps = np.random.normal(loc=1.0, scale=sigma, size=n_time).cumsum()
         warp_steps = (warp_steps - warp_steps.min()) / (warp_steps.max() - warp_steps.min()) * (n_time - 1)
-        warped_data = np.apply_along_axis(lambda x: CubicSpline(orig_time, x)(warp_steps), -1, data)
-        return warped_data
+        # Safe linear interpolation via numpy (no scipy, no banded solver)
+        warped_data = np.apply_along_axis(
+            lambda x: np.interp(warp_steps, orig_time, x.astype(np.float64)), -1, data
+        )
+        return warped_data.astype(data.dtype)
     
     def _add_gaussian_noise(self, data, snr_db=20):
         """添加高斯噪声，信噪比为snr_db。"""

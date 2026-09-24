@@ -1,0 +1,48 @@
+# CACML LOSO Evaluation with 20-trial fine-tuning
+# Loads pretrained CACML weights, freezes backbone, fine-tunes classifier
+# NOTE: n_shot refers to ORIGINAL TRIALS (not windows). Each subject has 40 trials.
+# 20 trials = 50% of data (~100 windows after sliding window segmentation)
+
+experiment:
+  name: "XWStroke_CACML_LOSO_20shot"
+  seed: 42
+  description: "CACML LOSO: 20-trial classifier fine-tuning with frozen backbone"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+             21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+             41, 42, 43, 44, 45, 46, 47, 48, 49, 50]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "CACML"
+  args:
+    embed_dim: 128
+    dropout: 0.5
+
+training:
+  device: "cuda"
+  epochs: 1
+  batch_size: 64
+  save_checkpoints: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+
+trainer:
+  type: "CACMLLOSOSTrainer"
+  args:
+    pretrained_path: "./experiments/cacml_pretrain/checkpoints/cacml_pretrained_best.pt"
+    n_shot: 20  # Number of original trials (not windows). 40 total per subject.
+    finetune_epochs: 50
+    lr_finetune: 0.0001
+    freeze_backbone: true
+
+paths:
+  root_dir: "./experiments/cacml_loso_20shot"
+
+logging:
+  level: "INFO"
+  console: true

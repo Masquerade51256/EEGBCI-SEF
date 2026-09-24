@@ -1,0 +1,44 @@
+# CACML Split12 LOSO Evaluation (Scheme 3 pretrained weights)
+# 12 held-out subjects: [4, 5, 13, 20, 22, 30, 33, 37, 40, 43, 46, 48]
+
+experiment:
+  name: "XWStroke_CACML_Split38_ClinicalInformed_LOSO"
+  seed: 42
+  description: "CACML LOSO evaluation on 12 held-out subjects using clinical-informed pretrained weights"
+
+data:
+  dataset: "XWStroke"
+  subjects: [4, 5, 13, 20, 22, 30, 33, 37, 40, 43, 46, 48]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "CACML"
+  args:
+    embed_dim: 128
+    dropout: 0.5
+
+training:
+  device: "cuda"
+  epochs: 1
+  batch_size: 64
+  save_checkpoints: false
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+
+trainer:
+  type: "CACMLLOSOSTrainer"
+  args:
+    pretrained_path: "./experiments/cacml_split38_clinical_informed/XWStroke_CACML_20260618_095759/checkpoints/cacml_pretrained_best.pt"
+    n_shot: 20  # Number of original trials (not windows). 40 total per subject.
+    finetune_epochs: 50
+    lr_finetune: 0.0001
+    freeze_backbone: true
+
+paths:
+  root_dir: "./experiments/cacml_split38_clinical_informed_loso_20shot"
+
+logging:
+  level: "INFO"
+  console: true

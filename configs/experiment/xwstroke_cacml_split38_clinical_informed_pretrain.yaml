@@ -1,0 +1,61 @@
+# CACML Split38 Pretraining with Clinical-Informed Class-Aware Contrastive (Scheme 3)
+# Positive pairs are determined by MI label; clinical similarity only weights
+# how strongly each positive pair is pulled together.
+
+experiment:
+  name: "XWStroke_CACML_Split38_ClinicalInformed_Pretrain"
+  seed: 42
+  description: "CACML Split38 pretraining: clinical-informed class-aware contrastive learning"
+
+data:
+  dataset: "XWStroke"
+  # Training split: 38 subjects held out from the 12 test subjects [4,5,13,20,22,30,33,37,40,43,46,48]
+  subjects: [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19,
+             21, 23, 24, 25, 26, 27, 28, 29, 31, 32, 34, 35, 36, 38, 39,
+             41, 42, 44, 45, 47, 49, 50]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "CACML"
+  args:
+    embed_dim: 128
+    dropout: 0.5
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 256
+  save_checkpoints: true
+  use_fp16_compression: false
+  num_workers: 0
+  pin_memory: true
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "CACMLPretrainTrainer"
+  args:
+    # Scheme 3 requires MI labels to define positive pairs.
+    self_supervised_pretrain: false
+
+    contrast_mode: "clinical_informed"
+    lambda_contrast: 1.0
+    lambda_align: 0.0      # Keep alignment off; clinical info enters only as positive weighting
+    lambda_cls: 1.0
+    tau: 0.07              # Temperature for EEG similarity
+    tau_clin: 0.07         # Temperature for clinical similarity weighting
+    use_hard_negative: false   # Not used in class-aware modes
+    k_hard: 5
+    alpha_hard: 2.0
+    val_ratio: 0.1
+    min_save_interval: 5
+
+paths:
+  root_dir: "./experiments/cacml_split38_clinical_informed"
+
+logging:
+  level: "INFO"
+  console: true

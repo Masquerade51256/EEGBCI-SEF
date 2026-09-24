@@ -9,6 +9,7 @@ For datasets with many subjects (e.g., 50 subjects in XW Stroke):
 This reduces memory from O(N) to O(1) subjects while maintaining the same LOSO evaluation.
 """
 
+import json
 import math
 from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
@@ -20,6 +21,10 @@ from tqdm import tqdm
 import numpy as np
 
 from core.base.base_trainer import BaseTrainer
+from utils.clinical_source_selection import (
+    load_clinical_metadata,
+    select_source_subjects
+)
 
 
 class StreamingSubjectDataset(Dataset):
@@ -228,16 +233,166 @@ class StreamingLOSOTrainer(BaseTrainer):
         
         # Scaler for mixed precision
         self.scaler = torch.cuda.amp.GradScaler() if self.mixed_precision and torch.cuda.is_available() else None
+
+        # Clinical source-subject selection configuration
+        self.source_selection = self.config.get('trainer.args.source_selection', None)
+        self._clinical_metadata = None
         
+        # Incremental results saving / resume configuration
+        self._incremental_results_path = self.paths.results_dir / "incremental_results.json"
+        self._resume_enabled = self.config.get('trainer.args.resume', True)
+
+    def _select_train_subjects(self, test_subject_id: int, all_subjects: List[int]) -> List[int]:
+        """Select training subjects for a LOSO round."""
+        if not self.source_selection or not self.source_selection.get('enabled', False):
+            return [s for s in all_subjects if s != test_subject_id]
+
+        k = self.source_selection.get('k', 10)
+        require_same_location = self.source_selection.get('require_same_location', False)
+        location_weight = self.source_selection.get('location_weight', 1.0)
+        duration_weight = self.source_selection.get('duration_weight', 1.0)
+        nihss_weight = self.source_selection.get('nihss_weight', 1.0)
+
+        candidate_sources = [s for s in all_subjects if s != test_subject_id]
+        selected = select_source_subjects(
+            target_subject_id=test_subject_id,
+            candidate_source_ids=candidate_sources,
+            metadata_df=self._clinical_metadata,
+            k=k,
+            require_same_location=require_same_location,
+            location_weight=location_weight,
+            duration_weight=duration_weight,
+            nihss_weight=nihss_weight
+        )
+        self._log(f"  Selected {len(selected)} source subjects for target {test_subject_id}: {selected}")
+        return selected
+
+    def _load_incremental_results(self) -> Optional[Dict[str, Any]]:
+        """Load previously saved incremental results if available."""
+        if not self._incremental_results_path.exists():
+            return None
+        try:
+            with open(self._incremental_results_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            self._log(f"  Found incremental results: {len(data.get('subjects', []))} subjects completed")
+            return data
+        except Exception as e:
+            self._log(f"  Warning: Failed to load incremental results: {e}", level="warning")
+            return None
+    
+    def _save_incremental_results(self, all_results: List[Dict], all_histories: List[Dict],
+                                   group_name: Optional[str] = None):
+        """Save incremental results after each subject to enable resume."""
+        try:
+            data = {
+                'subjects': all_results,
+                'histories': all_histories,
+                'group': group_name,
+                'num_completed': len(all_results),
+                'config': {
+                    'model_type': self.model_type,
+                    'num_subjects_expected': self.config.get('data.subjects', []),
+                }
+            }
+            # Atomic write to avoid corruption
+            tmp_path = self._incremental_results_path.with_suffix('.tmp')
+            with open(tmp_path, 'w', encoding='utf-8') as f:
+                json.dump(self._convert_for_json(data), f, indent=2)
+            tmp_path.replace(self._incremental_results_path)
+        except Exception as e:
+            self._log(f"  Warning: Failed to save incremental results: {e}", level="warning")
+    
+    def _convert_for_json(self, obj: Any) -> Any:
+        """Recursively convert numpy/torch types to JSON-serializable types."""
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif hasattr(obj, 'item'):
+            return obj.item()
+        elif isinstance(obj, dict):
+            return {k: self._convert_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_for_json(v) for v in obj]
+        return obj
+    
+    def _run_loso_on_subjects_streaming(self, subjects: List[int], dataset_info: Dict,
+                                        dataset_cls, group_name: Optional[str] = None):
+        """
+        Run streaming LOSO on a given list of subjects.
+        
+        Args:
+            subjects: List of subject IDs
+            dataset_info: Dataset information
+            dataset_cls: Dataset class for loading
+            group_name: Optional group name for logging
+            
+        Returns:
+            Tuple of (all_results, all_histories)
+        """
+        all_results = []
+        all_histories = []
+        prefix = f"[{group_name}] " if group_name else ""
+        
+        # Resume from incremental results if enabled
+        remaining_subjects = list(subjects)
+        if self._resume_enabled:
+            incremental = self._load_incremental_results()
+            if incremental is not None:
+                completed_ids = {r['test_subject_id'] for r in incremental.get('subjects', [])}
+                # Only resume if the group matches and subjects are consistent
+                if incremental.get('group') == group_name:
+                    all_results = incremental.get('subjects', [])
+                    all_histories = incremental.get('histories', [])
+                    remaining_subjects = [s for s in subjects if s not in completed_ids]
+                    if remaining_subjects:
+                        self._log(f"  Resuming LOSO: {len(completed_ids)} subjects already done, "
+                                  f"{len(remaining_subjects)} remaining")
+                    else:
+                        self._log(f"  All {len(completed_ids)} subjects already completed; skipping training")
+                    
+        for test_subject_idx, test_subject_id in enumerate(remaining_subjects):
+            self._log(f"\n{prefix}[{test_subject_idx + 1}/{len(subjects)}] Test Subject: {test_subject_id}")
+            self._log("-" * 40)
+            
+            train_subject_ids = self._select_train_subjects(test_subject_id, subjects)
+
+            subject_results, subject_history = self._train_loso_round_streaming(
+                test_subject_id, train_subject_ids, dataset_cls, dataset_info
+            )
+            
+            if group_name:
+                subject_results['group'] = group_name
+            
+            all_results.append(subject_results)
+            all_histories.append({
+                'test_subject_id': test_subject_id,
+                'history': subject_history,
+                'group': group_name
+            })
+            
+            subject_viz_dir = self.paths.get_subject_viz_dir(test_subject_id)
+            self._plot_history(subject_history, subject_viz_dir, test_subject_id)
+            
+            # Save incremental results after each subject
+            self._save_incremental_results(all_results, all_histories, group_name)
+            
+            import gc
+            gc.collect()
+        
+        return all_results, all_histories
+    
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run streaming LOSO cross-validation training.
+        
+        Supports standard LOSO across all subjects, or stratified LOSO
+        where subjects are grouped by a clinical field.
         
         Args:
             datasets: Dictionary containing:
                 - subjects: List of subject IDs
                 - info: Dataset information
                 - dataset_cls: Dataset class for loading
+                - subject_groups: Optional dict mapping group names to subject lists
                 
         Returns:
             Dictionary containing LOSO results
@@ -245,74 +400,134 @@ class StreamingLOSOTrainer(BaseTrainer):
         subjects = datasets['subjects']
         dataset_info = datasets.get('info', {})
         dataset_cls = datasets.get('dataset_cls')
+        subject_groups = datasets.get('subject_groups')
+
+        # Lazy-load clinical metadata if source selection is enabled
+        if self.source_selection and self.source_selection.get('enabled', False) and self._clinical_metadata is None:
+            metadata_path = self.source_selection.get('metadata_path')
+            if not metadata_path:
+                # Fallback to participants_tsv from dataset_info (user must provide a stratified CSV)
+                metadata_path = dataset_info.get('dataset', {}).get('participants_tsv')
+            if metadata_path:
+                self._clinical_metadata = load_clinical_metadata(metadata_path)
+                self._log(f"Clinical source selection enabled (k={self.source_selection.get('k', 10)})")
+            else:
+                self._log("Warning: source_selection enabled but no metadata_path found; disabling.", level="warning")
+                self.source_selection = None
         
         if not dataset_cls:
             raise ValueError("StreamingLOSOTrainer requires 'dataset_cls'")
         
-        all_results = []
-        all_histories = []
-        
-        self._log("=" * 60)
-        self._log("Starting Streaming LOSO Training")
-        self._log(f"Total subjects: {len(subjects)}")
-        self._log(f"Memory-efficient mode: {self.subject_buffer_size} subject(s) in memory")
-        self._log(f"Gradient accumulation: {self.gradient_accumulation_steps} steps")
-        if self.mixed_precision:
-            self._log("Mixed precision training: Enabled")
-        self._log("=" * 60)
-        
-        # LOSO loop
-        for test_subject_idx, test_subject_id in enumerate(subjects):
-            self._log(f"\n[{test_subject_idx + 1}/{len(subjects)}] Test Subject: {test_subject_id}")
-            self._log("-" * 40)
+        if subject_groups:
+            all_results = []
+            all_histories = []
+            group_stats = {}
             
-            # Get training subjects
-            train_subject_ids = [s for s in subjects if s != test_subject_id]
+            self._log("=" * 60)
+            self._log("Starting Stratified Streaming LOSO Training")
+            self._log(f"Stratification groups: {list(subject_groups.keys())}")
+            self._log("=" * 60)
             
-            # Train and evaluate
-            subject_results, subject_history = self._train_loso_round_streaming(
-                test_subject_id, train_subject_ids, dataset_cls, dataset_info
+            for group_name, group_subjects in subject_groups.items():
+                self._log(f"\n{'='*60}")
+                self._log(f"Group: {group_name} ({len(group_subjects)} subjects)")
+                self._log(f"{'='*60}")
+                
+                group_results, group_histories = self._run_loso_on_subjects_streaming(
+                    group_subjects, dataset_info, dataset_cls, group_name
+                )
+                all_results.extend(group_results)
+                all_histories.extend(group_histories)
+                
+                group_accs = [r['test_acc'] for r in group_results]
+                group_stats[group_name] = {
+                    'mean': float(np.mean(group_accs)),
+                    'std': float(np.std(group_accs)),
+                    'min': float(np.min(group_accs)),
+                    'max': float(np.max(group_accs)),
+                    'n': len(group_accs),
+                    'subject_ids': group_subjects
+                }
+            
+            self._plot_comparison(all_results, group_stats=group_stats)
+            
+            test_accuracies = [r['test_acc'] for r in all_results]
+            final_results = {
+                'subjects': all_results,
+                'group_stats': group_stats,
+                'overall_mean': float(np.mean(test_accuracies)),
+                'overall_std': float(np.std(test_accuracies)),
+                'overall_min': float(np.min(test_accuracies)),
+                'overall_max': float(np.max(test_accuracies)),
+                'streaming_config': {
+                    'num_subjects': len(subjects),
+                    'gradient_accumulation_steps': self.gradient_accumulation_steps,
+                    'subject_buffer_size': self.subject_buffer_size,
+                    'mixed_precision': self.mixed_precision,
+                    'stratified': True,
+                    'stratify_groups': list(subject_groups.keys()),
+                }
+            }
+            
+            self._log("\n" + "=" * 60)
+            self._log("Stratified Streaming LOSO Training Complete")
+            for group_name, stats in group_stats.items():
+                self._log(f"  {group_name}: {stats['mean']:.4f} ± {stats['std']:.4f} (n={stats['n']})")
+            self._log(f"  Overall: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
+            self._log("=" * 60)
+            
+            self._save_histories_if_needed(all_histories)
+            return final_results
+        
+        else:
+            all_results = []
+            all_histories = []
+            
+            self._log("=" * 60)
+            self._log("Starting Streaming LOSO Training")
+            self._log(f"Total subjects: {len(subjects)}")
+            self._log(f"Memory-efficient mode: {self.subject_buffer_size} subject(s) in memory")
+            self._log(f"Gradient accumulation: {self.gradient_accumulation_steps} steps")
+            if self.mixed_precision:
+                self._log("Mixed precision training: Enabled")
+            self._log("=" * 60)
+            
+            all_results, all_histories = self._run_loso_on_subjects_streaming(
+                subjects, dataset_info, dataset_cls
             )
             
-            all_results.append(subject_results)
-            all_histories.append({
-                'test_subject_id': test_subject_id,
-                'history': subject_history
-            })
+            self._plot_comparison(all_results)
             
-            # Plot history
-            subject_viz_dir = self.paths.get_subject_viz_dir(test_subject_id)
-            self._plot_history(subject_history, subject_viz_dir, test_subject_id)
-            
-            import gc
-            gc.collect()
-        
-        # Final comparison
-        self._plot_comparison(all_results)
-        
-        # Statistics
-        test_accuracies = [r['test_acc'] for r in all_results]
-        final_results = {
-            'subjects': all_results,
-            'overall_mean': np.mean(test_accuracies),
-            'overall_std': np.std(test_accuracies),
-            'overall_min': np.min(test_accuracies),
-            'overall_max': np.max(test_accuracies),
-            'streaming_config': {
-                'num_subjects': len(subjects),
-                'gradient_accumulation_steps': self.gradient_accumulation_steps,
-                'subject_buffer_size': self.subject_buffer_size,
-                'mixed_precision': self.mixed_precision
+            test_accuracies = [r['test_acc'] for r in all_results]
+            final_results = {
+                'subjects': all_results,
+                'overall_mean': float(np.mean(test_accuracies)),
+                'overall_std': float(np.std(test_accuracies)),
+                'overall_min': float(np.min(test_accuracies)),
+                'overall_max': float(np.max(test_accuracies)),
+                'streaming_config': {
+                    'num_subjects': len(subjects),
+                    'gradient_accumulation_steps': self.gradient_accumulation_steps,
+                    'subject_buffer_size': self.subject_buffer_size,
+                    'mixed_precision': self.mixed_precision
+                }
             }
-        }
-        
-        # Optionally save training histories for diagnostic analysis
+            
+            self._log("\n" + "=" * 60)
+            self._log("Streaming LOSO Training Complete")
+            self._log(f"Mean Accuracy: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
+            self._log("=" * 60)
+            
+            self._save_histories_if_needed(all_histories)
+            return final_results
+    
+    def _save_histories_if_needed(self, all_histories):
+        """Save training histories if configured."""
         save_hist = self.config.get("trainer.args.save_training_history", False)
         if save_hist and all_histories:
             try:
                 import json
                 hist_path = self.paths.logs_dir / "training_histories.json"
-                # Convert numpy types to Python native types
                 def _convert(obj):
                     if isinstance(obj, np.ndarray):
                         return obj.tolist()
@@ -328,13 +543,6 @@ class StreamingLOSOTrainer(BaseTrainer):
                 self._log(f"Training histories saved to: {hist_path}")
             except Exception as e:
                 self._log(f"Warning: Failed to save training histories: {e}", level="warning")
-        
-        self._log("\n" + "=" * 60)
-        self._log("Streaming LOSO Training Complete")
-        self._log(f"Mean Accuracy: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
-        self._log("=" * 60)
-        
-        return final_results
     
     def _build_cached_train_loader(self, train_subject_ids: List[int],
                                     dataset_cls, dataset_info: Dict):
@@ -478,7 +686,8 @@ class StreamingLOSOTrainer(BaseTrainer):
     
     def _train_loso_round_streaming(self, test_subject_id: int,
                                     train_subject_ids: List[int],
-                                    dataset_cls, dataset_info: Dict) -> Tuple[Dict, Dict]:
+                                    dataset_cls, dataset_info: Dict,
+                                    val_subject_id: Optional[int] = None) -> Tuple[Dict, Dict]:
         """
         Train one LOSO round with streaming data loading.
         
@@ -486,17 +695,30 @@ class StreamingLOSOTrainer(BaseTrainer):
         - Test subject: completely held out, never seen during training or model selection
         - Validation subject: randomly selected from train subjects, used for early stopping
         - Train subjects: remaining N-2 subjects used for actual training
+        
+        Args:
+            val_subject_id: If provided, use this specific subject as validation instead of
+                           randomly selecting one. Useful for validation-based pipeline selection.
         """
         # Early stopping config
         es_patience = self.config.get('trainer.args.early_stopping_patience', 15)
         use_val_es = self.config.get('trainer.args.use_validation_early_stopping', False)
         
         # Split train subjects into train/val if enabled and feasible
-        val_subject_id = None
         train_subject_ids_inner = train_subject_ids.copy()
         val_loader = None
         
-        if use_val_es and len(train_subject_ids) >= 2:
+        if val_subject_id is not None:
+            # Explicit validation subject (e.g., for pipeline selection)
+            if val_subject_id in train_subject_ids:
+                train_subject_ids_inner = [s for s in train_subject_ids if s != val_subject_id]
+                val_dataset = dataset_cls(subject_id=val_subject_id, dataset_info=dataset_info)
+                val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
+                self._log(f"  Val subject (specified): {val_subject_id} (ES patience={es_patience})")
+            else:
+                self._log(f"  Warning: specified val_subject {val_subject_id} not in train subjects; ignoring", level="warning")
+                val_subject_id = None
+        elif use_val_es and len(train_subject_ids) >= 2:
             # Deterministic random selection based on test_subject_id + seed
             import random
             seed = self.config.get('experiment.seed', 42)
@@ -848,24 +1070,46 @@ class StreamingLOSOTrainer(BaseTrainer):
         plt.savefig(save_dir / 'streaming_loso_history.png', dpi=150)
         plt.close()
     
-    def _plot_comparison(self, results: List[Dict]):
+    def _plot_comparison(self, results: List[Dict], group_stats: Optional[Dict] = None):
         """Plot comparison across subjects."""
         import matplotlib.pyplot as plt
+        from matplotlib.patches import Patch
         
         subject_ids = [r['test_subject_id'] for r in results]
         test_accs = [r['test_acc'] for r in results]
         
         fig, ax = plt.subplots(figsize=(max(8, len(subject_ids) * 0.4), 6))
         
-        colors = ['green' if acc >= 0.8 else 'yellow' if acc >= 0.6 else 'red' 
-                  for acc in test_accs]
-        
-        bars = ax.bar(range(len(subject_ids)), test_accs, color=colors, 
-                     edgecolor='black', alpha=0.7)
+        if group_stats:
+            group_names = list(group_stats.keys())
+            group_colors = plt.cm.tab10(np.linspace(0, 1, len(group_names)))
+            group_color_map = {name: group_colors[i] for i, name in enumerate(group_names)}
+            
+            colors = []
+            for r in results:
+                g = r.get('group')
+                if g and g in group_color_map:
+                    colors.append(group_color_map[g])
+                else:
+                    colors.append('steelblue')
+            
+            bars = ax.bar(range(len(subject_ids)), test_accs, color=colors,
+                         edgecolor='black', alpha=0.7)
+            
+            legend_handles = [Patch(facecolor=group_color_map[g], edgecolor='black', label=g)
+                              for g in group_names]
+            ax.legend(handles=legend_handles, title='Group', loc='upper right')
+        else:
+            colors = ['green' if acc >= 0.8 else 'yellow' if acc >= 0.6 else 'red' 
+                      for acc in test_accs]
+            
+            bars = ax.bar(range(len(subject_ids)), test_accs, color=colors, 
+                         edgecolor='black', alpha=0.7)
         
         ax.set_xlabel('Test Subject ID')
         ax.set_ylabel('Test Accuracy')
-        ax.set_title('Streaming LOSO Cross-Validation Results')
+        title = 'Stratified Streaming LOSO Results' if group_stats else 'Streaming LOSO Cross-Validation Results'
+        ax.set_title(title)
         ax.set_xticks(range(len(subject_ids)))
         ax.set_xticklabels([f'Sub{s}' for s in subject_ids], rotation=45)
         ax.set_ylim([0, 1.05])
@@ -874,7 +1118,8 @@ class StreamingLOSOTrainer(BaseTrainer):
         mean_acc = np.mean(test_accs)
         ax.axhline(y=mean_acc, color='r', linestyle='--', 
                   label=f'Mean: {mean_acc:.3f}')
-        ax.legend()
+        if not group_stats:
+            ax.legend()
         
         plt.tight_layout()
         plt.savefig(self.paths.viz_dir / 'streaming_loso_comparison.png', dpi=150)

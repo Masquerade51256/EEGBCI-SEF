@@ -161,20 +161,79 @@ class LOSOTrainer(BaseTrainer):
         self.fallback_checkpoint_dir = self.config.get('paths.fallback_checkpoint_dir', None)
         self._using_fallback_path = False
         
+    def _run_loso_on_subjects(self, subjects: List[int], dataset_info: Dict,
+                              dataset_cls, group_name: Optional[str] = None) -> Tuple[List[Dict], List[Dict]]:
+        """
+        Run LOSO on a given list of subjects.
+        
+        Args:
+            subjects: List of subject IDs to run LOSO on
+            dataset_info: Dataset information
+            dataset_cls: Dataset class for loading
+            group_name: Optional group name for logging
+            
+        Returns:
+            Tuple of (all_results, all_histories)
+        """
+        all_results = []
+        all_histories = []
+        prefix = f"[{group_name}] " if group_name else ""
+        
+        for test_subject_idx, test_subject_id in enumerate(subjects):
+            self._log(f"\n{prefix}[{test_subject_idx + 1}/{len(subjects)}] Test Subject: {test_subject_id}")
+            self._log("-" * 40)
+            
+            train_subject_ids = [s for s in subjects if s != test_subject_id]
+            
+            self._log(f"Loading training data from subjects: {train_subject_ids}")
+            train_datasets = []
+            for train_subject_id in train_subject_ids:
+                ds = dataset_cls(subject_id=train_subject_id, dataset_info=dataset_info)
+                train_datasets.append(ds)
+            
+            train_dataset = ConcatSubjectDataset(train_datasets)
+            self._log(f"Training set: {len(train_dataset)} samples from {len(train_datasets)} subjects")
+            
+            test_dataset = dataset_cls(subject_id=test_subject_id, dataset_info=dataset_info)
+            self._log(f"Test set: {len(test_dataset)} samples from subject {test_subject_id}")
+            
+            subject_results, subject_history = self._train_loso_round(
+                test_subject_id, train_dataset, test_dataset
+            )
+            
+            if group_name:
+                subject_results['group'] = group_name
+            
+            all_results.append(subject_results)
+            all_histories.append({
+                'test_subject_id': test_subject_id,
+                'history': subject_history,
+                'group': group_name
+            })
+            
+            subject_viz_dir = self.paths.get_subject_viz_dir(test_subject_id)
+            self._plot_loso_history(subject_history, subject_viz_dir, test_subject_id)
+            
+            del train_dataset, test_dataset, train_datasets
+            import gc
+            gc.collect()
+        
+        return all_results, all_histories
+    
     def train(self, datasets: Dict[str, Any]) -> Dict[str, Any]:
         """
         Run LOSO cross-validation training.
         
-        For each subject:
-        1. Load all other subjects' data as training set
-        2. Use current subject as test set
-        3. Train model and evaluate on test subject
+        Supports standard LOSO across all subjects, or stratified LOSO
+        where subjects are grouped by a clinical field (e.g., ParalysisSide)
+        and LOSO is performed within each group.
         
         Args:
             datasets: Dictionary containing:
                 - subjects: List of subject IDs
                 - info: Dataset information
                 - dataset_cls: Dataset class for loading
+                - subject_groups: Optional dict mapping group names to subject lists
                 
         Returns:
             Dictionary containing LOSO results for all subjects
@@ -182,86 +241,102 @@ class LOSOTrainer(BaseTrainer):
         subjects = datasets['subjects']
         dataset_info = datasets.get('info', {})
         dataset_cls = datasets.get('dataset_cls')
+        subject_groups = datasets.get('subject_groups')
         
         if not dataset_cls:
             raise ValueError("LOSO trainer requires 'dataset_cls' for lazy loading")
         
-        all_results = []
-        all_histories = []
+        if subject_groups:
+            all_results = []
+            all_histories = []
+            group_stats = {}
+            
+            self._log("=" * 60)
+            self._log("Starting Stratified LOSO Training")
+            self._log(f"Stratification groups: {list(subject_groups.keys())}")
+            self._log("=" * 60)
+            
+            for group_name, group_subjects in subject_groups.items():
+                self._log(f"\n{'='*60}")
+                self._log(f"Group: {group_name} ({len(group_subjects)} subjects)")
+                self._log(f"{'='*60}")
+                
+                group_results, group_histories = self._run_loso_on_subjects(
+                    group_subjects, dataset_info, dataset_cls, group_name
+                )
+                all_results.extend(group_results)
+                all_histories.extend(group_histories)
+                
+                group_accs = [r['test_acc'] for r in group_results]
+                group_stats[group_name] = {
+                    'mean': float(np.mean(group_accs)),
+                    'std': float(np.std(group_accs)),
+                    'min': float(np.min(group_accs)),
+                    'max': float(np.max(group_accs)),
+                    'n': len(group_accs),
+                    'subject_ids': group_subjects
+                }
+            
+            self._plot_loso_comparison(all_results, group_stats=group_stats)
+            
+            test_accuracies = [r['test_acc'] for r in all_results]
+            final_results = {
+                'subjects': all_results,
+                'group_stats': group_stats,
+                'overall_mean': float(np.mean(test_accuracies)),
+                'overall_std': float(np.std(test_accuracies)),
+                'overall_min': float(np.min(test_accuracies)),
+                'overall_max': float(np.max(test_accuracies)),
+                'loso_config': {
+                    'num_subjects': len(subjects),
+                    'subject_ids': subjects,
+                    'stratified': True,
+                    'stratify_groups': list(subject_groups.keys()),
+                }
+            }
+            
+            self._log("\n" + "=" * 60)
+            self._log("Stratified LOSO Training Complete")
+            for group_name, stats in group_stats.items():
+                self._log(f"  {group_name}: {stats['mean']:.4f} ± {stats['std']:.4f} (n={stats['n']})")
+            self._log(f"  Overall: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
+            self._log("=" * 60)
+            
+            return final_results
         
-        self._log("=" * 60)
-        self._log("Starting LOSO (Leave One Subject Out) Training")
-        self._log(f"Total subjects: {len(subjects)}")
-        self._log(f"Each subject will be tested once, trained on {len(subjects)-1} others")
-        self._log("=" * 60)
-        
-        # LOSO loop: each subject is the test set once
-        for test_subject_idx, test_subject_id in enumerate(subjects):
-            self._log(f"\n[{test_subject_idx + 1}/{len(subjects)}] Test Subject: {test_subject_id}")
-            self._log("-" * 40)
+        else:
+            self._log("=" * 60)
+            self._log("Starting LOSO (Leave One Subject Out) Training")
+            self._log(f"Total subjects: {len(subjects)}")
+            self._log(f"Each subject will be tested once, trained on {len(subjects)-1} others")
+            self._log("=" * 60)
             
-            # Get training subjects (all except test subject)
-            train_subject_ids = [s for s in subjects if s != test_subject_id]
-            
-            # Load training data from all training subjects
-            self._log(f"Loading training data from subjects: {train_subject_ids}")
-            train_datasets = []
-            for train_subject_id in train_subject_ids:
-                ds = dataset_cls(subject_id=train_subject_id, dataset_info=dataset_info)
-                train_datasets.append(ds)
-            
-            # Combine training datasets
-            train_dataset = ConcatSubjectDataset(train_datasets)
-            self._log(f"Training set: {len(train_dataset)} samples from {len(train_datasets)} subjects")
-            
-            # Load test data
-            test_dataset = dataset_cls(subject_id=test_subject_id, dataset_info=dataset_info)
-            self._log(f"Test set: {len(test_dataset)} samples from subject {test_subject_id}")
-            
-            # Train and evaluate
-            subject_results, subject_history = self._train_loso_round(
-                test_subject_id, train_dataset, test_dataset
+            all_results, all_histories = self._run_loso_on_subjects(
+                subjects, dataset_info, dataset_cls
             )
             
-            all_results.append(subject_results)
-            all_histories.append({
-                'test_subject_id': test_subject_id,
-                'history': subject_history
-            })
+            self._plot_loso_comparison(all_results)
             
-            # Plot training history for this subject
-            subject_viz_dir = self.paths.get_subject_viz_dir(test_subject_id)
-            self._plot_loso_history(subject_history, subject_viz_dir, test_subject_id)
-            
-            # Free memory
-            del train_dataset, test_dataset, train_datasets
-            import gc
-            gc.collect()
-        
-        # Generate comparison plot
-        self._plot_loso_comparison(all_results)
-        
-        # Calculate overall statistics
-        test_accuracies = [r['test_acc'] for r in all_results]
-        final_results = {
-            'subjects': all_results,
-            'overall_mean': np.mean(test_accuracies),
-            'overall_std': np.std(test_accuracies),
-            'overall_min': np.min(test_accuracies),
-            'overall_max': np.max(test_accuracies),
-            'loso_config': {
-                'num_subjects': len(subjects),
-                'subject_ids': subjects,
+            test_accuracies = [r['test_acc'] for r in all_results]
+            final_results = {
+                'subjects': all_results,
+                'overall_mean': float(np.mean(test_accuracies)),
+                'overall_std': float(np.std(test_accuracies)),
+                'overall_min': float(np.min(test_accuracies)),
+                'overall_max': float(np.max(test_accuracies)),
+                'loso_config': {
+                    'num_subjects': len(subjects),
+                    'subject_ids': subjects,
+                }
             }
-        }
-        
-        self._log("\n" + "=" * 60)
-        self._log("LOSO Training Complete")
-        self._log(f"Mean Accuracy: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
-        self._log(f"Range: [{final_results['overall_min']:.4f}, {final_results['overall_max']:.4f}]")
-        self._log("=" * 60)
-        
-        return final_results
+            
+            self._log("\n" + "=" * 60)
+            self._log("LOSO Training Complete")
+            self._log(f"Mean Accuracy: {final_results['overall_mean']:.4f} ± {final_results['overall_std']:.4f}")
+            self._log(f"Range: [{final_results['overall_min']:.4f}, {final_results['overall_max']:.4f}]")
+            self._log("=" * 60)
+            
+            return final_results
     
     def _train_loso_round(self, test_subject_id: int, 
                           train_dataset: ConcatSubjectDataset,
@@ -554,7 +629,7 @@ class LOSOTrainer(BaseTrainer):
         plt.savefig(save_path, dpi=150)
         plt.close(fig)
     
-    def _plot_loso_comparison(self, results: List[Dict]):
+    def _plot_loso_comparison(self, results: List[Dict], group_stats: Optional[Dict] = None):
         """Plot LOSO results comparison across subjects."""
         import matplotlib.pyplot as plt
         
@@ -563,21 +638,45 @@ class LOSOTrainer(BaseTrainer):
         
         fig, ax = plt.subplots(figsize=(max(8, len(subject_ids) * 0.5), 6))
         
-        bars = ax.bar(range(len(subject_ids)), test_accs, 
-                     color='steelblue', edgecolor='black', alpha=0.7)
-        
-        # Color bars by performance
-        for i, (bar, acc) in enumerate(zip(bars, test_accs)):
-            if acc >= 0.8:
-                bar.set_color('green')
-            elif acc >= 0.6:
-                bar.set_color('yellow')
-            else:
-                bar.set_color('red')
+        if group_stats:
+            # Color by group using tab10 palette
+            group_names = list(group_stats.keys())
+            group_colors = plt.cm.tab10(np.linspace(0, 1, len(group_names)))
+            group_color_map = {name: group_colors[i] for i, name in enumerate(group_names)}
+            
+            colors = []
+            for r in results:
+                g = r.get('group')
+                if g and g in group_color_map:
+                    colors.append(group_color_map[g])
+                else:
+                    colors.append('steelblue')
+            
+            bars = ax.bar(range(len(subject_ids)), test_accs,
+                         color=colors, edgecolor='black', alpha=0.7)
+            
+            # Add legend for groups
+            from matplotlib.patches import Patch
+            legend_handles = [Patch(facecolor=group_color_map[g], edgecolor='black', label=g)
+                              for g in group_names]
+            ax.legend(handles=legend_handles, title='Group', loc='upper right')
+        else:
+            bars = ax.bar(range(len(subject_ids)), test_accs, 
+                         color='steelblue', edgecolor='black', alpha=0.7)
+            
+            # Color bars by performance
+            for i, (bar, acc) in enumerate(zip(bars, test_accs)):
+                if acc >= 0.8:
+                    bar.set_color('green')
+                elif acc >= 0.6:
+                    bar.set_color('yellow')
+                else:
+                    bar.set_color('red')
         
         ax.set_xlabel('Test Subject ID')
         ax.set_ylabel('Test Accuracy')
-        ax.set_title('LOSO Cross-Validation Results')
+        title = 'Stratified LOSO Cross-Validation Results' if group_stats else 'LOSO Cross-Validation Results'
+        ax.set_title(title)
         ax.set_xticks(range(len(subject_ids)))
         ax.set_xticklabels([f'Sub{s}' for s in subject_ids], rotation=45)
         ax.set_ylim([0, 1.05])
@@ -593,7 +692,8 @@ class LOSOTrainer(BaseTrainer):
         mean_acc = np.mean(test_accs)
         ax.axhline(y=mean_acc, color='r', linestyle='--', 
                   label=f'Mean: {mean_acc:.3f}')
-        ax.legend()
+        if not group_stats:
+            ax.legend()
         
         plt.tight_layout()
         save_path = self.paths.viz_dir / 'loso_comparison.png'

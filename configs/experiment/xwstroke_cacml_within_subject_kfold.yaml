@@ -1,0 +1,51 @@
+# Within-subject 5-fold CV upper-bound for No-Contrastive CACML.
+# Runs k-fold CV at the original-trial level for all 50 XWStroke subjects.
+
+experiment:
+  name: "XWStroke_CACML_WithinSubject_KFold"
+  seed: 42
+  description: "Within-subject 5-fold CV upper bound using No-Contrastive CACML"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,
+             21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,
+             41,42,43,44,45,46,47,48,49,50]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "CACML"
+  args:
+    embed_dim: 128
+    dropout: 0.5
+
+training:
+  device: "cuda"
+  epochs: 0
+  batch_size: 64
+  save_checkpoints: false
+  use_fp16_compression: false
+  num_workers: 0
+  pin_memory: true
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "WithinSubjectKFoldTrainer"
+  args:
+    n_folds: 5
+    epochs: 100
+    batch_size: 64
+    lr: 0.001
+    weight_decay: 0.01
+    early_stop_patience: 15
+
+paths:
+  root_dir: "./experiments/cacml_within_subject_kfold"
+
+logging:
+  level: "INFO"
+  console: true

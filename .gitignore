@@ -2,7 +2,10 @@
 # Project-specific ignores
 # ========================================
 
-# Research Papers
+# Research Papers / Manuscript-related files (not tracked; keep only algorithm/experiment code)
+paper_ieee/
+docs/
+XWStroke_ADFCNN_vs_XWFilterBankNet_comparison.png
 
 # Datasets (large files, should not be in Git)
 src/datasets/*
@@ -270,3 +273,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ========================================
+# 2026-09 cleanup: keep only code + configs in git
+# Heavy outputs stay on server only (overrides earlier rules)
+# ========================================
+experiments/
+results/
+*.zip
+paper_ieee_submission_draft.pdf

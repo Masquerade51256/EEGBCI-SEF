@@ -9,6 +9,7 @@ import os
 from typing import Tuple
 import numpy as np
 import scipy.io as sio
+import torch
 
 from core.base.base_dataset import BaseDataset
 
@@ -99,6 +100,168 @@ def _load_paralysis_side(subject_id: int, dataset_info: dict) -> str:
         raise ValueError(f"Subject {sub_str} not found in {participants_tsv}")
     
     return str(sub_info['ParalysisSide'].values[0]).lower()
+
+
+def load_subject_groups(subject_ids: list, dataset_info: dict, field: str = 'ParalysisSide') -> dict:
+    """
+    Load subject groups from participants.tsv based on a stratification field.
+
+    Args:
+        subject_ids: List of subject IDs (integers)
+        dataset_info: Dataset configuration dictionary
+        field: Column name in participants.tsv to group by (default: 'ParalysisSide')
+
+    Returns:
+        Dictionary mapping field values to lists of subject IDs, e.g.:
+            {'left': [2, 3, 5, ...], 'right': [1, 4, 6, ...]}
+    """
+    import pandas as pd
+
+    participants_tsv = dataset_info.get('dataset', {}).get('participants_tsv')
+    if participants_tsv is None:
+        data_dir = dataset_info.get('dataset', {}).get('data_dir', '')
+        candidates = [
+            os.path.join(os.path.dirname(data_dir), 'participants.tsv'),
+            os.path.join(data_dir, 'participants.tsv'),
+            'src/datasets/21679035/participants.tsv',
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                participants_tsv = path
+                break
+        if participants_tsv is None:
+            raise FileNotFoundError(
+                f"participants.tsv not found. Searched: {candidates}. "
+                f"Please specify 'participants_tsv' in dataset config."
+            )
+
+    participants = pd.read_csv(participants_tsv, sep='\t')
+
+    if field not in participants.columns:
+        available = list(participants.columns)
+        raise ValueError(f"Field '{field}' not found in {participants_tsv}. Available: {available}")
+
+    groups = {}
+    for sid in subject_ids:
+        sub_str = f'sub-{sid:02d}'
+        sub_info = participants[participants['Participant_ID'] == sub_str]
+        if len(sub_info) == 0:
+            raise ValueError(f"Subject {sub_str} not found in {participants_tsv}")
+        value = str(sub_info[field].values[0]).lower().strip()
+        groups.setdefault(value, []).append(sid)
+
+    return groups
+
+
+def _classify_stroke_location(loc_str):
+    """Classify free-text stroke location into standardized categories."""
+    import pandas as pd
+    if pd.isna(loc_str):
+        return 'subcortical'
+    s = str(loc_str).lower()
+    cortical_kw = ['cortex', 'frontal', 'parietal', 'temporal', 'occipital', 'insula', 'watershed']
+    subcortical_kw = ['basal ganglia', 'thalamus', 'internal capsule', 'corona radiata',
+                      'centrum semiovale', 'paraventricular', 'subcortical']
+    brainstem_kw = ['pons', 'medulla oblongata']
+    cerebellar_kw = ['cerebellum', 'cerebellar']
+
+    has_cortical = any(kw in s for kw in cortical_kw)
+    has_subcortical = any(kw in s for kw in subcortical_kw)
+    has_brainstem = any(kw in s for kw in brainstem_kw)
+    has_cerebellar = any(kw in s for kw in cerebellar_kw)
+
+    flags = [has_cortical, has_subcortical, has_brainstem, has_cerebellar]
+    n_categories = sum(flags)
+
+    if n_categories >= 2:
+        return 'mixed'
+    elif has_cortical:
+        return 'cortical'
+    elif has_subcortical:
+        return 'subcortical'
+    elif has_brainstem:
+        return 'brainstem'
+    elif has_cerebellar:
+        return 'brainstem'  # cerebellar mapped to brainstem for simplicity
+    else:
+        return 'subcortical'
+
+
+def get_clinical_feature_vector(subject_id: int, dataset_info: dict) -> torch.Tensor:
+    """
+    Load and encode clinical features for a subject from participants.tsv.
+
+    Returns a 7-dimensional vector:
+        [loc_subcortical, loc_brainstem, loc_cortical, NIHSS_norm, duration_norm, side_left, side_right]
+
+    Stroke location uses continuous encoding to avoid one-hot sparsity (Cortical=1 problem):
+        - subcortical: [1.0, 0.0, 0.0]
+        - brainstem:   [0.0, 1.0, 0.0]
+        - mixed:       [0.5, 0.5, 0.0]  # intermediate between subcortical and brainstem
+        - cortical:    [0.0, 0.0, 1.0]
+
+    NIHSS and Duration are min-max normalized to [0, 1].
+    """
+    import pandas as pd
+
+    participants_tsv = dataset_info.get('dataset', {}).get('participants_tsv')
+    if participants_tsv is None:
+        data_dir = dataset_info.get('dataset', {}).get('data_dir', '')
+        candidates = [
+            os.path.join(os.path.dirname(data_dir), 'participants.tsv'),
+            os.path.join(data_dir, 'participants.tsv'),
+            'src/datasets/21679035/participants.tsv',
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                participants_tsv = path
+                break
+        if participants_tsv is None:
+            return torch.tensor([1.0, 0.0, 0.0, 0.2, 0.2, 1.0, 0.0], dtype=torch.float32)
+
+    try:
+        participants = pd.read_csv(participants_tsv, sep='\t')
+    except Exception:
+        return torch.tensor([1.0, 0.0, 0.0, 0.2, 0.2, 1.0, 0.0], dtype=torch.float32)
+
+    sub_str = f'sub-{subject_id:02d}'
+    sub_info = participants[participants['Participant_ID'] == sub_str]
+
+    if len(sub_info) == 0:
+        return torch.tensor([1.0, 0.0, 0.0, 0.2, 0.2, 1.0, 0.0], dtype=torch.float32)
+
+    sub_info = sub_info.iloc[0]
+
+    # Stroke location: classify free-text, then encode continuously
+    location_raw = sub_info.get('StrokeLocation', 'subcortical')
+    location = _classify_stroke_location(location_raw)
+    loc_encoding = {
+        'subcortical': [1.0, 0.0, 0.0],
+        'brainstem': [0.0, 1.0, 0.0],
+        'mixed': [0.5, 0.5, 0.0],
+        'cortical': [0.0, 0.0, 1.0],
+    }.get(location, [1.0, 0.0, 0.0])
+
+    # NIHSS (normalize, typical range 0-25)
+    try:
+        nihss = float(sub_info.get('NIHSS', 5.0))
+    except (ValueError, TypeError):
+        nihss = 5.0
+    nihss_norm = min(max(nihss / 25.0, 0.0), 1.0)
+
+    # Duration (normalize, typical range 0-30 days)
+    try:
+        duration = float(sub_info.get('Duration', 7.0))
+    except (ValueError, TypeError):
+        duration = 7.0
+    duration_norm = min(max(duration / 30.0, 0.0), 1.0)
+
+    # Paralysis side
+    side = str(sub_info.get('ParalysisSide', 'left')).lower().strip()
+    side_encoding = [1.0, 0.0] if side == 'left' else [0.0, 1.0]
+
+    features = loc_encoding + [nihss_norm, duration_norm] + side_encoding
+    return torch.tensor(features, dtype=torch.float32)
 
 
 class BCICIV2aDataset(BaseDataset):

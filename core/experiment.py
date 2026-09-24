@@ -206,6 +206,17 @@ class ExperimentManager:
             # instances will be loaded on-demand during training
         }
         
+        # Subject stratification: group subjects by a clinical field (e.g., ParalysisSide)
+        stratify_field = dataset_config.get('stratify_field')
+        if stratify_field:
+            from data.datasets import load_subject_groups
+            subject_groups = load_subject_groups(
+                target_subjects, dataset_info, field=stratify_field
+            )
+            self.datasets['subject_groups'] = subject_groups
+            group_summary = {k: len(v) for k, v in subject_groups.items()}
+            self._info(f"Stratified by '{stratify_field}': {group_summary}")
+        
         self._info(f"Configured for {len(target_subjects)} subjects (lazy loading)")
         
     def build_model(self) -> None:

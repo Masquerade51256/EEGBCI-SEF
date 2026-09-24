@@ -1,0 +1,45 @@
+# EEGNet + Euclidean Alignment pretraining on Split38 source subjects.
+# This checkpoint will be used for 0/5/10/20-shot LOSO evaluation.
+
+experiment:
+  name: "XWStroke_EEGNet_Split38_Pretrain_EA"
+  seed: 42
+  description: "EEGNet supervised pretraining on Split38 source subjects with EA"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19,
+             21, 23, 24, 25, 26, 27, 28, 29, 31, 32, 34, 35, 36, 38, 39,
+             41, 42, 44, 45, 47, 49, 50]
+  info_path: "configs/dataset/XWStroke_EA.yaml"
+
+model:
+  type: "EEGNet"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 256
+  save_checkpoints: true
+  use_fp16_compression: false
+  num_workers: 0
+  pin_memory: true
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "SimplePretrainTrainer"
+  args:
+    val_ratio: 0.1
+    min_save_interval: 5
+
+paths:
+  root_dir: "./experiments/eegnet_ea_split38"
+
+logging:
+  level: "INFO"
+  console: true

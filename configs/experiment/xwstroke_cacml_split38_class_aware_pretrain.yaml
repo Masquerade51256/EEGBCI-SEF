@@ -1,0 +1,58 @@
+# CACML Split38 Pretraining with Class-Aware Contrastive (Scheme 1)
+# EEG-only supervised contrastive: positives = same MI label.
+# No clinical information is used for contrastive learning.
+
+experiment:
+  name: "XWStroke_CACML_Split38_ClassAware_Pretrain"
+  seed: 42
+  description: "CACML Split38 pretraining: class-aware EEG-only contrastive learning"
+
+data:
+  dataset: "XWStroke"
+  subjects: [1, 2, 3, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18, 19,
+             21, 23, 24, 25, 26, 27, 28, 29, 31, 32, 34, 35, 36, 38, 39,
+             41, 42, 44, 45, 47, 49, 50]
+  info_path: "configs/dataset/XWStroke.yaml"
+
+model:
+  type: "CACML"
+  args:
+    embed_dim: 128
+    dropout: 0.5
+
+training:
+  device: "cuda"
+  epochs: 100
+  batch_size: 256
+  save_checkpoints: true
+  use_fp16_compression: false
+  num_workers: 0
+  pin_memory: true
+
+  optimizer:
+    type: "Adam"
+    lr: 0.001
+    weight_decay: 0.01
+
+trainer:
+  type: "CACMLPretrainTrainer"
+  args:
+    self_supervised_pretrain: false
+    contrast_mode: "class_aware"
+    lambda_contrast: 1.0
+    lambda_align: 0.0
+    lambda_cls: 1.0
+    tau: 0.07
+    tau_clin: 0.07
+    use_hard_negative: false
+    k_hard: 5
+    alpha_hard: 2.0
+    val_ratio: 0.1
+    min_save_interval: 5
+
+paths:
+  root_dir: "./experiments/cacml_split38_class_aware"
+
+logging:
+  level: "INFO"
+  console: true

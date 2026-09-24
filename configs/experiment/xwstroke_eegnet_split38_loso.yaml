@@ -1,0 +1,47 @@
+# EEGNet + Euclidean Alignment n-shot LOSO evaluation on Split38 held-out subjects.
+# Use scripts/run_eegnet_ea_split38.sh to sweep n_shot = 0/5/10/20.
+
+experiment:
+  name: "XWStroke_EEGNet_Split38_LOSO_Nshot_EA"
+  seed: 42
+  description: "EEGNet+EA n-shot LOSO evaluation"
+
+data:
+  dataset: "XWStroke"
+  subjects: [4, 5, 13, 20, 22, 30, 33, 37, 40, 43, 46, 48]
+  info_path: "configs/dataset/XWStroke_EA.yaml"
+
+model:
+  type: "EEGNet"
+  args: {}
+
+training:
+  device: "cuda"
+  epochs: 0
+  batch_size: 64
+  save_checkpoints: false
+  use_fp16_compression: false
+  num_workers: 0
+  pin_memory: true
+
+  optimizer:
+    type: "Adam"
+    lr: 0.0001
+    weight_decay: 0.01
+
+trainer:
+  type: "NShotLOSOTrainer"
+  args:
+    pretrained_path: "./experiments/eegnet_ea_split38/XWStroke_EEGNet_Split38_Pretrain_EA/checkpoints/pretrained_best.pt"
+    n_shot: 20
+    finetune_epochs: 50
+    lr_finetune: 1.0e-4
+    freeze_backbone: true
+    batch_size_finetune: 32
+
+paths:
+  root_dir: "./experiments/eegnet_ea_split38"
+
+logging:
+  level: "INFO"
+  console: true

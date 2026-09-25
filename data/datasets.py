@@ -844,5 +844,89 @@ class FiveFingerDataset(BaseDataset):
             f"Loaded {len(labels)} trials from {len(unique_files)} file(s), "
             f"shape={data.shape}, labels={np.unique(labels, return_counts=True)}"
         )
-        
+
+        return data, labels
+
+
+class HSStrokeDataset(BaseDataset):
+    """
+    HS Stroke dataset: upper-limb motor imagery EEG from chronic stroke patients.
+
+    Dataset details (v6, deduplicated release — 23,382 trials total):
+        - 14 chronic stroke patients (duration 6-22 months), 11 EEG channels
+          (FC3, FC4, C5, C3, C1, Cz, C2, C4, C6, CP3, CP4) @ 256 Hz
+        - ~20 sessions per patient over ~20 days (80-100 trials per session)
+        - Trials are pre-epoched 4-s MI segments: EEGdata (n_trials, 11, 1024)
+        - Labels: 1 = left-hand MI, 2 = right-hand MI (50/50 per session)
+        - Clinical metadata in participants.tsv: FMA pre/post, paralysis_side,
+          stroke_type, sEMG, MEPs
+
+    Files layout (EEG-BIDS derivatives):
+        <data_dir>/sub-XX/ses-YY/eeg/sub-XX_ses-YY_task-MI_eeg.mat
+
+    Optional config keys:
+        dataset.sessions: 'all' (default) or list of session ints, e.g. [1, 2, 3]
+
+    Side effect:
+        self.trial_sessions (np.ndarray) stores the session index of each trial
+        for later cross-session analyses (not used by the base pipeline).
+
+    Reference:
+        Lu, R., Luo, J., Zhong, S., & Gao, T. (2026).
+        An Upper-Limb Motor Imagery EEG Dataset of Chronic Stroke Patients.
+        Scientific Data. https://doi.org/10.1038/s41597-026-07742-x
+    """
+
+    def _load_raw_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load pre-epoched trials from per-session .mat files.
+
+        Returns:
+            Tuple of (data, labels):
+            - data: (n_trials, 11, 1024) float32, microvolts
+            - labels: (n_trials,) with values {1, 2} (base class 0-indexes them)
+        """
+        import glob
+
+        data_dir = self.data_dir or 'src/datasets/HSStroke'
+        sub = f'sub-{self.subject_id:02d}'
+        sessions = self.dataset_info.get('dataset', {}).get('sessions', 'all')
+
+        pattern = os.path.join(data_dir, sub, 'ses-*', 'eeg', '*_eeg.mat')
+        mat_files = sorted(glob.glob(pattern))
+
+        if sessions != 'all':
+            wanted = {f'ses-{int(s):02d}' for s in sessions}
+            mat_files = [f for f in mat_files
+                         if os.path.basename(os.path.dirname(os.path.dirname(f))) in wanted]
+
+        if not mat_files:
+            raise FileNotFoundError(
+                f"No HSStroke data found for {sub} (sessions={sessions}) "
+                f"with pattern {pattern}"
+            )
+
+        data_list, label_list, session_list = [], [], []
+        for f in mat_files:
+            m = sio.loadmat(f, squeeze_me=True)
+            trials = np.asarray(m['EEGdata'], dtype=np.float32)
+            labels = np.asarray(m['EEGdatalabel']).reshape(-1)
+            ses_name = os.path.basename(os.path.dirname(os.path.dirname(f)))
+            ses_idx = int(ses_name.replace('ses-', ''))
+
+            # Stored in volts (BIDS channels.tsv) -> convert to microvolts
+            data_list.append(trials * 1e6)
+            label_list.append(labels)
+            session_list.append(np.full(len(labels), ses_idx, dtype=np.int64))
+
+        data = np.concatenate(data_list, axis=0)
+        labels = np.concatenate(label_list)
+        self.trial_sessions = np.concatenate(session_list)
+
+        print(
+            f"[HSStroke sub-{self.subject_id:02d}] "
+            f"Loaded {len(labels)} trials from {len(mat_files)} session(s), "
+            f"shape={data.shape}, labels={np.unique(labels, return_counts=True)}"
+        )
+
         return data, labels

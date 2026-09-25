@@ -914,8 +914,9 @@ class HSStrokeDataset(BaseDataset):
             ses_name = os.path.basename(os.path.dirname(os.path.dirname(f)))
             ses_idx = int(ses_name.replace('ses-', ''))
 
-            # Stored in volts (BIDS channels.tsv) -> convert to microvolts
-            data_list.append(trials * 1e6)
+            # Values are already in microvolts (clipped at ±500 uV);
+            # the BIDS channels.tsv "V" unit is inaccurate — do NOT rescale.
+            data_list.append(trials)
             label_list.append(labels)
             session_list.append(np.full(len(labels), ses_idx, dtype=np.int64))
 

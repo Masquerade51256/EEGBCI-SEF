@@ -1,0 +1,57 @@
+# EEGNet within-subject 5-fold CV on HSStroke (chronic stroke, 11ch @256Hz, 1-s windows).
+# Purpose: dataset integration smoke test + rough comparison with the official
+# cross-trial benchmark (EEGNet 61.93% ± 3.18, v6 deduplicated release).
+# NOTE: our protocol uses GroupKFold by trial (stricter than the official
+# cross-trial window split), so a small accuracy difference is expected.
+
+data:
+  dataset: HSStroke
+  info_path: configs/dataset/HSStroke_ses01.yaml
+  subjects: [1, 2, 3]
+
+experiment:
+  description: HSStroke integration smoke test — EEGNet within-subject 5-fold, 3 subjects
+  name: HSStroke_EEGNet_WithinSes01_Pilot
+  seed: 42
+
+logging:
+  console: true
+  level: INFO
+  tensorboard: false
+
+model:
+  type: EEGNet
+  args: {}
+
+paths:
+  checkpoint_dir: ./src/checkpoints
+  data_dir: ./src/datasets
+  root_dir: ./experiments/hsstroke_eegnet_within_ses01_pilot
+
+trainer:
+  type: WithinSubjectKFoldTrainer
+  args:
+    batch_size: 32
+    early_stop_patience: 15
+    epochs: 100
+    lr: 0.001
+    n_folds: 5
+    weight_decay: 0.0
+
+training:
+  batch_size: 32
+  device: cuda
+  epochs: 0
+  num_workers: 0
+  optimizer:
+    lr: 0.001
+    type: Adam
+    weight_decay: 0.0
+  pin_memory: true
+  save_checkpoints: false
+  use_fp16_compression: false
+
+visualization:
+  plot_history: false
+  plot_subject_comparison: true
+  save_format: png

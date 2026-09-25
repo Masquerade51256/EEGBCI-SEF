@@ -1,0 +1,50 @@
+# HS Stroke dataset (chronic stroke, upper-limb MI)
+# Lu et al., Scientific Data 2026 — v6 deduplicated release (23,382 trials)
+# 14 patients, 11 channels @ 256 Hz, ~20 sessions/patient, pre-epoched 4-s MI trials
+dataset:
+  name: "HSStroke"
+  data_dir: "src/datasets/HSStroke"
+  original_sr: 256
+  num_channels: 11
+  num_classes: 2
+  num_subjects: 14
+  subjects: [1]
+  labels: [0, 1]  # 0: Left hand, 1: Right hand (converted from 1/2 by BaseDataset)
+  sessions: [1]  # single-session within test, matching official protocol
+
+preprocessing:
+  windowing:
+    window_length_sec: 1.0   # official cross-trial benchmark uses 1-s windows
+    window_stride_sec: 1.0   # non-overlapping (93,528 samples = 4 windows/trial)
+
+  resample:
+    target_sr: 256
+    method: "fft"
+
+  channel_selection:
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+  filter_bank:
+    filter_banks:
+      - [4, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore"
+    axis: -1  # standardize along time dimension
+
+  augmentation: []
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline:
+    train: []
+    val: []
+    test: []

@@ -56,7 +56,7 @@ def load_subject(sid):
                 continue
             T.append(seg)
             L.append(0 if str(row["trial_type"]).strip() == "left" else 1)
-        out[ses] = (bp(np.asarray(T))[:, :, ::TIME_DECIMATE].astype(np.float32), np.asarray(L))
+        out[ses] = (bp(np.asarray(T))[:, :, ::TIME_DECIMATE].astype(np.float64), np.asarray(L))
     return out
 
 def make_clf():

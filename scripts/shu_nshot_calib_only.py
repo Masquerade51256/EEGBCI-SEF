@@ -14,7 +14,7 @@ import mne
 
 FS = 250
 ROOT = Path("src/datasets/SHU")
-N_LIST = [1, 2, 4, 8, 16, 32]
+N_LIST = [2, 4, 8, 16, 32]
 SEEDS = [0, 1, 2, 3, 4]
 mne.set_log_level("ERROR")
 
@@ -66,7 +66,10 @@ for sid in range(1, 26):
                 mask[calib] = False
                 clf = Pipeline([("csp", CSP(n_components=6, log=True, norm_trace=False)),
                                 ("lda", LinearDiscriminantAnalysis())])
-                clf.fit(X[calib], y[calib])
+                try:
+                    clf.fit(X[calib], y[calib])
+                except ValueError:
+                    continue
                 accs.append(float(clf.score(X[mask], y[mask])))
             results.setdefault(f"sub-{sid:03d}_ses-{ses:02d}", {})[str(n)] = accs
     print(f"sub-{sid:03d} done", flush=True)

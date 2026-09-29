@@ -24,7 +24,9 @@ FS = 250
 ROOT = Path("src/datasets/SHU")
 N_LIST = [0, 1, 2, 4, 8, 16, 32]
 SEEDS_A, SEEDS_B = [0, 1, 2], [0, 1, 2, 3, 4]
-SRC_SUBSAMPLE = 2000
+SRC_SUBSAMPLE = 1000          # 源子抽样（协方差估计已足够）
+A_SESSIONS = [2, 5]           # 协议 A 只评近/远两个目标 session
+TIME_DECIMATE = 4             # 时间轴抽稀 1000->250 点，CSP 协方差计算加速 4 倍
 mne.set_log_level("ERROR")
 
 def bp(x, lo=8, hi=30):
@@ -54,7 +56,7 @@ def load_subject(sid):
                 continue
             T.append(seg)
             L.append(0 if str(row["trial_type"]).strip() == "left" else 1)
-        out[ses] = (bp(np.asarray(T)).astype(np.float64), np.asarray(L))
+        out[ses] = (bp(np.asarray(T))[:, :, ::TIME_DECIMATE].astype(np.float32), np.asarray(L))
     return out
 
 def make_clf():
@@ -102,7 +104,9 @@ for tgt_sid in sorted(DATA):
     rng_sub = np.random.RandomState(1000 + tgt_sid)
     pick = rng_sub.choice(len(y_src_all), size=min(SRC_SUBSAMPLE, len(y_src_all)), replace=False)
     X_src, y_src = X_src_all[pick], y_src_all[pick]
-    for ses in DATA[tgt_sid]:
+    for ses in A_SESSIONS:
+        if ses not in DATA[tgt_sid]:
+            continue
         X_t, y_t = DATA[tgt_sid][ses]
         for n in N_LIST:
             accs = [nshot_mixed(X_src, y_src, X_t, y_t, n, seed) for seed in SEEDS_A]

@@ -1002,7 +1002,13 @@ class SHUDataset(BaseDataset):
 
             raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
             sig = raw.get_data()  # (32, n_times), volts
+            # 部分 events.tsv 缺表头（如 sub-001_ses-04），做兼容读取
+            ev_names = ['onset', 'duration', 'trial_type',
+                        'response_time', 'sample', 'value']
             events = pd.read_csv(ev_path, sep='\t')
+            if 'sample' not in events.columns:
+                events = pd.read_csv(ev_path, sep='\t',
+                                     header=None, names=ev_names)
 
             trials, labels = [], []
             for _, row in events.iterrows():

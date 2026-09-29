@@ -931,3 +931,103 @@ class HSStrokeDataset(BaseDataset):
         )
 
         return data, labels
+
+
+class SHUDataset(BaseDataset):
+    """
+    SHU Multi-session dataset: motor imagery EEG from healthy subjects,
+    purpose-built for cross-session variability research.
+
+    Dataset details (Ma et al., Scientific Data 2022):
+        - 25 healthy subjects x 5 sessions (2-3 day intervals)
+        - 32 EEG channels @ 250 Hz
+          [Fp1,Fp2,Fz,F3,F4,F7,F8,FC1,FC2,FC5,FC6,Cz,C3,C4,T3,T4,
+           A1,A2,CP1,CP2,CP5,CP6,Pz,P3,P4,T5,T6,PO3,PO4,Oz,O1,O2]
+        - ~100 trials per session (94-100), left/right hand MI, ~50/50
+        - EDF files hold concatenated 4-s MI segments (1000 samples each);
+          per-trial onsets/labels come from the BIDS events.tsv
+
+    Files layout:
+        <data_dir>/edf_raw/edf/sub-XXX_ses-0Y_task_motorimagery_eeg.edf
+        <data_dir>/events_raw/events/sub-XXX_ses-0Y_task_motorimagery_events.tsv
+
+    Optional config keys:
+        dataset.sessions: 'all' (default) or list of session ints, e.g. [1, 2]
+
+    Side effect:
+        self.trial_sessions (np.ndarray) stores the session index of each trial
+        for cross-session analyses (N-shot curves, session adaptation).
+
+    Reference:
+        Ma, J., Yang, B., Qiu, W., Li, Y., Gao, S., & Xia, X. (2022).
+        A large EEG dataset for studying cross-session variability in
+        motor imagery brain-computer interface. Scientific Data, 9, 531.
+        https://doi.org/10.1038/s41597-022-01647-1
+    """
+
+    TRIAL_SAMPLES = 1000  # 4 s @ 250 Hz per MI segment
+
+    def _load_raw_data(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load per-trial 4-s MI segments from EDF + events.tsv.
+
+        Returns:
+            Tuple of (data, labels):
+            - data: (n_trials, 32, 1000) float32, microvolts
+            - labels: (n_trials,) 1 = left, 2 = right (base class 0-indexes)
+        """
+        import mne
+        import pandas as pd
+
+        data_dir = self.data_dir or 'src/datasets/SHU'
+        sub = f'sub-{self.subject_id:03d}'
+        sessions = self.dataset_info.get('dataset', {}).get('sessions', 'all')
+        if sessions == 'all':
+            sessions = [1, 2, 3, 4, 5]
+        sessions = [int(s) for s in sessions]
+
+        mne.set_log_level('ERROR')
+        data_list, label_list, session_list = [], [], []
+        for ses in sessions:
+            edf_path = os.path.join(
+                data_dir, 'edf_raw', 'edf',
+                f'{sub}_ses-{ses:02d}_task_motorimagery_eeg.edf')
+            ev_path = os.path.join(
+                data_dir, 'events_raw', 'events',
+                f'{sub}_ses-{ses:02d}_task_motorimagery_events.tsv')
+            if not os.path.exists(edf_path):
+                raise FileNotFoundError(f'Missing EDF: {edf_path}')
+            if not os.path.exists(ev_path):
+                raise FileNotFoundError(f'Missing events: {ev_path}')
+
+            raw = mne.io.read_raw_edf(edf_path, preload=True, verbose=False)
+            sig = raw.get_data()  # (32, n_times), volts
+            events = pd.read_csv(ev_path, sep='\t')
+
+            trials, labels = [], []
+            for _, row in events.iterrows():
+                start = int(row['sample'])
+                seg = sig[:, start:start + self.TRIAL_SAMPLES]
+                if seg.shape[1] < self.TRIAL_SAMPLES:
+                    continue  # 尾部不完整 trial，跳过
+                trials.append(seg * 1e6)  # V -> uV
+                labels.append(1 if str(row['trial_type']).strip() == 'left' else 2)
+
+            data_list.append(np.asarray(trials, dtype=np.float32))
+            label_list.append(np.asarray(labels, dtype=np.int64))
+            session_list.append(np.full(len(labels), ses, dtype=np.int64))
+
+        if not data_list:
+            raise ValueError(f'No SHU trials loaded for {sub} (sessions={sessions})')
+
+        data = np.concatenate(data_list, axis=0)
+        labels = np.concatenate(label_list)
+        self.trial_sessions = np.concatenate(session_list)
+
+        print(
+            f'[SHU sub-{self.subject_id:03d}] '
+            f'Loaded {len(labels)} trials from {len(data_list)} session(s), '
+            f'shape={data.shape}, labels={np.unique(labels, return_counts=True)}'
+        )
+
+        return data, labels

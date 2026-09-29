@@ -1,0 +1,51 @@
+# SHU Multi-session dataset (healthy subjects, cross-session MI)
+# Ma et al., Scientific Data 2022 — 25 subjects x 5 sessions, 32ch @250Hz
+# EDF = concatenated 4-s MI segments; labels from BIDS events.tsv
+dataset:
+  name: "SHU"
+  data_dir: "src/datasets/SHU"
+  original_sr: 250
+  num_channels: 32
+  num_classes: 2
+  num_subjects: 25
+  subjects: [1]
+  labels: [0, 1]  # 0: Left hand, 1: Right hand (converted from 1/2 by BaseDataset)
+  sessions: "all"  # or list like [1, 2]
+
+preprocessing:
+  windowing:
+    window_length_sec: 2.0   # 与项目 XWStroke 标准一致
+    window_stride_sec: 0.5
+
+  resample:
+    target_sr: 250
+    method: "fft"
+
+  channel_selection:
+    channels_to_select: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+                         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
+
+  filter_bank:
+    filter_banks:
+      - [4, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore"
+    axis: -1
+
+  augmentation: []
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline:
+    train: []
+    val: []
+    test: []

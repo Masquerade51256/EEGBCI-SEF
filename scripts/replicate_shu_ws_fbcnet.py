@@ -72,7 +72,7 @@ def train_fold(Xtr, ytr, Xva, yva, Xte, yte, seed=42):
     lossf = nn.NLLLoss()
     tr = torch.utils.data.DataLoader(
         torch.utils.data.TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(ytr).long()),
-        batch_size=16, shuffle=True, drop_last=False)
+        batch_size=16, shuffle=True, drop_last=True)  # drop_last 防止 batch=1 被 squeeze 掉维度
     Xva_t = torch.from_numpy(Xva).to(DEVICE)
     Xte_t = torch.from_numpy(Xte).to(DEVICE)
     best_va, best_state, bad = -1, None, 0
@@ -117,6 +117,7 @@ for sid in range(1, 26):
                                           X_rest[va_idx], y_rest[va_idx],
                                           X[te], y[te]))
         accs[f"sub-{sid:03d}_ses-{ses:02d}"] = float(np.mean(fold_scores))
+        print(f"  sub-{sid:03d}_ses-{ses:02d}: {accs[f'sub-{sid:03d}_ses-{ses:02d}']*100:.1f}%", flush=True)
     a = np.array(list(accs.values()))
     print(f"sub-{sid:03d} done, 累计均值 {a.mean()*100:.2f}% (n={len(a)})", flush=True)
 

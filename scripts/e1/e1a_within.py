@@ -75,7 +75,9 @@ def run_eegnet(ds_train_mode, data_np, labels, group_ids, seeds, epochs=100):
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, Subset, TensorDataset
+    from models import register_all_models
     from core.registry import MODELS, build_from_config
+    register_all_models()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     X_np = data_np  # (n, 1, 7, 500)

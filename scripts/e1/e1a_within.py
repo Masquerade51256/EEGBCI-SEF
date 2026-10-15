@@ -57,7 +57,7 @@ def run_csp(ds, seeds=(42,)):
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.pipeline import Pipeline
     from mne.decoding import CSP
-    X = ds.data[:, 0, :, :]  # (n_win, 7, 500)
+    X = ds.data[:, 0, :, :].astype(np.float64)  # (n_win, 7, 500)，mne CSP 要求 float64
     y = ds.labels
     g = ds.group_ids
     rows = []

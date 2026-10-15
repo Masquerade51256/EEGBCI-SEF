@@ -63,10 +63,18 @@ for sid in range(1, 26):
         if "sample" not in ev.columns:
             ev = pd.read_csv(evp, sep="\t", header=None,
                              names=["onset", "duration", "trial_type", "response_time", "sample", "value"])
-        c3 = np.stack([sig[12, int(r["sample"]):int(r["sample"]) + 1000] for _, r in ev.iterrows()])
-        c4 = np.stack([sig[13, int(r["sample"]):int(r["sample"]) + 1000] for _, r in ev.iterrows()])
+        segs = []
+        labels_ev = []
+        for _, r in ev.iterrows():
+            s = int(r["sample"])
+            if s + 1000 > sig.shape[1]:
+                continue
+            segs.append(s)
+            labels_ev.append(0 if str(r["trial_type"]).strip() == "left" else 1)
+        c3 = np.stack([sig[12, s:s + 1000] for s in segs])
+        c4 = np.stack([sig[13, s:s + 1000] for s in segs])
         lats.append(lat_from_segments(c3, c4))
-        ys.append(np.array([0 if str(t).strip() == "left" else 1 for t in ev["trial_type"]]))
+        ys.append(np.asarray(labels_ev))
     lat = np.concatenate(lats)
     y = np.concatenate(ys)
     d = cohens_d(lat[y == 0], lat[y == 1])

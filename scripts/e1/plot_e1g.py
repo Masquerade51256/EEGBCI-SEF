@@ -28,24 +28,28 @@ ARMS = [("finetune", "pretrained + fine-tune", "-", "tab:blue"),
 
 fig, axes = plt.subplots(1, 2, figsize=(12, 5.2), sharey=True)
 for ax, (direction, title, (wl, wv, wc)) in zip(axes, PANELS):
+    xs = np.arange(len(N_LIST))  # 等距分类坐标，避免 log2(0)
     for arm, label, ls, color in ARMS:
         df = pd.read_csv(f"{BASE}/e1_fewshot/{direction}_{arm}.csv")
         # 先按 (subject, seed) 聚合，再跨被试×seed 汇总
         per = df.groupby(["n_shot", "target_subject", "seed"])["acc"].mean().reset_index()
         g = per.groupby("n_shot")["acc"]
-        ns = g.mean().index.values
-        mean = g.mean().values * 100
-        sem = (g.std() / np.sqrt(g.count())).values * 100
-        ax.plot(ns, mean, ls, color=color, marker="o", ms=4, label=label)
-        ax.fill_between(ns, mean - sem, mean + sem, color=color, alpha=0.15)
+        mean_s = g.mean() * 100
+        sem_s = (g.std() / np.sqrt(g.count())) * 100
+        ns = mean_s.index.values
+        xi = np.array([N_LIST.index(int(n)) for n in ns])
+        mean = mean_s.values
+        sem = sem_s.values
+        ax.plot(xi, mean, ls, color=color, marker="o", ms=4, label=label)
+        ax.fill_between(xi, mean - sem, mean + sem, color=color, alpha=0.15)
     ax.axhline(50, color="k", ls="--", lw=1)
     ax.axhline(wv, color=wc, ls=":", lw=1.4)
-    ax.text(1.1, wv + 0.4, wl, fontsize=8.5, color=wc)
-    ax.text(1.1, 50.4, "chance", fontsize=8.5)
-    ax.set_xscale("log", base=2)
-    ax.set_xticks(N_LIST)
+    ax.text(0.05, wv + 0.4, wl, fontsize=8.5, color=wc)
+    ax.text(0.05, 50.4, "chance", fontsize=8.5)
+    ax.set_xticks(xs)
     ax.set_xticklabels([str(n) for n in N_LIST])
-    ax.set_xlabel("N labeled trials from target subject (log2)")
+    ax.set_xlim(-0.3, len(N_LIST) - 0.7)
+    ax.set_xlabel("N labeled trials from target subject")
     ax.set_title(title, fontsize=11)
     ax.set_ylim(46, 60)
     ax.legend(fontsize=9, loc="lower right")

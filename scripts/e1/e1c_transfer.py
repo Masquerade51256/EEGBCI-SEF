@@ -33,6 +33,10 @@ DOMAINS = {
     "xw": ("configs/dataset/XWStroke_7ch_hsalign.yaml", XWStrokeDataset, list(range(1, 51))),
     "hs": ("configs/dataset/HSStroke_7ch_250hz.yaml", HSStrokeDataset, list(range(1, 15))),
 }
+DOMAINS_EA = {
+    "xw": ("configs/dataset/XWStroke_7ch_hsalign_ea.yaml", XWStrokeDataset, list(range(1, 51))),
+    "hs": ("configs/dataset/HSStroke_7ch_250hz_ea.yaml", HSStrokeDataset, list(range(1, 15))),
+}
 DIRECTIONS = {"xw2hs": ("xw", "hs"), "hs2xw": ("hs", "xw")}
 
 
@@ -42,9 +46,9 @@ def load_subject(cls, cfg_path, sid, mode):
     return cls(subject_id=sid, dataset_info=info, mode=mode)
 
 
-def load_domain(name, mode):
+def load_domain(name, mode, domains=None):
     """加载整域：返回 per-subject [(sid, ds)] 列表"""
-    cfg, cls, sids = DOMAINS[name]
+    cfg, cls, sids = (domains or DOMAINS)[name]
     out = []
     for sid in sids:
         try:
@@ -145,24 +149,27 @@ def main():
     ap.add_argument("--direction", required=True, choices=list(DIRECTIONS.keys()))
     ap.add_argument("--arm", required=True, choices=["csp", "eegnet"])
     ap.add_argument("--seeds", default="42")
+    ap.add_argument("--ea", action="store_true", help="使用 EA 对齐的 config 变体（E1c-EA 臂）")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
 
+    domains = DOMAINS_EA if args.ea else DOMAINS
+    tag = "_ea" if args.ea else ""
     src_name, tgt_name = DIRECTIONS[args.direction]
     os.makedirs(OUT, exist_ok=True)
-    out_csv = os.path.join(OUT, f"{args.direction}_{args.arm}.csv")
+    out_csv = os.path.join(OUT, f"{args.direction}_{args.arm}{tag}.csv")
 
     done_seeds = set()
     if os.path.exists(out_csv):
         done_seeds = set(pd.read_csv(out_csv)["seed"].unique())
     remain = [s for s in seeds if s not in done_seeds]
     if not remain:
-        print(f"[resume] {args.direction}/{args.arm} 全部 seed 已完成")
+        print(f"[resume] {args.direction}/{args.arm}{tag} 全部 seed 已完成")
         return
 
-    print(f"=== E1c {args.direction} {args.arm} seeds={remain} ===", flush=True)
-    source = load_domain(src_name, mode="train")
-    target = load_domain(tgt_name, mode="test")
+    print(f"=== E1c{tag} {args.direction} {args.arm} seeds={remain} ===", flush=True)
+    source = load_domain(src_name, mode="train", domains=domains)
+    target = load_domain(tgt_name, mode="test", domains=domains)
 
     if args.arm == "csp":
         rows = []
@@ -174,7 +181,7 @@ def main():
     df = pd.DataFrame(rows, columns=["target_subject", "seed", "acc", "n_test"])
     df.to_csv(out_csv, mode="a", header=not os.path.exists(out_csv), index=False)
     m = df.groupby("target_subject")["acc"].mean()
-    print(f"\n===== {args.direction}/{args.arm} 完成: {m.mean()*100:.2f}% ± {m.std()*100:.2f}% =====")
+    print(f"\n===== {args.direction}/{args.arm}{tag} 完成: {m.mean()*100:.2f}% ± {m.std()*100:.2f}% =====")
 
 
 if __name__ == "__main__":

@@ -30,7 +30,9 @@ from e1c_transfer import DOMAINS, load_domain  # 复用域加载（无 EA 主口
 
 OUT = "experiments/e1_acute_vs_chronic/e1_fewshot"
 N_LIST = [0, 2, 4, 8, 16, 32]
-FT_EPOCHS = 50
+FT_EPOCHS = 100
+FT_LR = 1e-3        # 微调与预训练同 lr（EEGNet 仅 ~1.5k 参数，小数据下 1e-4 欠适应）
+SCRATCH_LR = 1e-3
 PRETRAIN_EPOCHS = 100
 
 
@@ -166,9 +168,9 @@ def main():
                 if n > 0:
                     if args.arm == "finetune":
                         model.load_state_dict({k: v.to(device) for k, v in pretrained_state.items()})
-                        lr = 1e-4
+                        lr = FT_LR
                     else:
-                        lr = 1e-3
+                        lr = SCRATCH_LR
                     Xtr, ytr = ds.data[ft_mask], ds.labels[ft_mask]
                     train_model(model, Xtr, ytr, FT_EPOCHS, lr, device)
                 # n=0 的 finetune 臂 = zero-shot（加载预训练权重直接测）

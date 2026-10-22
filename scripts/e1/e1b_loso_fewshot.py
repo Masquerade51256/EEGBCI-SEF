@@ -54,13 +54,12 @@ def main():
 
     print(f"=== E1b {args.dataset}/{args.arm} seeds={seeds} ===", flush=True)
     domain = load_domain(args.dataset, mode="train")
-    if args.max_targets:
-        domain = domain[:args.max_targets]
+    targets = domain[:args.max_targets] if args.max_targets else domain
     aug = domain[0][1].augmentor
 
     for seed in seeds:
         # 逐目标被试：LOSO 源域预训练（scratch 条件不需要，但 N=0 行需与 finetune 对齐跳过）
-        for sid_t, ds_t in domain:
+        for sid_t, ds_t in targets:
             pending = [n for n in N_LIST
                        if (sid_t, seed, n) not in done
                        and not (n == 0 and args.arm == "scratch")]

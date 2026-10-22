@@ -1,0 +1,65 @@
+# BCICIV2a 7-channel subset aligned with XWStroke/HSStroke motor channels (E1c+ healthy<->patient).
+# Channel order after selection: [FC3, FC4, C3, Cz, C4, CP3, CP4]
+#   BCICIV2a 22ch order: [Fz,FC3,FC1,FCz,FC2,FC4,C5,C3,C1,Cz,C2,C4,C6,
+#                         CP3,CP1,CPz,CP2,CP4,P1,Pz,P2,POz]
+#   -> indices [1,5,7,9,11,13,17]
+# Native 250 Hz; 3-s MI epochs -> 2-s windows / 0.5-s stride (3 windows/trial).
+# NOTE: natively 4-class; E1c+ scripts filter to left(0)/right(1) after loading.
+dataset:
+  name: "BCICIV2a"
+  data_dir: "src/datasets/BCICIV2a"
+  original_sr: 250
+  num_channels: 7
+  num_classes: 2
+  num_subjects: 9
+  subjects: [1,2,3,4,5,6,7,8,9]
+  labels: [0, 1]  # 0: Left hand, 1: Right hand（脚本侧过滤掉 foot/tongue）
+
+preprocessing:
+  windowing:
+    window_length_sec: 2.0
+    window_stride_sec: 0.5
+
+  resample:
+    target_sr: 250
+    method: "fft"
+
+  channel_selection:
+    channels_to_select: [1, 5, 7, 9, 11, 13, 17]
+
+  filter_bank:
+    filter_banks:
+      - [4, 40]
+    normalize: true
+
+  normalization:
+    method: "zscore"
+    axis: -1
+
+  augmentation:
+    - method: "add_noise"
+      snr_db: 20
+      probability: 0.3
+    - method: "channel_dropout"
+      dropout_rate: 0.1
+      probability: 0.3
+    - method: "time_warp"
+      sigma: 0.2
+      probability: 0.3
+
+pipelines:
+  global_pipeline:
+    - name: "resample"
+    - name: "channel_selection"
+    - name: "filter_bank"
+
+  sample_pipeline:
+    - name: "temporal_standardization"
+
+  augmentation_pipeline:
+    train:
+      - "gaussian_noise"
+      - "channel_dropout"
+      - "time_warp"
+    val: []
+    test: []

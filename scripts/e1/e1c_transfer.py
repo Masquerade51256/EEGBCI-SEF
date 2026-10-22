@@ -24,7 +24,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, ".")
-from data.datasets import XWStrokeDataset, HSStrokeDataset
+from data.datasets import XWStrokeDataset, HSStrokeDataset, BCICIV2aDataset
 
 OUT = "experiments/e1_acute_vs_chronic/e1c_transfer"
 MAX_WIN_PER_SUBJECT = 2000  # 源域每被试窗数上限（HS 全量 ~8000/人，控制训练规模）
@@ -32,12 +32,18 @@ MAX_WIN_PER_SUBJECT = 2000  # 源域每被试窗数上限（HS 全量 ~8000/人�
 DOMAINS = {
     "xw": ("configs/dataset/XWStroke_7ch_hsalign.yaml", XWStrokeDataset, list(range(1, 51))),
     "hs": ("configs/dataset/HSStroke_7ch_250hz.yaml", HSStrokeDataset, list(range(1, 15))),
+    # E1c+：健康源（BCICIV2a，原生 4 类，加载后过滤为左/右手两类）
+    "bcic": ("configs/dataset/BCICIV2a_7ch_250hz.yaml", BCICIV2aDataset, list(range(1, 10))),
 }
 DOMAINS_EA = {
     "xw": ("configs/dataset/XWStroke_7ch_hsalign_ea.yaml", XWStrokeDataset, list(range(1, 51))),
     "hs": ("configs/dataset/HSStroke_7ch_250hz_ea.yaml", HSStrokeDataset, list(range(1, 15))),
 }
-DIRECTIONS = {"xw2hs": ("xw", "hs"), "hs2xw": ("hs", "xw")}
+# 原生多类数据集加载后需过滤的标签子集
+LABEL_SUBSET = {"bcic": [0, 1]}
+DIRECTIONS = {"xw2hs": ("xw", "hs"), "hs2xw": ("hs", "xw"),
+              "bcic2xw": ("bcic", "xw"), "bcic2hs": ("bcic", "hs"),
+              "xw2bcic": ("xw", "bcic"), "hs2bcic": ("hs", "bcic")}
 
 
 def load_subject(cls, cfg_path, sid, mode):
@@ -47,12 +53,17 @@ def load_subject(cls, cfg_path, sid, mode):
 
 
 def load_domain(name, mode, domains=None):
-    """加载整域：返回 per-subject [(sid, ds)] 列表"""
+    """加载整域：返回 per-subject [(sid, ds)] 列表；原生多类数据集在此过滤标签子集"""
     cfg, cls, sids = (domains or DOMAINS)[name]
+    keep_labels = LABEL_SUBSET.get(name)
     out = []
     for sid in sids:
         try:
             ds = load_subject(cls, cfg, sid, mode)
+            if keep_labels is not None:
+                keep = np.isin(ds.labels, keep_labels)
+                ds.data, ds.labels, ds.group_ids = (
+                    ds.data[keep], ds.labels[keep], ds.group_ids[keep])
             out.append((sid, ds))
             print(f"  [{name}] sub-{sid:02d} loaded: {ds.data.shape}", flush=True)
         except Exception as e:
@@ -156,6 +167,8 @@ def main():
     domains = DOMAINS_EA if args.ea else DOMAINS
     tag = "_ea" if args.ea else ""
     src_name, tgt_name = DIRECTIONS[args.direction]
+    if args.ea and (src_name not in DOMAINS_EA or tgt_name not in DOMAINS_EA):
+        raise ValueError(f"--ea 仅支持 xw/hs 方向，{args.direction} 无 EA config 变体")
     os.makedirs(OUT, exist_ok=True)
     out_csv = os.path.join(OUT, f"{args.direction}_{args.arm}{tag}.csv")
 

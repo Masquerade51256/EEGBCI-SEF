@@ -104,7 +104,8 @@ def build_eegnet(device, seed):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--direction", required=True, choices=["xw2hs", "hs2xw"])
+    ap.add_argument("--direction", required=True,
+                    choices=["xw2hs", "hs2xw", "bcic2xw", "bcic2hs"])
     ap.add_argument("--arm", required=True, choices=["finetune", "scratch"])
     ap.add_argument("--seeds", default="42,123,2026")
     args = ap.parse_args()
@@ -112,7 +113,9 @@ def main():
 
     import torch  # noqa
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    src_name, tgt_name = {"xw2hs": ("xw", "hs"), "hs2xw": ("hs", "xw")}[args.direction]
+    src_name, tgt_name = {"xw2hs": ("xw", "hs"), "hs2xw": ("hs", "xw"),
+                          "bcic2xw": ("bcic", "xw"), "bcic2hs": ("bcic", "hs")
+                          }[args.direction]
     os.makedirs(OUT, exist_ok=True)
     out_csv = os.path.join(OUT, f"{args.direction}_{args.arm}.csv")
 

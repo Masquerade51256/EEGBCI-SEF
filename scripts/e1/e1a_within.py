@@ -24,7 +24,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, ".")
-from data.datasets import XWStrokeDataset, HSStrokeDataset
+from data.datasets import XWStrokeDataset, HSStrokeDataset, BCICIV2aDataset
 
 OUT = "experiments/e1_acute_vs_chronic/e1a_within"
 
@@ -32,7 +32,10 @@ DATASETS = {
     "xw": ("configs/dataset/XWStroke_7ch_hsalign.yaml", XWStrokeDataset, list(range(1, 51)), None),
     "hs_all": ("configs/dataset/HSStroke_7ch_250hz.yaml", HSStrokeDataset, list(range(1, 15)), None),
     "hs_ses01": ("configs/dataset/HSStroke_7ch_250hz.yaml", HSStrokeDataset, list(range(1, 15)), [1]),
+    # BCICIV2a：原生 4 类，加载后过滤为左/右手两类（与 E1c+ 口径一致）
+    "bcic": ("configs/dataset/BCICIV2a_7ch_250hz.yaml", BCICIV2aDataset, list(range(1, 10)), None),
 }
+LABEL_SUBSET = {"bcic": [0, 1]}
 
 
 def load_subject(cls, cfg_path, sid, sessions, mode):
@@ -140,6 +143,10 @@ def main():
         t0 = time.time()
         try:
             ds = load_subject(cls, cfg, sid, sessions, mode="train")
+            if args.dataset in LABEL_SUBSET:
+                keep = np.isin(ds.labels, LABEL_SUBSET[args.dataset])
+                ds.data, ds.labels, ds.group_ids = (
+                    ds.data[keep], ds.labels[keep], ds.group_ids[keep])
         except Exception as e:
             print(f"sub-{sid:02d}: LOAD ERROR {e}", flush=True)
             continue

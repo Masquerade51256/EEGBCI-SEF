@@ -37,28 +37,51 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, ".")
-from data.datasets import XWStrokeDataset
+from data.datasets import XWStrokeDataset, BCICIV2aDataset
 
 OUT = "experiments/e2_hypothesis_families/e2a_spatial"
-CFG = "configs/dataset/XWStroke_affected_aligned.yaml"
-SUBJECTS = list(range(1, 51))
 
-# 对齐坐标系下的通道名（见 data/datasets.py XWSTROKE_FLIP_ORDER 注释）：
+# XWStroke 对齐坐标系通道名（见 data/datasets.py XWSTROKE_FLIP_ORDER 注释）：
 #   0 Fp1, 1 Fp2, 2 Fz, 3 F3, 4 F4, 5 F7, 6 F8, 7 FCz, 8 FC3, 9 FC4,
 #  10 FT7, 11 FT8, 12 Cz, 13 C3, 14 C4, 15 T3, 16 T4, 17 CPz, 18 CP3, 19 CP4,
 #  20 TP7, 21 TP8, 22 Pz, 23 P3, 24 P4, 25 T5, 26 T6, 27 Oz, 28 O1, 29 O2
-CH_NAMES = ["Fp1", "Fp2", "Fz", "F3", "F4", "F7", "F8", "FCz", "FC3", "FC4",
-            "FT7", "FT8", "Cz", "C3", "C4", "T3", "T4", "CPz", "CP3", "CP4",
-            "TP7", "TP8", "Pz", "P3", "P4", "T5", "T6", "Oz", "O1", "O2"]
-FIXED4 = [8, 12, 13, 18]  # FC3, Cz, C3, CP3：对齐坐标系下即病灶对侧运动区 + 中线
+XW_CH_NAMES = ["Fp1", "Fp2", "Fz", "F3", "F4", "F7", "F8", "FCz", "FC3", "FC4",
+               "FT7", "FT8", "Cz", "C3", "C4", "T3", "T4", "CPz", "CP3", "CP4",
+               "TP7", "TP8", "Pz", "P3", "P4", "T5", "T6", "Oz", "O1", "O2"]
+# FC3, Cz, C3, CP3：对齐坐标系下即病灶对侧运动区 + 中线
+XW_FIXED4 = [8, 12, 13, 18]
+
+# BCIC IV2a 22 导：Fz,FC3,FC1,FCz,FC2,FC4,C5,C3,C1,Cz,C2,C4,C6,
+#                  CP3,CP1,CPz,CP2,CP4,P1,Pz,P2,POz
+BCIC_CH_NAMES = ["Fz", "FC3", "FC1", "FCz", "FC2", "FC4", "C5", "C3", "C1", "Cz",
+                 "C2", "C4", "C6", "CP3", "CP1", "CPz", "CP2", "CP4", "P1", "Pz",
+                 "P2", "POz"]
+# FC3, C3, Cz, CP3：左侧运动区 + 中线（与 XW fixed4 同解剖含义）
+BCIC_FIXED4 = [1, 7, 9, 13]
+
+DATASETS = {
+    "xw": dict(cfg="configs/dataset/XWStroke_affected_aligned.yaml",
+               cls=XWStrokeDataset, subjects=list(range(1, 51)),
+               ch_names=XW_CH_NAMES, fixed4=XW_FIXED4, label_subset=None),
+    "bcic": dict(cfg="configs/dataset/BCICIV2a_full_250hz.yaml",
+                 cls=BCICIV2aDataset, subjects=list(range(1, 10)),
+                 ch_names=BCIC_CH_NAMES, fixed4=BCIC_FIXED4, label_subset=[0, 1]),
+}
+
 SEL_K = 4
 BANDS = [(8, 13), (13, 30)]  # μ, β
 
 
-def load_subject(sid):
-    with open(CFG) as f:
+def load_subject(dkey, sid):
+    d = DATASETS[dkey]
+    with open(d["cfg"]) as f:
         info = yaml.safe_load(f)
-    return XWStrokeDataset(subject_id=sid, dataset_info=info, mode="train")
+    ds = d["cls"](subject_id=sid, dataset_info=info, mode="train")
+    if d["label_subset"] is not None:
+        keep = np.isin(ds.labels, d["label_subset"])
+        ds.data, ds.labels, ds.group_ids = (
+            ds.data[keep], ds.labels[keep], ds.group_ids[keep])
+    return ds
 
 
 def group_kfold_indices(group_ids, n_folds, seed):
@@ -92,7 +115,7 @@ def erd_channel_scores(X_tr, y_tr, fs=250):
     return scores
 
 
-def run_csp(X, y, g, sid, seeds, chan_mode):
+def run_csp(X, y, g, sid, seeds, chan_mode, ch_names, fixed4):
     """chan_mode: 'full' | 'fixed4' | 'sel4'"""
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
     from sklearn.pipeline import Pipeline
@@ -104,7 +127,7 @@ def run_csp(X, y, g, sid, seeds, chan_mode):
             if chan_mode == "full":
                 ch = list(range(X.shape[1]))
             elif chan_mode == "fixed4":
-                ch = FIXED4
+                ch = fixed4
             else:  # sel4：选择仅用训练折
                 ch = np.argsort(-erd_channel_scores(X[tr], y[tr]))[:SEL_K].tolist()
             # 分量数：全导 6；4 导时取 4（CSP 要求偶数且 ≤ 通道数）
@@ -114,7 +137,7 @@ def run_csp(X, y, g, sid, seeds, chan_mode):
             clf.fit(X[tr][:, ch, :], y[tr])
             acc = float(clf.score(X[te][:, ch, :], y[te]))
             rows.append((sid, seed, fi, acc, len(tr), len(te),
-                         ",".join(CH_NAMES[c] for c in ch)))
+                         ",".join(ch_names[c] for c in ch)))
     return rows
 
 
@@ -167,42 +190,46 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", required=True,
                     choices=["csp_full", "csp_fixed4", "csp_sel4", "eegnet_full"])
+    ap.add_argument("--dataset", default="xw", choices=list(DATASETS.keys()))
     ap.add_argument("--seeds", default="42,123,2026")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
+    dspec = DATASETS[args.dataset]
 
-    os.makedirs(OUT, exist_ok=True)
-    out_csv = os.path.join(OUT, f"{args.arm}_fold_results.csv")
+    out_dir = os.path.join(OUT, args.dataset)
+    os.makedirs(out_dir, exist_ok=True)
+    out_csv = os.path.join(out_dir, f"{args.arm}_fold_results.csv")
     done = set()
     if os.path.exists(out_csv):
         prev = pd.read_csv(out_csv)
         done = set(zip(prev.subject, prev.seed))
         print(f"[resume] {len(done)} (subject, seed) 已完成")
 
-    for sid in SUBJECTS:
+    for sid in dspec["subjects"]:
         remain = [s for s in seeds if (sid, s) not in done]
         if not remain:
             continue
         t0 = time.time()
         try:
-            ds = load_subject(sid)
+            ds = load_subject(args.dataset, sid)
         except Exception as e:
             print(f"sub-{sid:02d}: LOAD ERROR {e}", flush=True)
             continue
-        X = ds.data[:, 0, :, :]  # (n_win, 30, T)
+        X = ds.data[:, 0, :, :]  # (n_win, n_ch, T)
         if args.arm == "eegnet_full":
             rows = run_eegnet(ds, remain)
         else:
             rows = run_csp(X, ds.labels, ds.group_ids, sid, remain,
-                           args.arm.replace("csp_", ""))
+                           args.arm.replace("csp_", ""),
+                           dspec["ch_names"], dspec["fixed4"])
         m = np.mean([r[3] for r in rows])
-        print(f"[{args.arm}] sub-{sid:02d} done: {m*100:.2f}%  ({time.time()-t0:.0f}s)",
+        print(f"[{args.dataset}/{args.arm}] sub-{sid:02d} done: {m*100:.2f}%  ({time.time()-t0:.0f}s)",
               flush=True)
         df = pd.DataFrame(rows, columns=["subject", "seed", "fold", "acc",
                                          "n_train", "n_test", "channels"])
         df.to_csv(out_csv, mode="a", header=not os.path.exists(out_csv), index=False)
 
-    print(f"\n===== {args.arm} 完成 =====")
+    print(f"\n===== {args.dataset}/{args.arm} 完成 =====")
 
 
 if __name__ == "__main__":

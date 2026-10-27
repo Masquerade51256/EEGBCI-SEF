@@ -37,7 +37,10 @@ sys.path.insert(0, ".")
 from scripts.e2.e2a_spatial import (DATASETS, load_subject, group_kfold_indices)
 
 OUT = "experiments/e2_hypothesis_families/e2b_connectivity"
-BANDS = [(8, 13), (13, 30)]  # μ, β
+BANDS_2 = [(8, 13), (13, 30)]                        # μ, β（初版，仅作对照保留）
+BANDS_4 = [(4, 8), (8, 13), (13, 30), (30, 40)]      # θ, μ, β, γ（2026-10-27 扩展：
+                                                     #  只用 μ/β 是依赖健康人 ERD 先验，
+                                                     #  违背不预设健康模式的原则）
 
 
 def band_hilbert(X, lo, hi, fs=250):
@@ -48,12 +51,12 @@ def band_hilbert(X, lo, hi, fs=250):
     return hilbert(Xf, axis=-1)
 
 
-def connectivity_features(X, fs=250):
-    """X: (n, ch, T) -> (n, n_edges*2*2) [wPLI μ, wPLI β, iCoh μ, iCoh β]"""
+def connectivity_features(X, bands, fs=250):
+    """X: (n, ch, T) -> (n, n_edges*2*len(bands)) [wPLI, iCoh] × bands"""
     n, n_ch, _ = X.shape
     iu = np.triu_indices(n_ch, k=1)
     feats = []
-    for lo, hi in BANDS:
+    for lo, hi in bands:
         Z = band_hilbert(X, lo, hi, fs)          # (n, ch, T) 解析信号
         # 两两交叉谱虚部：向量化
         Zi = Z[:, iu[0], :]                       # (n, E, T)
@@ -80,9 +83,11 @@ def edge_scores(F_tr, y_tr):
 
 def run_conn(X, y, g, sid, seeds, arm):
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    F = connectivity_features(X)                  # 全窗连接特征（无泄漏：逐窗独立）
+    bands = BANDS_4 if arm.endswith("_4b") else BANDS_2
+    base = arm.replace("_4b", "")
+    F = connectivity_features(X, bands)           # 全窗连接特征（无泄漏：逐窗独立）
     rows = []
-    topk = {"conn_sel50": 50, "conn_sel20": 20}.get(arm)
+    topk = {"conn_sel50": 50, "conn_sel20": 20}.get(base)
     for seed in seeds:
         for fi, (tr, te) in enumerate(group_kfold_indices(g, 5, seed + sid)):
             Ftr, Fte = F[tr], F[te]
@@ -106,7 +111,8 @@ def run_conn(X, y, g, sid, seeds, arm):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--arm", required=True,
-                    choices=["conn_full", "conn_sel50", "conn_sel20"])
+                    choices=["conn_full", "conn_sel50", "conn_sel20",
+                             "conn_full_4b", "conn_sel50_4b", "conn_sel20_4b"])
     ap.add_argument("--dataset", default="xw", choices=list(DATASETS.keys()))
     ap.add_argument("--seeds", default="42,123,2026")
     args = ap.parse_args()

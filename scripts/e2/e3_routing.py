@@ -36,7 +36,7 @@ import pandas as pd
 sys.path.insert(0, ".")
 from scripts.e2.e2a_spatial import DATASETS, load_subject, group_kfold_indices
 from scripts.e2.e2b_connectivity import connectivity_features, edge_scores, BANDS_2
-from scripts.e2.e2e_slowpot import load_xw_trials, scp_features, LOADERS
+from scripts.e2.e2e_slowpot import scp_features, LOADERS
 import scripts.e2.e2e_slowpot as e2e
 from scripts.e2.e2cd_nonlinear_aperiodic import feat_aperiodic
 
@@ -90,20 +90,25 @@ def fit_predict_aper(Ftr_w, ytr_w, gtr, Fte_w, gte, tr_ids, te_ids):
 class SubjectData:
     """每个被试预计算全部特征，避免嵌套内重复计算。"""
 
-    def __init__(self, sid):
-        ds = load_subject("xw", sid)
-        self.Xw = ds.data[:, 0, :, :].astype(np.float64)  # (n_win, 30, 500)
+    def __init__(self, sid, dkey="xw"):
+        ds = load_subject(dkey, sid)
+        self.Xw = ds.data[:, 0, :, :].astype(np.float64)  # (n_win, n_ch, 500)
         self.yw = ds.labels
         self.g = ds.group_ids
         self.trial_ids = np.unique(self.g)
-        # trial 级标签（已验证与慢电位 loader 一致）
+        # trial 级标签（XW 已验证与慢电位 loader 一致；HS 同源 .mat 天然一致）
         self.yt = np.array([self.yw[self.g == t][0] for t in self.trial_ids])
         # 预计算特征
         self.Fconn = connectivity_features(self.Xw, BANDS_2)
         self.Faper = feat_aperiodic(self.Xw)
-        e2e.LOADERS_CUR = LOADERS["xw"]
-        Xt, _ = load_xw_trials(sid)
-        self.Fscp = scp_features(Xt, LOADERS["xw"][1])     # trial 级
+        loader, sr, epoch_s, _ = LOADERS[dkey]
+        e2e.LOADERS_CUR = LOADERS[dkey]
+        Xt, yt_raw = loader(sid)
+        # 校验 trial 标签一致（防口径错配）
+        if len(yt_raw) != len(self.yt) or not np.array_equal(yt_raw, self.yt):
+            raise ValueError(f"{dkey} sub-{sid:02d}: trial labels mismatch "
+                             f"({len(yt_raw)} vs {len(self.yt)})")
+        self.Fscp = scp_features(Xt, sr)                   # trial 级
 
     def _win_mask(self, trial_subset):
         return np.isin(self.g, trial_subset)
@@ -218,11 +223,13 @@ def protocol_b(sd, seeds, n_list=(8, 16, 32), n_rep=5):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", default="42,123,2026")
+    ap.add_argument("--dataset", default="xw", choices=["xw", "hs"])
     ap.add_argument("--part", default="ab", choices=["a", "b", "ab"])
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
+    dkey = args.dataset
 
-    out_dir = os.path.join(OUT, "xw")
+    out_dir = os.path.join(OUT, dkey)
     os.makedirs(out_dir, exist_ok=True)
     csv_a = os.path.join(out_dir, "full_calib_results.csv")
     csv_b = os.path.join(out_dir, "nshot_results.csv")
@@ -235,10 +242,10 @@ def main():
         prev = pd.read_csv(csv_b)
         done_b = set(prev.subject)
 
-    for sid in DATASETS["xw"]["subjects"]:
+    for sid in DATASETS[dkey]["subjects"]:
         t0 = time.time()
         try:
-            sd = SubjectData(sid)
+            sd = SubjectData(sid, dkey)
             sd.sid = sid
         except Exception as e:
             print(f"sub-{sid:02d}: LOAD ERROR {e}", flush=True)

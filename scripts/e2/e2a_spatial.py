@@ -37,7 +37,7 @@ import pandas as pd
 import yaml
 
 sys.path.insert(0, ".")
-from data.datasets import XWStrokeDataset, BCICIV2aDataset
+from data.datasets import XWStrokeDataset, BCICIV2aDataset, HSStrokeDataset
 
 OUT = "experiments/e2_hypothesis_families/e2a_spatial"
 
@@ -59,13 +59,30 @@ BCIC_CH_NAMES = ["Fz", "FC3", "FC1", "FCz", "FC2", "FC4", "C5", "C3", "C1", "Cz"
 # FC3, C3, Cz, CP3：左侧运动区 + 中线（与 XW fixed4 同解剖含义）
 BCIC_FIXED4 = [1, 7, 9, 13]
 
+# HS Stroke 11 导（全部运动区导联）：FC3,FC4,C5,C3,C1,Cz,C2,C4,C6,CP3,CP4
+HS_CH_NAMES = ["FC3", "FC4", "C5", "C3", "C1", "Cz", "C2", "C4", "C6", "CP3", "CP4"]
+# FC3, C3, Cz, CP3（左侧运动区 + 中线，与 XW/BCIC fixed4 同解剖含义）
+HS_FIXED4 = [0, 3, 5, 9]
+
 DATASETS = {
     "xw": dict(cfg="configs/dataset/XWStroke_affected_aligned.yaml",
                cls=XWStrokeDataset, subjects=list(range(1, 51)),
-               ch_names=XW_CH_NAMES, fixed4=XW_FIXED4, label_subset=None),
+               ch_names=XW_CH_NAMES, fixed4=XW_FIXED4, label_subset=None,
+               sessions=None),
     "bcic": dict(cfg="configs/dataset/BCICIV2a_full_250hz.yaml",
                  cls=BCICIV2aDataset, subjects=list(range(1, 10)),
-                 ch_names=BCIC_CH_NAMES, fixed4=BCIC_FIXED4, label_subset=[0, 1]),
+                 ch_names=BCIC_CH_NAMES, fixed4=BCIC_FIXED4, label_subset=[0, 1],
+                 sessions=None),
+    # HS 慢性期：ses-01 单会话（与 XW 单会话口径可比）
+    "hs": dict(cfg="configs/dataset/HSStroke_full_250hz.yaml",
+               cls=HSStrokeDataset, subjects=list(range(1, 15)),
+               ch_names=HS_CH_NAMES, fixed4=HS_FIXED4, label_subset=None,
+               sessions=[1]),
+    # HS 慢性期多会话（session 稀释/稳定性检验）
+    "hs_all": dict(cfg="configs/dataset/HSStroke_full_250hz.yaml",
+                   cls=HSStrokeDataset, subjects=list(range(1, 15)),
+                   ch_names=HS_CH_NAMES, fixed4=HS_FIXED4, label_subset=None,
+                   sessions="all"),
 }
 
 SEL_K = 4
@@ -76,6 +93,8 @@ def load_subject(dkey, sid):
     d = DATASETS[dkey]
     with open(d["cfg"]) as f:
         info = yaml.safe_load(f)
+    if d.get("sessions") not in (None, "all"):
+        info["dataset"]["sessions"] = d["sessions"]
     ds = d["cls"](subject_id=sid, dataset_info=info, mode="train")
     if d["label_subset"] is not None:
         keep = np.isin(ds.labels, d["label_subset"])

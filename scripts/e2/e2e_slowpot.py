@@ -103,8 +103,40 @@ def load_bcic_trials(sid):
     return data[keep].astype(np.float64), labels[keep]
 
 
+def load_hs_trials(sid, sessions=(1,)):
+    """HS Stroke 慢性期：直接读每会话 .mat（未滤波 4s epoch，256 Hz）。
+    -> (n_trials, 11, 1024), labels(0=left,1=right)"""
+    import glob
+    data_dir = "src/datasets/HSStroke"
+    sub = f"sub-{sid:02d}"
+    pattern = os.path.join(data_dir, sub, "ses-*", "eeg", "*_eeg.mat")
+    mat_files = sorted(glob.glob(pattern))
+    if sessions != "all":
+        wanted = {f"ses-{int(s):02d}" for s in sessions}
+        mat_files = [f for f in mat_files
+                     if os.path.basename(os.path.dirname(os.path.dirname(f))) in wanted]
+    if not mat_files:
+        raise FileNotFoundError(f"No HSStroke data for {sub} sessions={sessions}")
+    data_list, label_list = [], []
+    for f in mat_files:
+        m = sio.loadmat(f, squeeze_me=True)
+        data_list.append(np.asarray(m["EEGdata"], dtype=np.float64))
+        label_list.append(np.asarray(m["EEGdatalabel"]).reshape(-1).astype(int) - 1)
+    return np.concatenate(data_list, 0), np.concatenate(label_list)
+
+
+def load_hs_trials_ses01(sid):
+    return load_hs_trials(sid, sessions=(1,))
+
+
+def load_hs_trials_all(sid):
+    return load_hs_trials(sid, sessions="all")
+
+
 LOADERS = {"xw": (load_xw_trials, XW_SR, XW_EPOCH_S, XW_MOTOR),
-           "bcic": (load_bcic_trials, 250, 3.0, BCIC_MOTOR)}
+           "bcic": (load_bcic_trials, 250, 3.0, BCIC_MOTOR),
+           "hs": (load_hs_trials_ses01, 256, 4.0, list(range(11))),
+           "hs_all": (load_hs_trials_all, 256, 4.0, list(range(11)))}
 
 
 def scp_features(X, sr):

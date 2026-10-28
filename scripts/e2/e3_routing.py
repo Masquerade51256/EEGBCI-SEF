@@ -130,11 +130,12 @@ class SubjectData:
 
 
 def inner_oof_probs(sd: SubjectData, calib_ids, y_calib, n_inner=4, seed=0):
-    """校准集内层 OOF：每专家的 trial 概率矩阵 + 准确率。"""
-    from sklearn.model_selection import KFold
-    kf = KFold(n_splits=min(n_inner, len(calib_ids)), shuffle=True, random_state=seed)
+    """校准集内层 OOF：每专家的 trial 概率矩阵 + 准确率（分层折，防小样本单类）。"""
+    from sklearn.model_selection import StratifiedKFold
+    kf = StratifiedKFold(n_splits=min(n_inner, len(calib_ids) // 2),
+                         shuffle=True, random_state=seed)
     P = np.zeros((len(calib_ids), len(EXPERTS)))
-    for itr, ite in kf.split(calib_ids):
+    for itr, ite in kf.split(calib_ids, y_calib):
         probs = sd.expert_trial_probs(calib_ids[itr], calib_ids[ite])
         for j, ex in enumerate(EXPERTS):
             P[ite, j] = probs[ex][1]
@@ -188,7 +189,12 @@ def protocol_b(sd, seeds, n_list=(8, 16, 32), n_rep=5):
         for N in n_list:
             for rep in range(n_rep):
                 rng = np.random.default_rng(seed * 1000 + rep)
-                calib_pos = rng.choice(n_all, N, replace=False)
+                # 分层抽样：每类各取 N/2，保证校准集两类都在
+                pos0 = np.where(sd.yt == 0)[0]
+                pos1 = np.where(sd.yt == 1)[0]
+                calib_pos = np.concatenate([
+                    rng.choice(pos0, N // 2, replace=False),
+                    rng.choice(pos1, N - N // 2, replace=False)])
                 test_pos = np.setdiff1d(np.arange(n_all), calib_pos)
                 tr_ids, te_ids = sd.trial_ids[calib_pos], sd.trial_ids[test_pos]
                 y_tr = sd.yt[calib_pos]

@@ -101,8 +101,11 @@ def source_bandpower(X, inv, ch_names):
     feats = []
     for lo, hi in BANDS:
         m = (freqs >= lo) & (freqs <= hi)
-        bp = P[..., m].mean(axis=-1)          # (n, 3*n_src)
-        bp = bp.reshape(n, 3, -1).sum(axis=1)  # 三朝向功率求和 -> (n, n_src)
+        bp = P[..., m].mean(axis=-1)          # (n, n_rows)
+        # 若为三朝向展开（3*n_src）则合并；否则 MNE 已按源点合并，直接使用
+        n_src = inv["src"][0]["nuse"]
+        if bp.shape[1] == 3 * n_src:
+            bp = bp.reshape(n, 3, -1).sum(axis=1)
         feats.append(np.log(bp + 1e-20))
     return np.concatenate(feats, axis=1)
 

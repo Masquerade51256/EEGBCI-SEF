@@ -15,7 +15,7 @@
   → 特征 = n_src × 2
 
 条件（arms）：
-  src_full   全源特征 + 收缩 LDA
+  src_full   全源特征 → 折内嵌套 PCA(40 成分) + LDA（高维 >> 样本，先降维）
   src_sel50  折内嵌套特征选择（训练折 |点二列相关| top-50）+ LDA
 
 协议：GroupKFold 5 折按 trial（group_ids），seeds 42/123/2026；折内标准化。
@@ -122,7 +122,14 @@ def run_src(X, y, g, sid, seeds, arm, K, sel):
                 Ftr, Fte = Ftr[:, idx], Fte[:, idx]
                 clf = LinearDiscriminantAnalysis()
             else:
-                clf = LinearDiscriminantAnalysis(shrinkage="auto", solver="lsqr")
+                # src_full：5938 维 >> n_train≈160，高维 LDA 在忙服务器上过慢；
+                # 折内嵌套 PCA（randomized SVD，40 成分）降维后接 LDA
+                from sklearn.decomposition import PCA
+                pca = PCA(n_components=min(40, len(tr) - 1), svd_solver="randomized",
+                          random_state=seed)
+                Ftr = pca.fit_transform(Ftr)
+                Fte = pca.transform(Fte)
+                clf = LinearDiscriminantAnalysis()
             clf.fit(Ftr, y[tr])
             acc = float(clf.score(Fte, y[te]))
             rows.append((sid, seed, fi, acc, len(tr), len(te), F.shape[1]))

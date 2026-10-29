@@ -57,6 +57,10 @@ def build_inverse(ch_names):
     montage = mne.channels.make_standard_montage(
         MONTAGE.get(CUR_DATASET, "standard_1020"))
     info.set_montage(montage, on_missing="warn")
+    # 平均参考投影（逆解强制要求）：通过临时 RawArray 挂上 projector
+    raw = mne.io.RawArray(np.zeros((len(ch_names), 10)), info, verbose="ERROR")
+    raw.set_eeg_reference("average", projection=True, verbose="ERROR")
+    info = raw.info
     # 球形头模型（按电极位置拟合，3 层 EEG 标准电导）
     bem = mne.make_sphere_model(r0="auto", head_radius="auto", info=info,
                                 relative_radii=(0.90, 0.92, 0.97, 1.0),
@@ -87,6 +91,7 @@ def source_bandpower(X, inv, ch_names):
         MONTAGE.get(CUR_DATASET, "standard_1020"))
     info.set_montage(montage, on_missing="warn")
     epochs = mne.EpochsArray(X, info, tmin=0.0, verbose="ERROR")
+    epochs.set_eeg_reference("average", projection=True, verbose="ERROR")
     stcs = mne.minimum_norm.apply_inverse_epochs(
         epochs, inv, lambda2=1.0 / 9.0, method="eLORETA",
         pick_ori=None, verbose="ERROR")

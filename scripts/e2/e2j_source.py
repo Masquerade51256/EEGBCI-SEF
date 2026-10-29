@@ -43,7 +43,7 @@ OUT = "experiments/e2_hypothesis_families/e2j_source"
 SR = 250
 BANDS = [(8.0, 13.0), (13.0, 30.0)]   # mu, beta
 
-MONTAGE = {"xw": "standard_alphabetic",   # T3/T4/T5/T6 旧名
+MONTAGE = {"xw": "standard_1020",  # MNE 的 standard_1020 覆盖旧名 T3/T4/T5/T6
            "bcic": "standard_1020",
            "hs": "standard_1020",
            "hs_all": "standard_1020"}

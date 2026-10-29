@@ -62,7 +62,7 @@ def build_inverse(ch_names):
                                 relative_radii=(0.90, 0.92, 0.97, 1.0),
                                 sigmas=(0.33, 1.0, 0.004, 0.33))
     src = mne.setup_volume_source_space(
-        subject=None, pos=10.0, bem=bem, sphere=None, verbose="ERROR")
+        subject=None, pos=10.0, mindist=5.0, bem=bem, sphere=None, verbose="ERROR")
     try:
         fwd = mne.make_forward_solution(info, trans=None, src=src, bem=bem,
                                         eeg=True, meg=False, verbose="ERROR")
@@ -71,7 +71,7 @@ def build_inverse(ch_names):
                                         eeg=True, meg=False, verbose="ERROR")
     noise_cov = mne.make_ad_hoc_cov(info)
     inv = mne.minimum_norm.make_inverse_operator(
-        info, fwd, noise_cov, loose=1.0, depth=0.8, fixed=False, verbose="ERROR")
+        info, fwd, noise_cov, loose=1.0, depth=None, fixed=False, verbose="ERROR")  # 球网格深度加权 d=0 除零，关闭
     return inv, info
 
 

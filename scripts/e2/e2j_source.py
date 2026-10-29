@@ -50,8 +50,16 @@ MONTAGE = {"xw": "standard_1020",  # MNE 的 standard_1020 覆盖旧名 T3/T4/T5
 
 
 def build_inverse(ch_names):
-    """球形头模型 + 体积源空间 + eLORETA 逆算子。每数据集只调一次。"""
+    """球形头模型 + 体积源空间 + eLORETA 逆算子核。每数据集只调一次。
+
+    返回 (K, sel)：K 为成像核 (3*n_src, n_ch)，满足
+        源朝向时间序列 = K @ 通道数据[sel]
+    （与 apply_inverse_epochs 的 pick_ori=None 路径完全一致：
+    白化/投影已烘入 prepared 逆算子；eLORETA 的 noise_norm 为 None）。
+    """
     import mne
+    from mne.minimum_norm.inverse import (_check_or_prepare, _assemble_kernel,
+                                          _pick_channels_inverse_operator)
     mne.set_log_level("ERROR")
     info = mne.create_info(ch_names=list(ch_names), sfreq=SR, ch_types="eeg")
     montage = mne.channels.make_standard_montage(
@@ -67,52 +75,40 @@ def build_inverse(ch_names):
                                 sigmas=(0.33, 1.0, 0.004, 0.33))
     src = mne.setup_volume_source_space(
         subject=None, pos=10.0, mindist=5.0, bem=bem, sphere=None, verbose="ERROR")
-    try:
-        fwd = mne.make_forward_solution(info, trans=None, src=src, bem=bem,
-                                        eeg=True, meg=False, verbose="ERROR")
-    except Exception:
-        fwd = mne.make_forward_solution(info, trans=np.eye(4), src=src, bem=bem,
-                                        eeg=True, meg=False, verbose="ERROR")
+    fwd = mne.make_forward_solution(info, trans=None, src=src, bem=bem,
+                                    eeg=True, meg=False, verbose="ERROR")
     noise_cov = mne.make_ad_hoc_cov(info)
     inv = mne.minimum_norm.make_inverse_operator(
         info, fwd, noise_cov, loose=1.0, depth=None, fixed=False, verbose="ERROR")  # 球网格深度加权 d=0 除零，关闭
-    return inv, info
+    inv = _check_or_prepare(inv, 1, 1.0 / 9.0, "eLORETA", None, False)
+    sel = _pick_channels_inverse_operator(list(ch_names), inv)
+    K, _, _, _ = _assemble_kernel(inv, None, "eLORETA", None)
+    return K, sel
 
 
-def source_bandpower(X, inv, ch_names):
-    """X: (n_win, n_ch, T) -> (n_win, n_src*2) log 频段功率（三朝向合并）。"""
-    import mne
-    from scipy.signal import welch
-    mne.set_log_level("ERROR")
+def source_bandpower(X, K, sel):
+    """X: (n_win, n_ch, T) -> (n_win, n_src*2) log 频段功率（三朝向合并）。
+
+    利用线性性：带通与逆解都是线性算子，可交换；频段功率 = 带通后信号方差，
+    而源序列方差 = diag(K C Kᵀ)（C 为带通数据的窗内协方差），无需显式源序列。
+    """
+    from scipy.signal import butter, filtfilt
     n, n_ch, T = X.shape
-    # 逆算子是线性算子：用 apply_inverse_epochs 批量施加
-    info = mne.create_info(ch_names=list(ch_names), sfreq=SR, ch_types="eeg")
-    montage = mne.channels.make_standard_montage(
-        MONTAGE.get(CUR_DATASET, "standard_1020"))
-    info.set_montage(montage, on_missing="warn")
-    epochs = mne.EpochsArray(X, info, tmin=0.0, verbose="ERROR")
-    epochs.set_eeg_reference("average", projection=True, verbose="ERROR")
-    stcs = mne.minimum_norm.apply_inverse_epochs(
-        epochs, inv, lambda2=1.0 / 9.0, method="eLORETA",
-        pick_ori=None, verbose="ERROR")
-    # 所有 epoch 的源序列堆成 (n, 3*n_src, T)
-    S = np.stack([s.data for s in stcs])
-    freqs, P = welch(S, fs=SR, axis=-1, nperseg=min(256, T))
+    n_src = K.shape[0] // 3
     feats = []
     for lo, hi in BANDS:
-        m = (freqs >= lo) & (freqs <= hi)
-        bp = P[..., m].mean(axis=-1)          # (n, n_rows)
-        # 若为三朝向展开（3*n_src）则合并；否则 MNE 已按源点合并，直接使用
-        n_src = inv["src"][0]["nuse"]
-        if bp.shape[1] == 3 * n_src:
-            bp = bp.reshape(n, 3, -1).sum(axis=1)
-        feats.append(np.log(bp + 1e-20))
+        b, a = butter(4, [lo / (SR / 2), hi / (SR / 2)], btype="band")
+        Xf = filtfilt(b, a, X[:, sel, :], axis=-1)
+        C = np.einsum("nct,ndt->ncd", Xf, Xf) / T          # (n, ch, ch)
+        var = np.einsum("sc,ncd,sd->ns", K, C, K)          # (n, 3*n_src)
+        var = var.reshape(n, n_src, 3).sum(axis=2)         # 三朝向功率求和
+        feats.append(np.log(var + 1e-20))
     return np.concatenate(feats, axis=1)
 
 
-def run_src(X, y, g, sid, seeds, arm, inv, ch_names):
+def run_src(X, y, g, sid, seeds, arm, K, sel):
     from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    F = source_bandpower(X, inv, ch_names)    # 逐窗独立，无泄漏
+    F = source_bandpower(X, K, sel)           # 逐窗独立，无泄漏
     rows = []
     for seed in seeds:
         for fi, (tr, te) in enumerate(group_kfold_indices(g, 5, seed + sid)):
@@ -148,8 +144,9 @@ def main():
 
     ch_names = DATASETS[args.dataset]["ch_names"]
     t0 = time.time()
-    inv, _ = build_inverse(ch_names)
-    print(f"[{args.dataset}] inverse operator built ({time.time()-t0:.0f}s)", flush=True)
+    K, sel = build_inverse(ch_names)
+    print(f"[{args.dataset}] inverse kernel built ({time.time()-t0:.0f}s), "
+          f"{K.shape[0]//3} sources", flush=True)
 
     out_dir = os.path.join(OUT, args.dataset)
     os.makedirs(out_dir, exist_ok=True)
@@ -172,7 +169,7 @@ def main():
             continue
         X = ds.data[:, 0, :, :].astype(np.float64)
         y, g = ds.labels, ds.group_ids
-        rows = run_src(X, y, g, sid, remain, args.arm, inv, ch_names)
+        rows = run_src(X, y, g, sid, remain, args.arm, K, sel)
         m = np.mean([r[3] for r in rows])
         print(f"[{args.dataset}/{args.arm}] sub-{sid:02d} done: {m*100:.2f}%  ({time.time()-t0:.0f}s)",
               flush=True)

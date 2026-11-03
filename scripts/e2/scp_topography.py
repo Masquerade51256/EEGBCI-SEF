@@ -30,7 +30,7 @@ for ax, g, ttl in [(axes[0], "sig", f"SCP-significant (n={int((df.group=='sig').
     m = diffmaps[df.group.values == g].mean(axis=0)
     im, _ = mne.viz.plot_topomap(m, pos, axes=ax, cmap="RdBu_r", vlim=(-vlim, vlim),
                                  show=False, contours=4)
-    ax.set_title(f"{title}\naffected - unaffected, 2.0-3.5 s", fontsize=10)
+    ax.set_title(f"{ttl}\naffected - unaffected, 2.0-3.5 s", fontsize=10)
 fig.colorbar(im, ax=axes, label="Slow-potential difference (uV)", shrink=0.8)
 fig.suptitle("XW acute stroke: scalp topography of MI slow-wave difference", y=1.0)
 fig.savefig(os.path.join(OUT, "fig_scp_topography.png"), bbox_inches="tight", dpi=150)

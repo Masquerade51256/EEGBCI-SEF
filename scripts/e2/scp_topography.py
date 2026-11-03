@@ -17,10 +17,8 @@ XW_CH_NAMES = ["Fp1","Fp2","Fz","F3","F4","F7","F8","FCz","FC3","FC4",
                "TP7","TP8","Pz","P3","P4","T5","T6","Oz","O1","O2"]
 ren = {"T3":"T7","T4":"T8","T5":"P7","T6":"P8"}
 names = [ren.get(c, c) for c in XW_CH_NAMES]
-mont = mne.channels.make_standard_montage("standard_1020")
-pos = np.array([mont.get_positions()["ch_pos"][n][:2] for n in names])
-# normalize to head circle
-pos = pos / np.max(np.linalg.norm(pos, axis=1)) * 0.45
+info = mne.create_info(names, sfreq=250, ch_types="eeg")
+info.set_montage(mne.channels.make_standard_montage("standard_1020"))
 
 diffmaps = np.stack([np.fromstring(s, sep=",") for s in df["diffmap"]])
 fig, axes = plt.subplots(1, 2, figsize=(8.5, 4.2))
@@ -28,7 +26,7 @@ vlim = np.percentile(np.abs(diffmaps), 95)
 for ax, g, ttl in [(axes[0], "sig", f"SCP-significant (n={int((df.group=='sig').sum())})"),
                    (axes[1], "non", f"non-significant (n={int((df.group=='non').sum())})")]:
     m = diffmaps[df.group.values == g].mean(axis=0)
-    im, _ = mne.viz.plot_topomap(m, pos, axes=ax, cmap="RdBu_r", vlim=(-vlim, vlim),
+    im, _ = mne.viz.plot_topomap(m, info, axes=ax, cmap="RdBu_r", vlim=(-vlim, vlim),
                                  show=False, contours=4)
     ax.set_title(f"{ttl}\naffected - unaffected, 2.0-3.5 s", fontsize=10)
 fig.colorbar(im, ax=axes, label="Slow-potential difference (uV)", shrink=0.8)

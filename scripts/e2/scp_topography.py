@@ -22,13 +22,14 @@ info.set_montage(mne.channels.make_standard_montage("standard_1020"))
 
 diffmaps = np.stack([np.fromstring(s, sep=",") for s in df["diffmap"]])
 fig, axes = plt.subplots(1, 2, figsize=(8.5, 4.2))
-vlim = np.percentile(np.abs(diffmaps), 95)
+med = {g: np.median(diffmaps[df.group.values == g], axis=0) for g in ("sig", "non")}
+vlim = float(np.abs(np.concatenate(list(med.values()))).max())  # scale to plotted median maps
 for ax, g, ttl in [(axes[0], "sig", f"SCP-significant (n={int((df.group=='sig').sum())})"),
                    (axes[1], "non", f"non-significant (n={int((df.group=='non').sum())})")]:
-    m = diffmaps[df.group.values == g].mean(axis=0)
+    m = med[g]
     im, _ = mne.viz.plot_topomap(m, info, axes=ax, cmap="RdBu_r", vlim=(-vlim, vlim),
                                  show=False, contours=4)
-    ax.set_title(f"{ttl}\naffected - unaffected, 2.0-3.5 s", fontsize=10)
+    ax.set_title(f"{ttl}\nmedian affected - unaffected, 2.0-3.5 s", fontsize=10)
 fig.colorbar(im, ax=axes, label="Slow-potential difference (uV)", shrink=0.8)
 fig.suptitle("XW acute stroke: scalp topography of MI slow-wave difference", y=1.0)
 fig.savefig(os.path.join(OUT, "fig_scp_topography.png"), bbox_inches="tight", dpi=150)

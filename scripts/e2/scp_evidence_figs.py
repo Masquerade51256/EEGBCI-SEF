@@ -62,10 +62,12 @@ for ax, g, title in [(axes[0], "sig", f"SCP-significant subjects (n={len(SIG)})"
                      (axes[1], "non", f"non-significant subjects (n={len(NONSIG)})")]:
     aff = np.stack(grp[g]["aff"]); una = np.stack(grp[g]["una"])
     for arr, lab, col in [(aff, "affected-hand MI", "#c1443c"), (una, "unaffected-hand MI", "#3a7ca5")]:
-        m = arr[:, C3, :].mean(axis=0)
-        se = arr[:, C3, :].std(axis=0) / np.sqrt(len(arr))
+        # median across subjects (robust to a few huge-amplitude individuals)
+        m = np.median(arr[:, C3, :], axis=0)
+        q25 = np.percentile(arr[:, C3, :], 25, axis=0)
+        q75 = np.percentile(arr[:, C3, :], 75, axis=0)
         ax.plot(t, m, color=col, lw=1.8, label=lab)
-        ax.fill_between(t, m - se, m + se, color=col, alpha=0.25)
+        ax.fill_between(t, q25, q75, color=col, alpha=0.25)
     ax.axhline(0, color="k", lw=0.6); ax.axvline(0.5, color="gray", ls=":", lw=0.8)
     ax.set_title(f"{title}\nchannel C3 (contralesional motor)", fontsize=10)
     ax.set_xlabel("Time in trial (s)"); ax.set_ylabel("Slow potential (uV, baseline-corr.)")
@@ -82,6 +84,6 @@ ax.set_ylabel("Motor-area slow-wave |diff| (uV)")
 ax.set_title("Artifact audit: frontal vs motor slow activity", fontsize=10)
 ax.legend(frameon=False, fontsize=8)
 
-fig.suptitle("XW acute stroke: slow-potential evidence (0-4 Hz, grand average)", y=1.02)
+fig.suptitle("XW acute stroke: slow-potential evidence (0-4 Hz, median across subjects, IQR band)", y=1.02)
 fig.savefig(os.path.join(OUT, "fig_scp_evidence.png"), bbox_inches="tight", dpi=150)
 print("saved fig_scp_evidence.png")

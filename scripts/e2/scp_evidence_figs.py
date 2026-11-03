@@ -36,6 +36,7 @@ os.makedirs(OUT, exist_ok=True)
 SIG = [2, 3, 4, 8, 13, 17, 20, 22, 30, 32, 34, 35, 40, 42, 45, 50]
 NONSIG = [s for s in range(1, 51) if s not in SIG]
 C3 = XW_CH_NAMES.index("C3")
+C4 = XW_CH_NAMES.index("C4")  # aligned coords: C4 = ipsilesional motor area (contralateral to affected hand)
 W = slice(1000, 1750)  # 2.0-3.5 s late window
 EPS = 1e-12
 
@@ -69,6 +70,7 @@ for sid in range(1, 51):
                       sem_una=una.std(0, ddof=1) / np.sqrt(len(una)))
     rows.append(dict(subject=sid, group=g, frontal_slow_uv=frontal, motor_slow_uv=motor,
                      c3_d_late=float(d_map[C3]), c3_absd_late=float(abs(d_map[C3])),
+                     c4_d_late=float(d_map[C4]), c4_absd_late=float(abs(d_map[C4])),
                      diffmap=",".join(f"{v:.4f}" for v in diff),
                      dmap=",".join(f"{v:.4f}" for v in d_map)))
     print(f"sub-{sid:02d} done", flush=True)
@@ -79,25 +81,26 @@ pd.DataFrame(rows).to_csv(os.path.join(OUT, "scp_evidence_persubj.csv"), index=F
 fig = plt.figure(figsize=(16, 5.0))
 gs = fig.add_gridspec(2, 3, width_ratios=[1.25, 1.0, 1.0], wspace=0.28, hspace=0.55)
 
-# Panel A: 2x2 example sig subjects (largest within-subject |d| at C3)
-ex = sorted(SIG, key=lambda s: -abs(store[s]["d_map"][C3]))[:4]
+# Panel A: 2x2 example sig subjects (largest within-subject |d| at aligned C4 = ipsilesional motor)
+ex = sorted(SIG, key=lambda s: -abs(store[s]["d_map"][C4]))[:4]
 sub = gs[:, 0].subgridspec(2, 2, hspace=0.6, wspace=0.35)
 for i, sid in enumerate(ex):
     ax = fig.add_subplot(sub[i // 2, i % 2])
     s = store[sid]
-    ax.plot(t, s["m_aff"][C3], color="#c1443c", lw=1.5, label="affected-hand MI")
-    ax.fill_between(t, s["m_aff"][C3] - s["sem_aff"][C3], s["m_aff"][C3] + s["sem_aff"][C3],
+    ax.plot(t, s["m_aff"][C4], color="#c1443c", lw=1.5, label="affected-hand MI")
+    ax.fill_between(t, s["m_aff"][C4] - s["sem_aff"][C4], s["m_aff"][C4] + s["sem_aff"][C4],
                     color="#c1443c", alpha=0.25)
-    ax.plot(t, s["m_una"][C3], color="#3a7ca5", lw=1.5, label="unaffected-hand MI")
-    ax.fill_between(t, s["m_una"][C3] - s["sem_una"][C3], s["m_una"][C3] + s["sem_una"][C3],
+    ax.plot(t, s["m_una"][C4], color="#3a7ca5", lw=1.5, label="unaffected-hand MI")
+    ax.fill_between(t, s["m_una"][C4] - s["sem_una"][C4], s["m_una"][C4] + s["sem_una"][C4],
                     color="#3a7ca5", alpha=0.25)
     ax.axhline(0, color="k", lw=0.5); ax.axvline(0.5, color="gray", ls=":", lw=0.7)
-    ax.set_title(f"sub-{sid:02d}  (C3, within-subj d={s['d_map'][C3]:+.2f})", fontsize=9)
+    ax.set_title(f"sub-{sid:02d}  (ipsilesional C4, d={s['d_map'][C4]:+.2f})", fontsize=9)
     ax.tick_params(labelsize=8)
     if i == 0:
         ax.legend(frameon=False, fontsize=7, loc="upper left")
-fig.text(0.06, 0.02, "Panel A: example SCP-significant subjects (top-4 by within-subject |d| at C3); "
-                     "band = +/- SEM across trials", fontsize=9)
+fig.text(0.06, 0.02, "Panel A: example SCP-significant subjects (top-4 by within-subject |d| at aligned C4 = "
+                     "ipsilesional motor cortex, contralateral to affected hand); band = +/- SEM across trials",
+         fontsize=9)
 
 # Panel B: group median of channel-mean |d|(t) (distributed effect, matches multivariate decoding)
 axB = fig.add_subplot(gs[:, 1])

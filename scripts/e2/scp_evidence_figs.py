@@ -99,19 +99,19 @@ for i, sid in enumerate(ex):
 fig.text(0.06, 0.02, "Panel A: example SCP-significant subjects (top-4 by within-subject |d| at C3); "
                      "band = +/- SEM across trials", fontsize=9)
 
-# Panel B: group median |d|(t) at C3
+# Panel B: group median of channel-mean |d|(t) (distributed effect, matches multivariate decoding)
 axB = fig.add_subplot(gs[:, 1])
 for g, col, lab in [("sig", "#5a8f5a", f"SCP-significant (n={len(SIG)})"),
                     ("non", "#999999", f"non-significant (n={len(NONSIG)})")]:
     sids = SIG if g == "sig" else NONSIG
-    absd = np.stack([np.abs(store[s]["d_wave"][C3]) for s in sids])
+    absd = np.stack([np.abs(store[s]["d_wave"]).mean(axis=0) for s in sids])  # mean over 30 ch
     med = np.median(absd, axis=0)
     q25, q75 = np.percentile(absd, 25, axis=0), np.percentile(absd, 75, axis=0)
     axB.plot(t, med, color=col, lw=1.8, label=lab)
     axB.fill_between(t, q25, q75, color=col, alpha=0.22)
 axB.axvline(0.5, color="gray", ls=":", lw=0.8)
-axB.set_xlabel("Time in trial (s)"); axB.set_ylabel("|d| at C3 (affected vs unaffected)")
-axB.set_title("Panel B: within-subject effect size at C3\n(group median, IQR band)", fontsize=10)
+axB.set_xlabel("Time in trial (s)"); axB.set_ylabel("|d| (affected vs unaffected)")
+axB.set_title("Panel B: within-subject effect size,\nmean over 30 channels (group median, IQR)", fontsize=10)
 axB.legend(frameon=False, fontsize=8)
 
 # Panel C: audit scatter frontal vs motor slow amplitude

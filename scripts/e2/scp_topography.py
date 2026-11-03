@@ -35,7 +35,7 @@ for ax, g, ttl in [(axes[0], "sig", f"SCP-significant (n={int((df.group=='sig').
                    (axes[1], "non", f"non-significant (n={int((df.group=='non').sum())})")]:
     im, _ = mne.viz.plot_topomap(med[g], info, axes=ax, cmap="Reds", vlim=(0, vlim),
                                  show=False, contours=4)
-    ax.set_title(f"{ttl}\nmedian |d| (affected vs unaffected), 2.0-3.5 s", fontsize=10)
+    ax.set_title(ttl, fontsize=11)
 fig.colorbar(im, ax=axes, label="Within-subject effect size |d|", shrink=0.8)
 fig.suptitle("XW acute stroke: scalp topography of MI slow-wave effect size", y=1.0)
 fig.savefig(os.path.join(OUT, "fig_scp_topography.png"), bbox_inches="tight", dpi=150)

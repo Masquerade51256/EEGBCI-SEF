@@ -96,11 +96,15 @@ for i, sid in enumerate(ex):
     ax.axhline(0, color="k", lw=0.5); ax.axvline(0.5, color="gray", ls=":", lw=0.7)
     ax.set_title(f"sub-{sid:02d}  (ipsilesional C4, d={s['d_map'][C4]:+.2f})", fontsize=9)
     ax.tick_params(labelsize=8)
+    if i % 2 == 0:
+        ax.set_ylabel("Slow potential (uV)", fontsize=8)
+    if i >= 2:
+        ax.set_xlabel("Time in trial (s)", fontsize=8)
     if i == 0:
         ax.legend(frameon=False, fontsize=7, loc="upper left")
-fig.text(0.06, 0.02, "Panel A: example SCP-significant subjects (top-4 by within-subject |d| at aligned C4 = "
-                     "ipsilesional motor cortex, contralateral to affected hand); band = +/- SEM across trials",
-         fontsize=9)
+fig.text(0.135, 0.015, "Panel A: example SCP-significant subjects (top-4 by |d| at aligned C4 =\n"
+                       "ipsilesional motor cortex, contralateral to affected hand); band = +/- SEM",
+         fontsize=8, ha="center")
 
 # Panel B: group median of channel-mean |d|(t) (distributed effect, matches multivariate decoding)
 axB = fig.add_subplot(gs[:, 1])

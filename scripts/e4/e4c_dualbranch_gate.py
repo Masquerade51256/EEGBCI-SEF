@@ -203,6 +203,7 @@ def run_arm(Xw, Xs, y, sid, seeds, arm):
     from torch.utils.data import DataLoader, TensorDataset
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch.set_num_threads(4)          # 多被试并行时避免线程超额订阅
     n = len(y)
     g = np.arange(n)                              # 每 trial 一组（振荡支窗随 trial）
     mode = {"gate_l0": "gate", "gate_l01": "gate", "gate_l10": "gate",

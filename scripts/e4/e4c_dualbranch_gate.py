@@ -185,10 +185,10 @@ def augment(xw, xs, gen):
     import torch
     B, W, C, T = xw.shape
     Ts = xs.shape[-1]
-    mask = (torch.rand(B, C, generator=gen, device=xw.device) > 0.15).float()
+    mask = (torch.rand(B, C, generator=gen) > 0.15).float().to(xw.device)
     xw = xw * mask[:, None, :, None]
     xs = xs * mask[:, :, None]
-    amp = 0.9 + 0.2 * torch.rand(B, 1, 1, 1, generator=gen, device=xw.device)
+    amp = (0.9 + 0.2 * torch.rand(B, 1, 1, 1, generator=gen)).to(xw.device)
     xw = xw * amp
     xs = xs * amp.squeeze(-1)
     shift = int(torch.randint(-12, 13, (1,), generator=gen).item())   # ±0.25 s @50Hz

@@ -64,7 +64,7 @@ def subject_features(sid):
     X4, y4 = load_xw_trials(sid)                    # trial 级：500Hz 原始 4s
     Fscp = scp_features(X4, 500)                    # (n_trial, 120)
 
-    Fw = connectivity_features(ds.data, BANDS_2, fs=250)   # (n_win, 1740)
+    Fw = connectivity_features(ds.data[:, 0, :, :], BANDS_2, fs=250)  # (n_win,1740)
     g = np.asarray(ds.group_ids)
     uniq = np.unique(g)
     # --- 对齐断言：窗组 = trial，标签两链一致 ---

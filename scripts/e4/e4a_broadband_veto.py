@@ -95,14 +95,15 @@ def make_broad(X, sr):
     return Xb, tidx
 
 
-def run_arm(Xs, y, tidx, sid, seeds, arm, epochs=100):
+def run_arm(Xs, y, tidx, sid, seeds, arm, epochs=100, batch=None):
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, TensorDataset
     from models.EEGNet import EEGNet
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    batch = 16 if arm == "broad" else 32
+    if batch is None:
+        batch = 16 if arm == "broad" else 32
     y_all = y[tidx]                              # 窗级 / trial 级标签
     rows = []
     for seed in seeds:

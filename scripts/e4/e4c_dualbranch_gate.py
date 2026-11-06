@@ -104,7 +104,7 @@ def build_model(n_ch, n_win, T_win, T_slow):
             super().__init__()
             self.convs = nn.ModuleList([
                 nn.Conv2d(1, 8, (1, k), padding=(0, k // 2), bias=False)
-                for k in (10, 20, 31)])
+                for k in (11, 21, 31)])
             self.bn_t = nn.BatchNorm2d(24)
             self.spatial = nn.Conv2d(24, 24, (n_ch, 1), groups=24, bias=False)
             self.bn_s = nn.BatchNorm2d(24)

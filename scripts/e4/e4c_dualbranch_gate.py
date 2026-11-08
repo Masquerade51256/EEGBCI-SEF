@@ -141,12 +141,13 @@ def build_model(n_ch, n_win, T_win, T_slow):
             self.fc2 = nn.Linear(16, 2)
             nn.init.zeros_(self.fc2.weight)                # 初始精确均匀
             nn.init.zeros_(self.fc2.bias)
+            self.tau = TAU        # 可被外部改写（e4d 温度退火）；默认 2.0 不变
 
         def forward(self, e):
             logit = self.fc2(Fn.elu(self.fc1(e)))
             if self.training:
                 logit = logit + torch.randn_like(logit) * 0.2    # logit 抖动
-            return torch.softmax(logit / TAU, dim=-1)
+            return torch.softmax(logit / self.tau, dim=-1)
 
     class DualBranch(nn.Module):
         def __init__(self):

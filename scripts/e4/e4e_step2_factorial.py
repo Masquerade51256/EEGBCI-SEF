@@ -113,10 +113,12 @@ def build_step2_model(arm, n_ch, T):
             self.head = nn.Linear(feat.shape[1], 2)
 
         def features(self, x):                    # x: (B, nband, ch, T)
+            T_in = x.shape[-1]
             if self.fast_conv is not None:
-                x = torch.cat([self.slow_conv(x[:, 0:1]), self.fast_conv(x[:, 1:2])], dim=1)
+                x = torch.cat([self.slow_conv(x[:, 0:1])[..., :T_in],
+                               self.fast_conv(x[:, 1:2])[..., :T_in]], dim=1)
             else:
-                x = self.slow_conv(x)
+                x = self.slow_conv(x)[..., :T_in]
             x = self.bn_t(x)
             x = self.spatial(x)
             x = self.sep(x)

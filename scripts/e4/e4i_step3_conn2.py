@@ -53,7 +53,7 @@ WIN, STRIDE = 500, 125          # 2 s / 0.5 s @ 250 Hz
 SUBBANDS = [(4., 8.), (8., 13.), (13., 30.), (30., 40.)]
 
 
-def build_s3c2_model(n_ch, T):
+def build_s3c2_model(n_ch, T, conn_only=False):
     import torch
     import torch.nn as nn
     import torch.nn.functional as Fn
@@ -100,6 +100,27 @@ def build_s3c2_model(n_ch, T):
             aw = aw.reshape(B, nw, *aw.shape[1:]).mean(dim=1) # (B, heads, ch, ch)
             return feat, aw
 
+    if conn_only:
+        class ConnOnlyNet(nn.Module):
+            """连接分支 v2 单体：检验分支独立提取信息的能力上限
+            （区分"分支学不到"与"被 B 主干冗余覆盖"）。"""
+            def __init__(self):
+                super().__init__()
+                self.conn = ConnBranchV2()
+                self.drop = nn.Dropout(DROP)
+                self.head = nn.Linear(16, 2)
+
+            def features(self, x):
+                feat_c, aw = self.conn(x[:, 1:2])
+                return self.drop(feat_c), aw
+
+            def forward(self, x, return_attn=False):
+                feat, aw = self.features(x)
+                out = self.head(feat)
+                return (out, aw) if return_attn else out
+
+        return ConnOnlyNet()
+
     class S3C2Net(nn.Module):
         def __init__(self):
             super().__init__()
@@ -145,7 +166,7 @@ def build_s3c2_model(n_ch, T):
     return S3C2Net()
 
 
-def run_subject(Xs, y, sid, seeds, out_dir):
+def run_subject(Xs, y, sid, seeds, out_dir, conn_only=False):
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, TensorDataset
@@ -159,7 +180,8 @@ def run_subject(Xs, y, sid, seeds, out_dir):
         for fi, (tr, te) in enumerate(group_kfold_indices(tidx, 5, seed + sid)):
             torch.manual_seed(seed)
             np.random.seed(seed)
-            model = build_s3c2_model(Xs.shape[2], Xs.shape[-1]).to(device)
+            model = build_s3c2_model(Xs.shape[2], Xs.shape[-1],
+                                     conn_only=conn_only).to(device)
             opt = torch.optim.Adam(model.parameters(), lr=1e-3)
             lossf = nn.CrossEntropyLoss()
             loader = DataLoader(TensorDataset(torch.from_numpy(Xs[tr]),
@@ -206,11 +228,16 @@ def run_subject(Xs, y, sid, seeds, out_dir):
 
 
 def main():
+    global ARM
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="xw", choices=list(LOADERS.keys()))
     ap.add_argument("--seeds", default="42,123,2026")
     ap.add_argument("--subjects", default=None)
+    ap.add_argument("--conn-only", action="store_true",
+                    help="连接分支单体（ARM=S3C2conn），无 B 主干")
     args = ap.parse_args()
+    if args.conn_only:
+        ARM = "S3C2conn"
     seeds = [int(s) for s in args.seeds.split(",")]
     dspec = LOADERS[args.dataset]
     subjects = dspec["subjects"] if args.subjects is None else \
@@ -237,7 +264,8 @@ def main():
             print(f"sub-{sid:02d}: LOAD ERROR {e}", flush=True)
             continue
         Xs = make_twoband(X, dspec["sr"])
-        rows, pred_rows = run_subject(Xs, y.astype(int), sid, remain, out_dir)
+        rows, pred_rows = run_subject(Xs, y.astype(int), sid, remain, out_dir,
+                                      conn_only=args.conn_only)
         m = np.mean([r[3] for r in rows])
         print(f"[{args.dataset}/{ARM}] sub-{sid:02d} done: {m*100:.2f}%  "
               f"({time.time()-t0:.0f}s)", flush=True)

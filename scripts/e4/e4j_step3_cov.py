@@ -80,7 +80,7 @@ def build_s3cov_model(n_ch, T, cov_only=False):
         def forward(self, xf):                    # xf: (B, 1, ch, T)
             T_in = xf.shape[-1]
             xb = Fn.conv2d(xf, self.filtbank, padding=(0, 62))[..., :T_in]
-            S = torch.einsum("bnct,nkc->bnkt", xb, self.W)   # (B, NB, K, T)
+            S = torch.einsum("bnct,nck->bnkt", xb, self.W)   # (B, NB, K, T)
             C = torch.einsum("bnkt,bnlt->bnkl", S, S) / S.shape[-1]
             dg = C.diagonal(dim1=-2, dim2=-1).clamp_min(1e-12).sqrt()
             Cn = C / torch.einsum("bnk,bnl->bnkl", dg, dg)   # 相关化

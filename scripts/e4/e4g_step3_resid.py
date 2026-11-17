@@ -49,8 +49,8 @@ OUT = "experiments/e4_step3"
 ARM = "S3R"
 
 
-def build_s3r_model(n_ch, T):
-    """B 主干 + 残差分支（通用 CNN），拼接融合。"""
+def build_s3r_model(n_ch, T, resid_only=False):
+    """B 主干 + 残差分支（通用 CNN），拼接融合；resid_only=分支单体。"""
     import torch
     import torch.nn as nn
     from models.layers import Conv2dWithConstraint
@@ -84,6 +84,24 @@ def build_s3r_model(n_ch, T):
             h = self.spatial(h)
             h = self.sep(h)
             return h.flatten(1)
+
+    if resid_only:
+        class ResidOnlyNet(nn.Module):
+            """残差分支单体：检验分支独立提取信息的能力上限
+            （区分"分支学不到"与"被 B 主干冗余覆盖"——2026-11-11 用户规则）。"""
+            def __init__(self):
+                super().__init__()
+                self.resid = ResidBranch()
+                self.drop = nn.Dropout(DROP)
+                dummy = torch.zeros(1, 2, n_ch, T)
+                with torch.no_grad():
+                    f = self.resid(dummy)
+                self.head = nn.Linear(f.shape[1], 2)
+
+            def forward(self, x):
+                return self.head(self.drop(self.resid(x)))
+
+        return ResidOnlyNet()
 
     class S3RNet(nn.Module):
         def __init__(self):
@@ -127,7 +145,7 @@ def build_s3r_model(n_ch, T):
     return S3RNet()
 
 
-def run_subject(Xs, y, sid, seeds, out_dir):
+def run_subject(Xs, y, sid, seeds, out_dir, resid_only=False):
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, TensorDataset
@@ -140,7 +158,8 @@ def run_subject(Xs, y, sid, seeds, out_dir):
         for fi, (tr, te) in enumerate(group_kfold_indices(tidx, 5, seed + sid)):
             torch.manual_seed(seed)
             np.random.seed(seed)
-            model = build_s3r_model(Xs.shape[2], Xs.shape[-1]).to(device)
+            model = build_s3r_model(Xs.shape[2], Xs.shape[-1],
+                                    resid_only=resid_only).to(device)
             opt = torch.optim.Adam(model.parameters(), lr=1e-3)
             lossf = nn.CrossEntropyLoss()
             loader = DataLoader(TensorDataset(torch.from_numpy(Xs[tr]),
@@ -174,11 +193,16 @@ def run_subject(Xs, y, sid, seeds, out_dir):
 
 
 def main():
+    global ARM
     ap = argparse.ArgumentParser()
     ap.add_argument("--dataset", default="xw", choices=list(LOADERS.keys()))
     ap.add_argument("--seeds", default="42,123,2026")
     ap.add_argument("--subjects", default=None)
+    ap.add_argument("--resid-only", action="store_true",
+                    help="残差分支单体（ARM=S3Ronly），无 B 主干")
     args = ap.parse_args()
+    if args.resid_only:
+        ARM = "S3Ronly"
     seeds = [int(s) for s in args.seeds.split(",")]
     dspec = LOADERS[args.dataset]
     subjects = dspec["subjects"] if args.subjects is None else \
@@ -205,7 +229,8 @@ def main():
             print(f"sub-{sid:02d}: LOAD ERROR {e}", flush=True)
             continue
         Xs = make_twoband(X, dspec["sr"])
-        rows, pred_rows = run_subject(Xs, y.astype(int), sid, remain, out_dir)
+        rows, pred_rows = run_subject(Xs, y.astype(int), sid, remain, out_dir,
+                                      resid_only=args.resid_only)
         m = np.mean([r[3] for r in rows])
         print(f"[{args.dataset}/{ARM}] sub-{sid:02d} done: {m*100:.2f}%  "
               f"({time.time()-t0:.0f}s)", flush=True)

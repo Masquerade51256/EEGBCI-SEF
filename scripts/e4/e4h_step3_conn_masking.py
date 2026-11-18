@@ -30,11 +30,13 @@ from scripts.e4.e4a_broadband_veto import LOADERS
 from scripts.e4.e4e_step2_factorial import make_twoband
 from scripts.e4.e4f_step3_conn import build_s3c_model
 from scripts.e4.e4i_step3_conn2 import build_s3c2_model
+from scripts.e4.e4j_step3_cov import build_s3cov_model
 from scripts.e2.e2a_spatial import group_kfold_indices
 
 OUT = "experiments/e4_step3"
-CONN_DIM = 16     # 连接分支输出维度（d=16，v1/v2 同）
-ARCHS = {"S3C": build_s3c_model, "S3C2": build_s3c2_model}
+CONN_DIM = 16     # 分支输出维度（v1/v2/v3 同为 d=16）
+ARCHS = {"S3C": build_s3c_model, "S3C2": build_s3c2_model,
+         "S3COV": build_s3cov_model}
 
 
 def run_subject(Xs, y, sid, seeds, out_dir, arm):
@@ -58,7 +60,8 @@ def run_subject(Xs, y, sid, seeds, out_dir, arm):
             Xte = torch.from_numpy(Xs[te]).to(device)
             yte = torch.from_numpy(y[te]).long().to(device)
             with torch.no_grad():
-                feat, _ = model.features(Xte)
+                fout = model.features(Xte)
+                feat = fout[0] if isinstance(fout, tuple) else fout
                 acc_full = float((model.head(feat).argmax(1) == yte)
                                  .float().mean().item())
                 feat_m = feat.clone()

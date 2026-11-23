@@ -80,27 +80,35 @@ def main():
             if not files:
                 continue
             import torch
-            Ws = []
+            Ws, n_bad = [], 0
             for f in files:
                 sd = torch.load(f, map_location="cpu", weights_only=True)
                 if key in sd:
-                    Ws.append(sd[key].numpy())
+                    W = sd[key].numpy()
+                    if np.isfinite(W).all():
+                        Ws.append(W)
+                    else:
+                        n_bad += 1
             if len(Ws) < 2:
                 continue
             cons = subspace_consistency(Ws)
             Wm = np.mean(Ws, axis=0)
             e, m_motor, m_front, m_po = energy_share(Wm)
-            rows.append((arm, sid, len(Ws), cons, m_motor, m_front, m_po))
-            print(f"{arm} sub-{sid:02d}: n={len(Ws)} consistency={cons:.3f} "
+            rows.append((arm, sid, len(Ws), n_bad, cons, m_motor, m_front,
+                         m_po))
+            print(f"{arm} sub-{sid:02d}: n={len(Ws)} bad={n_bad} "
+                  f"consistency={cons:.3f} "
                   f"motor={m_motor:.2f} frontal={m_front:.2f} "
                   f"parieto-occ={m_po:.2f}", flush=True)
-    df = pd.DataFrame(rows, columns=["arm", "subject", "n_runs", "consistency",
-                                     "motor_share", "frontal_share",
+    df = pd.DataFrame(rows, columns=["arm", "subject", "n_runs", "n_nan",
+                                     "consistency", "motor_share",
+                                     "frontal_share",
                                      "parieto_occ_share"])
     df["random_baseline"] = rand_ref
     df.to_csv(OUT_CSV, index=False)
     print(f"\n===== 汇总 =====")
-    print(df.groupby("arm")[["consistency", "motor_share", "frontal_share",
+    print(df.groupby("arm")[["n_nan", "consistency", "motor_share",
+                             "frontal_share",
                              "parieto_occ_share"]].mean().round(3))
     print(f"随机基线: {rand_ref:.3f}")
 

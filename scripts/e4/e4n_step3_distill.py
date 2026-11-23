@@ -131,7 +131,8 @@ def build_s3d_model(n_ch, T, n_teacher, distill_only=False):
                 super().__init__()
                 self.trunk = trunk
                 self.drop = nn.Dropout(DROP)
-                dummy = torch.zeros(1, 2, n_ch, T)
+                dev = next(trunk.parameters()).device
+                dummy = torch.zeros(1, 2, n_ch, T, device=dev)
                 with torch.no_grad():
                     f = trunk(dummy)
                 self.head = nn.Linear(f.shape[1], 2)
@@ -161,7 +162,8 @@ def build_s3d_model(n_ch, T, n_teacher, distill_only=False):
             self.pool = nn.AvgPool2d((1, P2), stride=P2)
             self.trunk = trunk
             self.drop = nn.Dropout(DROP)
-            dummy = torch.zeros(1, 2, n_ch, T)
+            dev = next(trunk.parameters()).device
+            dummy = torch.zeros(1, 2, n_ch, T, device=dev)
             with torch.no_grad():
                 feat = self.features(dummy)
             self.head = nn.Linear(feat.shape[1], 2)

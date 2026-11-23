@@ -132,6 +132,7 @@ def build_s3d_model(n_ch, T, n_teacher, distill_only=False):
                 self.trunk = trunk
                 self.drop = nn.Dropout(DROP)
                 dev = next(trunk.parameters()).device
+                self.to(dev)
                 dummy = torch.zeros(1, 2, n_ch, T, device=dev)
                 with torch.no_grad():
                     f = trunk(dummy)
@@ -163,6 +164,7 @@ def build_s3d_model(n_ch, T, n_teacher, distill_only=False):
             self.trunk = trunk
             self.drop = nn.Dropout(DROP)
             dev = next(trunk.parameters()).device
+            self.to(dev)
             dummy = torch.zeros(1, 2, n_ch, T, device=dev)
             with torch.no_grad():
                 feat = self.features(dummy)

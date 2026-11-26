@@ -103,6 +103,7 @@ def run_subject(Xs, y, Tch, sid, seeds, out_dir):
                                        distill_only=True)[0]
                 mdl = OnlyCls(pre2.trunk)
                 mdl.load_state_dict(torch.load(mpath, map_location=device))
+                mdl = mdl.to(device)
                 mdl.eval()
                 with torch.no_grad():
                     e_tr = mdl.trunk(torch.from_numpy(Xs[tr]).to(device)) \

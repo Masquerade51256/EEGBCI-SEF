@@ -43,13 +43,26 @@ OUT = "experiments/e4_step3"
 
 
 def r2_by_group(pred, true, ap_dim):
-    """pred/true: (n, D) → (r2_ap, r2_wpli)，逐维 R² 组内均值。"""
-    def _r2(p, t):
-        ss_res = ((t - p) ** 2).sum(0)
-        ss_var = ((t - t.mean(0, keepdims=True)) ** 2).sum(0) + 1e-12
-        return 1.0 - ss_res / ss_var
-    r2 = _r2(pred, true)
-    return float(r2[:ap_dim].mean()), float(r2[ap_dim:].mean())
+    """pred/true: (n, D) → 逐组 (R² 均值, Pearson r 均值, 退化维数)。
+    R² 逐维计算，仅在评估集方差足够（ss_var > 0.1n，即 z 空间 std>0.32）
+    的维上取均值——近常数维（z-score 后 sd≈1e-8）会使 R² 爆炸为无意义
+    的天文数字，单列退化维数备查。Pearson r 对尺度不变，作辅助指标。"""
+    n = true.shape[0]
+    ss_res = ((true - pred) ** 2).sum(0)
+    ss_var = ((true - true.mean(0, keepdims=True)) ** 2).sum(0)
+    ok = ss_var > 0.1 * n
+    r2 = 1.0 - ss_res[ok] / ss_var[ok]
+    sd_t = true.std(0)
+    sd_p = pred.std(0)
+    okr = (sd_t > 0.1) & (sd_p > 0.1)
+    with np.errstate(invalid="ignore"):
+        r = np.array([np.corrcoef(pred[:, j], true[:, j])[0, 1]
+                      if okr else np.nan for j, okr in enumerate(okr)])
+    def _grp(v):
+        return (float(np.nanmean(v[:ap_dim])), float(np.nanmean(v[ap_dim:])))
+    r2_ap, r2_wp = _grp(r2)
+    r_ap, r_wp = _grp(r)
+    return r2_ap, r2_wp, r_ap, r_wp, int((~ok).sum())
 
 
 def run_subject(Xs, y, Tch, sid, seeds, out_dir):
@@ -91,11 +104,11 @@ def run_subject(Xs, y, Tch, sid, seeds, out_dir):
             with torch.no_grad():
                 p_te = pre(torch.from_numpy(Xs[te]).to(device)).cpu().numpy()
                 p_tr = pre(torch.from_numpy(Xs[tr]).to(device)).cpu().numpy()
-            r2_ap, r2_wp = r2_by_group(p_te, Tz[te], ap_dim)
-            r2_ap_tr, r2_wp_tr = r2_by_group(p_tr, Tz[tr], ap_dim)
+            r2_ap, r2_wp, r_ap, r_wp, ndeg = r2_by_group(p_te, Tz[te], ap_dim)
+            r2_ap_tr, r2_wp_tr = r2_by_group(p_tr, Tz[tr], ap_dim)[:2]
 
             # —— B. 微调后 trunk 存活探针（加载已存 S3Donly 模型）——
-            r2f_ap = r2f_wp = np.nan
+            r2f_ap = r2f_wp = rf_ap = rf_wp = np.nan
             mpath = os.path.join(out_dir, "models",
                                  f"S3Donly_sub{sid:02d}_seed{seed}_fold{fi}.pt")
             if os.path.exists(mpath):
@@ -112,14 +125,18 @@ def run_subject(Xs, y, Tch, sid, seeds, out_dir):
                         .cpu().numpy()
                 rg = Ridge(alpha=1.0)
                 rg.fit(e_tr, Tz[tr])
-                r2f_ap, r2f_wp = r2_by_group(rg.predict(e_te), Tz[te], ap_dim)
+                r2f_ap, r2f_wp, rf_ap, rf_wp, _ = r2_by_group(
+                    rg.predict(e_te), Tz[te], ap_dim)
 
-            rows.append((sid, seed, fi, r2_ap, r2_wp, r2_ap_tr, r2_wp_tr,
-                         r2f_ap, r2f_wp))
+            rows.append((sid, seed, fi, r2_ap, r2_wp, r_ap, r_wp, ndeg,
+                         r2_ap_tr, r2_wp_tr, r2f_ap, r2f_wp, rf_ap, rf_wp))
             print(f"    sub-{sid:02d} seed={seed} fold{fi}: "
-                  f"s1_test ap={r2_ap:.3f} wpli={r2_wp:.3f} | "
-                  f"s1_train ap={r2_ap_tr:.3f} wpli={r2_wp_tr:.3f} | "
-                  f"ft_test ap={r2f_ap:.3f} wpli={r2f_wp:.3f}", flush=True)
+                  f"s1_test R2 ap={r2_ap:.3f} wpli={r2_wp:.3f} "
+                  f"r ap={r_ap:.3f} wpli={r_wp:.3f} | "
+                  f"s1_train R2 ap={r2_ap_tr:.3f} wpli={r2_wp_tr:.3f} | "
+                  f"ft_test R2 ap={r2f_ap:.3f} wpli={r2f_wp:.3f} "
+                  f"r ap={rf_ap:.3f} wpli={rf_wp:.3f} | ndeg={ndeg}",
+                  flush=True)
     return rows
 
 
@@ -138,8 +155,9 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     out_csv = os.path.join(out_dir, "S3D_fidelity.csv")
     cols = ["subject", "seed", "fold", "r2_s1_ap_test", "r2_s1_wpli_test",
+            "r_s1_ap_test", "r_s1_wpli_test", "n_degen_dims",
             "r2_s1_ap_train", "r2_s1_wpli_train", "r2_ft_ap_test",
-            "r2_ft_wpli_test"]
+            "r2_ft_wpli_test", "r_ft_ap_test", "r_ft_wpli_test"]
     done = set()
     if os.path.exists(out_csv):
         prev = pd.read_csv(out_csv)

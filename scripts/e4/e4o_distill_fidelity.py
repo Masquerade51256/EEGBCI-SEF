@@ -37,9 +37,11 @@ from scripts.e4.e4a_broadband_veto import LOADERS
 from scripts.e4.e4e_step2_factorial import make_twoband
 from scripts.e4.e4n_step3_distill import (REGIONS, teacher_features,
                                           build_s3d_model)
+from scripts.e4.e4p_distill2_pca import apply_teacher_pca, PCA_K
 from scripts.e2.e2a_spatial import group_kfold_indices
 
 OUT = "experiments/e4_step3"
+MODEL_PREFIX = {"S3D": "S3Donly", "S3DPCA": "S3DPCAonly"}
 
 
 def r2_by_group(pred, true, ap_dim):
@@ -65,7 +67,7 @@ def r2_by_group(pred, true, ap_dim):
     return r2_ap, r2_wp, r_ap, r_wp, int((~ok).sum())
 
 
-def run_subject(Xs, y, Tch, sid, seeds, out_dir):
+def run_subject(Xs, y, Tch, sid, seeds, out_dir, arm="S3D", teacher="raw"):
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, TensorDataset
@@ -74,19 +76,22 @@ def run_subject(Xs, y, Tch, sid, seeds, out_dir):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     n_ch, T = Xs.shape[2], Xs.shape[-1]
     ap_dim = 2 * n_ch
+    n_teacher = Tch.shape[1] if teacher == "raw" else ap_dim + PCA_K
     tidx = np.arange(len(y))
     rows = []
     for seed in seeds:
         for fi, (tr, te) in enumerate(group_kfold_indices(tidx, 5, seed + sid)):
-            # —— A. 阶段 1 复演（与 e4n 同 RNG 顺序）——
+            # —— A. 阶段 1 复演（与 e4n/e4p 同 RNG 顺序）——
             torch.manual_seed(seed)
             np.random.seed(seed)
-            pre_cls, OnlyCls = build_s3d_model(n_ch, T, Tch.shape[1],
+            pre_cls, OnlyCls = build_s3d_model(n_ch, T, n_teacher,
                                                distill_only=True)
             pre = pre_cls.to(device)
             mu = Tch[tr].mean(0, keepdims=True)
             sd = Tch[tr].std(0, keepdims=True) + 1e-8
             Tz = ((Tch - mu) / sd).astype(np.float32)
+            if teacher == "pca":
+                Tz, _ = apply_teacher_pca(Tz, tr, ap_dim)
             opt = torch.optim.Adam(pre.parameters(), lr=1e-3)
             lossf = nn.MSELoss()
             loader = DataLoader(TensorDataset(torch.from_numpy(Xs[tr]),
@@ -107,12 +112,13 @@ def run_subject(Xs, y, Tch, sid, seeds, out_dir):
             r2_ap, r2_wp, r_ap, r_wp, ndeg = r2_by_group(p_te, Tz[te], ap_dim)
             r2_ap_tr, r2_wp_tr = r2_by_group(p_tr, Tz[tr], ap_dim)[:2]
 
-            # —— B. 微调后 trunk 存活探针（加载已存 S3Donly 模型）——
+            # —— B. 微调后 trunk 存活探针（加载已存单模型）——
             r2f_ap = r2f_wp = rf_ap = rf_wp = np.nan
             mpath = os.path.join(out_dir, "models",
-                                 f"S3Donly_sub{sid:02d}_seed{seed}_fold{fi}.pt")
+                                 f"{MODEL_PREFIX[arm]}_sub{sid:02d}"
+                                 f"_seed{seed}_fold{fi}.pt")
             if os.path.exists(mpath):
-                pre2 = build_s3d_model(n_ch, T, Tch.shape[1],
+                pre2 = build_s3d_model(n_ch, T, n_teacher,
                                        distill_only=True)[0]
                 mdl = OnlyCls(pre2.trunk)
                 mdl.load_state_dict(torch.load(mpath, map_location=device))
@@ -145,6 +151,9 @@ def main():
     ap.add_argument("--dataset", default="xw", choices=list(LOADERS.keys()))
     ap.add_argument("--seeds", default="42,123,2026")
     ap.add_argument("--subjects", default=None)
+    ap.add_argument("--arm", default="S3D", choices=["S3D", "S3DPCA"])
+    ap.add_argument("--teacher", default="raw", choices=["raw", "pca"],
+                    help="pca = wPLI 教师折内 PCA 至 K 维（对应 e4p v2a）")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",")]
     dspec = LOADERS[args.dataset]
@@ -153,7 +162,7 @@ def main():
 
     out_dir = os.path.join(OUT, args.dataset)
     os.makedirs(out_dir, exist_ok=True)
-    out_csv = os.path.join(out_dir, "S3D_fidelity.csv")
+    out_csv = os.path.join(out_dir, f"{args.arm}_fidelity.csv")
     cols = ["subject", "seed", "fold", "r2_s1_ap_test", "r2_s1_wpli_test",
             "r_s1_ap_test", "r_s1_wpli_test", "n_degen_dims",
             "r2_s1_ap_train", "r2_s1_wpli_train", "r2_ft_ap_test",
@@ -176,14 +185,15 @@ def main():
             continue
         Xs = make_twoband(X, dspec["sr"])
         Tch = teacher_features(X, args.dataset, dspec["sr"]).astype(np.float32)
-        rows = run_subject(Xs, y.astype(int), Tch, sid, remain, out_dir)
-        print(f"[{args.dataset}/fidelity] sub-{sid:02d} done "
+        rows = run_subject(Xs, y.astype(int), Tch, sid, remain, out_dir,
+                           arm=args.arm, teacher=args.teacher)
+        print(f"[{args.dataset}/{args.arm}_fidelity] sub-{sid:02d} done "
               f"({time.time()-t0:.0f}s)", flush=True)
         df = pd.DataFrame(rows, columns=cols)
         df.to_csv(out_csv, mode="a", header=not os.path.exists(out_csv),
                   index=False)
 
-    print(f"\n===== {args.dataset}/S3D_fidelity 完成 =====")
+    print(f"\n===== {args.dataset}/{args.arm}_fidelity 完成 =====")
 
 
 if __name__ == "__main__":

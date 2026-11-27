@@ -5,9 +5,13 @@ v1/v2a 判负边界复核发现阶段 1 为裸跑（无增强、Adam 无 weight 
 容量未降档）——"纯记忆化"诊断的标准治疗手段均未动用。v3a 单因子改动
 （vs v1，教师保持 raw 280 维、阶段 2 与 v1 完全一致）：
   ① 训练折内无标签增强：每训练 trial ×3 副本（时间循环滚动 ±0.25 s +
-     幅值抖动 ×0.9–1.1 + 通道 dropout p=0.15），**教师对增强后输入同步
-     重算**（教师是输入的确定性函数，保证输入-目标不错位），阶段 1 样本
-     池 32 → 128；z-score 统计量仍只用原始训练 trial 估计；
+     幅值抖动 ×0.9–1.1），**教师对增强后输入同步重算**（教师是输入的
+     确定性函数，保证输入-目标不错位），阶段 1 样本池 32 → 128；
+     z-score 统计量仍只用原始训练 trial 估计。
+     注：初版曾含通道 dropout，因其使被置零导联的非周期谱拟合目标
+     退化为极端值（MSE 被垃圾目标主导，测试 R² 恶化至 −40 量级）而
+     移除——分类增强可用的操作未必与特征蒸馏兼容（2026-11-27 冒烟
+     确诊并修复）；
   ② 阶段 1 优化器 Adam → AdamW（weight decay 1e-2）；
   ③ trunk 容量减半（FR 6→3，§7.5 容量纪律方向）。
 保真度指标（测试折 R²/Pearson r 分组）在阶段 1 结束时内嵌计算
@@ -45,7 +49,8 @@ N_AUG = 3  # 每训练 trial 的增强副本数
 
 def augment_trials(X, sr=250):
     """训练折内无标签增强：X (n, ch, T) → (N_AUG*n, ch, T)。
-    时间循环滚动 ±0.25 s + 幅值抖动 ×0.9–1.1 + 通道 dropout p=0.15。"""
+    时间循环滚动 ±0.25 s + 幅值抖动 ×0.9–1.1。
+    （不含通道 dropout：置零导联的非周期谱拟合目标无定义，见模块头注）"""
     n, ch, T = X.shape
     max_roll = int(0.25 * sr)
     outs = []
@@ -53,10 +58,7 @@ def augment_trials(X, sr=250):
         Xa = np.empty_like(X)
         for i in range(n):
             r = np.random.randint(-max_roll, max_roll + 1)
-            t = np.roll(X[i], r, axis=-1) * np.random.uniform(0.9, 1.1)
-            mask = np.random.rand(ch) >= 0.15
-            t[~mask] = 0.0
-            Xa[i] = t
+            Xa[i] = np.roll(X[i], r, axis=-1) * np.random.uniform(0.9, 1.1)
         outs.append(Xa)
     return np.concatenate(outs, axis=0)
 
